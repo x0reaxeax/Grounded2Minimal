@@ -91,7 +91,7 @@ inline volatile bool CheckGlobalOutputEnabled(void) {
 bool GetVersionFromResource(
     VersionInfo& versionInfo
 ) {
-    HMODULE hModule = GetModuleHandleA("GroundedMinimal.dll");
+    HMODULE hModule = GetModuleHandleA("Grounded2Minimal.dll");
 
     HRSRC hResource = FindResource(
         hModule,

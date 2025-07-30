@@ -51,8 +51,8 @@ END
 //
 
 VS_VERSION_INFO VERSIONINFO
-FILEVERSION 0,1,9,0
-PRODUCTVERSION 0,1,9,0
+FILEVERSION 0,1,10,0
+PRODUCTVERSION 0,1,10,0
  FILEFLAGSMASK 0x3fL
 #ifdef _DEBUG
  FILEFLAGS 0x1L
@@ -69,12 +69,12 @@ BEGIN
         BEGIN
             VALUE "CompanyName", "x0reaxeax"
             VALUE "FileDescription", "Grounded2Minimal Tool"
-            VALUE "FileVersion", "0.1.9.0"
+            VALUE "FileVersion", "0.1.10.0"
             VALUE "InternalName", "Grounded2Minimal"
             VALUE "LegalCopyright", "Copyright (C) 2025 x0reaxeax"
             VALUE "OriginalFilename", "GroundedMinimal.dll"
             VALUE "ProductName", "GroundedMinimal"
-            VALUE "ProductVersion", "0.1.9.0"
+            VALUE "ProductVersion", "0.1.10.0"
         END
     END
     BLOCK "VarFileInfo"
@@ -97,6 +97,7 @@ END
 
 /////////////////////////////////////////////////////////////////////////////
 #endif    // not APSTUDIO_INVOKED
+
 
 
 

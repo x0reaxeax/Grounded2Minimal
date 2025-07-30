@@ -28,7 +28,7 @@ int main(void) {
     snprintf(
         szTargetDllPath,
         sizeof(szTargetDllPath),
-        "%s\\GroundedMinimal.dll",
+        "%s\\Grounded2Minimal.dll",
         szCurrentDir
     );
 
