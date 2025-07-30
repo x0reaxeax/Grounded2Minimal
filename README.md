@@ -3,7 +3,7 @@
 **The only thing that works right now is the Item Spawner.**  
 **I'm currently rewriting the tool from scratch.**
 
-# -== EVERYTHING BELOW IS CONSIDERED OUTDATED ==-
+# - EVERYTHING BELOW IS CONSIDERED OUTDATED -
 
 
 
