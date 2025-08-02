@@ -369,5 +369,7 @@ MigrationBackup/
 
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
-/GroundedMinimal/GroundedMinimal.7z
+
+# Version archives
+*.7z
 *.zip
