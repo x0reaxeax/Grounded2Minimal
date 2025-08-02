@@ -6,8 +6,12 @@
 
 int main(void) {
 
+    CHAR cConsume = 0;
     INT iRet = EXIT_FAILURE;
 
+    HANDLE hProcess = NULL;
+    HANDLE hThread = NULL;
+    
     CHAR szCurrentDir[MAX_PATH] = { 0 };
     CHAR szTargetDllPath[MAX_PATH * 2] = { 0 };
     LPCSTR cszTargetProcessName = "Grounded2-WinGRTS-Shipping.exe";
@@ -22,7 +26,7 @@ int main(void) {
             "[-] GetCurrentDirectoryA() - E%lu\n", 
             GetLastError()
         );
-        return EXIT_FAILURE;
+        goto _FINAL;
     }
 
     snprintf(
@@ -32,8 +36,6 @@ int main(void) {
         szCurrentDir
     );
 
-    HANDLE hProcess = NULL;
-    HANDLE hThread = NULL;
 
     HANDLE hFile = CreateFileA(
         szTargetDllPath,
@@ -51,7 +53,7 @@ int main(void) {
             "[-] DLL not found: '%s'\n", 
             szTargetDllPath
         );
-        return EXIT_FAILURE;
+        goto _FINAL;
     }
     CloseHandle(hFile);
 
@@ -66,7 +68,7 @@ int main(void) {
             "[-] CreateToolhelp32Snapshot() - E%lu\n",
             GetLastError()
         );
-        return EXIT_FAILURE;
+        goto _FINAL;
     }
 
     PROCESSENTRY32 procEntry32 = {
@@ -80,7 +82,7 @@ int main(void) {
             GetLastError()
         );
         CloseHandle(hSnapshot);
-        return EXIT_FAILURE;
+        goto _FINAL;
     }
 
     DWORD dwTargetProcessId = 0;
@@ -101,7 +103,7 @@ int main(void) {
             stderr,
             "[-] Grounded2 process not found.\n"
         );
-        return EXIT_FAILURE;
+        goto _FINAL;
     }
 
     printf(
@@ -122,7 +124,7 @@ int main(void) {
             "[-] OpenProcess() - E%lu\n",
             GetLastError()
         );
-        return EXIT_FAILURE;
+        goto _FINAL;
     }
 
     printf(
@@ -231,8 +233,11 @@ int main(void) {
     printf("[+] Success\n");
 
     iRet = EXIT_SUCCESS;
-
+    goto _SKIP;
 _FINAL:
+    cConsume = getchar();
+    
+_SKIP:
     if (NULL != hThread) {
         CloseHandle(hThread);
     }
