@@ -32,7 +32,7 @@
 | `Clay` |  |
 | `Fertilizer` |  |
 | `StoneQuartzite` |  |
-| `FiberDry` |  |
+| `FiberDry` | Dry Grass Chunk |
 | `ThistleNeedle` |  |
 | `DandelionPuff` |  |
 | `FuzzMite` |  |
