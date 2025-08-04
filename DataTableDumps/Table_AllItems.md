@@ -4,7 +4,7 @@
 | -----------------  | --------------- |
 | `LabChair` |  |
 | `LabChairB` |  |
-| `StoneShale` |  |
+| `StoneShale` | Pebblet  |
 | `FiberRaw` | Plant Fiber |
 | `Twig` |  |
 | `Leaf` |  |
@@ -16,7 +16,7 @@
 | `DirtyDrop` |  |
 | `JuiceDrop` |  |
 | `SodaDrop` |  |
-| `Log` |  |
+| `Log` | Weed Stem |
 | `GrassPlank` |  |
 | `AcornTop` |  |
 | `AcornShell` |  |
@@ -156,8 +156,8 @@
 | `UpgradeCrystalIBM` |  |
 | `UnknownItem` |  |
 | `Fabric` |  |
-| `FiberWoven` |  |
-| `Rubber` |  |
+| `FiberWoven` | Crude Rope |
+| `Rubber` | Bug Rubber |
 | `TwigHardened` |  |
 | `Resin` |  |
 | `Acid` |  |
