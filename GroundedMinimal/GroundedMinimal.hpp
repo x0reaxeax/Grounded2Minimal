@@ -57,6 +57,7 @@ typedef BOOL (WINAPI *MiniDumpWriteDump_t)(
 extern bool ShowDebugConsole;
 extern bool GlobalOutputEnabled;
 extern VersionInfo GroundedMinimalVersionInfo;
+extern std::vector<SDK::APlayerState*> g_vPlayers;
 
 ////////////////////////////////////
 /// Functions

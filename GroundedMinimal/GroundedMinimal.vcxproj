@@ -84,11 +84,18 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
     <PreBuildEvent>
-      <Command>powershell -ExecutionPolicy Bypass -File "$(ProjectDir)IncrementVersion.ps1"</Command>
+      <Command>powershell -ExecutionPolicy Bypass -File "$(ProjectDir)IncrementVersion.ps1"
+del "$(OutDir)Grounded2Minimal.dll"</Command>
     </PreBuildEvent>
     <PreBuildEvent>
       <Message>Increment Build Number</Message>
     </PreBuildEvent>
+    <PostBuildEvent>
+      <Command>rename "$(OutDir)GroundedMinimal.dll" "Grounded2Minimal.dll"</Command>
+    </PostBuildEvent>
+    <PostBuildEvent>
+      <Message>Rename DLL to Grounded2Minimal</Message>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
@@ -108,11 +115,18 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
     <PreBuildEvent>
-      <Command>powershell -ExecutionPolicy Bypass -File "$(ProjectDir)IncrementVersion.ps1"</Command>
+      <Command>powershell -ExecutionPolicy Bypass -File "$(ProjectDir)IncrementVersion.ps1"
+del "$(OutDir)Grounded2Minimal.dll"</Command>
     </PreBuildEvent>
     <PreBuildEvent>
       <Message>Increment Build Number</Message>
     </PreBuildEvent>
+    <PostBuildEvent>
+      <Command>rename "$(OutDir)GroundedMinimal.dll" "Grounded2Minimal.dll"</Command>
+    </PostBuildEvent>
+    <PostBuildEvent>
+      <Message>Rename DLL to Grounded2Minimal</Message>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
@@ -128,11 +142,18 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
     <PreBuildEvent>
-      <Command>powershell -ExecutionPolicy Bypass -File "$(ProjectDir)IncrementVersion.ps1"</Command>
+      <Command>powershell -ExecutionPolicy Bypass -File "$(ProjectDir)IncrementVersion.ps1"
+del "$(OutDir)Grounded2Minimal.dll"</Command>
     </PreBuildEvent>
     <PreBuildEvent>
       <Message>Increment Build Number</Message>
     </PreBuildEvent>
+    <PostBuildEvent>
+      <Command>rename "$(OutDir)GroundedMinimal.dll" "Grounded2Minimal.dll"</Command>
+    </PostBuildEvent>
+    <PostBuildEvent>
+      <Message>Rename DLL to Grounded2Minimal</Message>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
@@ -152,11 +173,18 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
     <PreBuildEvent>
-      <Command>powershell -ExecutionPolicy Bypass -File "$(ProjectDir)IncrementVersion.ps1"</Command>
+      <Command>powershell -ExecutionPolicy Bypass -File "$(ProjectDir)IncrementVersion.ps1"
+del "$(OutDir)Grounded2Minimal.dll"</Command>
     </PreBuildEvent>
     <PreBuildEvent>
       <Message>Increment Build Number</Message>
     </PreBuildEvent>
+    <PostBuildEvent>
+      <Command>rename "$(OutDir)GroundedMinimal.dll" "Grounded2Minimal.dll"</Command>
+    </PostBuildEvent>
+    <PostBuildEvent>
+      <Message>Rename DLL to Grounded2Minimal</Message>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="C2Cycle.cpp" />
@@ -191,6 +219,7 @@
     <ClInclude Include="SDK\BP_SurvivalGameMode_classes.hpp" />
     <ClInclude Include="SDK\BP_SurvivalGameMode_parameters.hpp" />
     <ClInclude Include="SDK\BP_WorldItem_classes.hpp" />
+    <ClInclude Include="SDK\OEIOnlineSubsystemUtils_structs.hpp" />
     <ClInclude Include="Summon.hpp" />
     <ClInclude Include="UnrealContainers.hpp" />
     <ClInclude Include="UnrealUtils.hpp" />
@@ -198,7 +227,7 @@
     <ClInclude Include="WinGUI.hpp" />
   </ItemGroup>
   <ItemGroup>
-    <ResourceCompile Include="GroundedMinimal.rc" />
+    <ResourceCompile Include="Grounded2Minimal.rc" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

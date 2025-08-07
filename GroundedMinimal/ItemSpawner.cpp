@@ -41,14 +41,15 @@ namespace ItemSpawner {
             return false;
         }
 
-        int32_t iTotalPlayers = lpGameStateBase->PlayerArray.Num();
+        int32_t iTotalPlayers = g_vPlayers.size();
         LogMessage(
             "ItemSpawner", 
-            "Total players in game: " + std::to_string(iTotalPlayers)
+            "Total players in game: " + std::to_string(iTotalPlayers),
+            true
         );
 
-        for (int32_t i = 0; i < lpGameStateBase->PlayerArray.Num(); i++) {
-            SDK::APlayerState *lpPlayerState = lpGameStateBase->PlayerArray[i];
+        for (int32_t i = 0; i < iTotalPlayers; i++) {
+            SDK::APlayerState *lpPlayerState = g_vPlayers.at(i);
             if (nullptr == lpPlayerState) {
                 continue;
             }

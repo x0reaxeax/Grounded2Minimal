@@ -128,9 +128,12 @@
     <ClInclude Include="SDK\Basic.hpp">
       <Filter>Header Files\SDK</Filter>
     </ClInclude>
+    <ClInclude Include="SDK\OEIOnlineSubsystemUtils_structs.hpp">
+      <Filter>Header Files\SDK</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ResourceCompile Include="GroundedMinimal.rc">
+    <ResourceCompile Include="Grounded2Minimal.rc">
       <Filter>Resource Files</Filter>
     </ResourceCompile>
   </ItemGroup>

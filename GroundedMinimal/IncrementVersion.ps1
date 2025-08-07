@@ -1,6 +1,6 @@
 # IncrementVersion.ps1
 
-$rcPath = "$PSScriptRoot\GroundedMinimal.rc"
+$rcPath = "$PSScriptRoot\Grounded2Minimal.rc"
 
 if (-Not (Test-Path $rcPath)) {
     Write-Host "RC file not found at: $rcPath"

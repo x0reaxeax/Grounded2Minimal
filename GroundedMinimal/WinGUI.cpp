@@ -173,7 +173,6 @@ namespace WinGUI {
         EnableGlobalOutput();
     }
 
-    std::vector<SDK::APlayerState*> g_vszPlayers;
     std::vector<UnrealUtils::DataTableInfo> g_vDataTables;
 
     ///////////////////////////////////////////////////////
@@ -828,15 +827,24 @@ namespace WinGUI {
         UnrealUtils::DumpConnectedPlayers(&vNewPlayers);
         EnableGlobalOutput();
 
+        if (vNewPlayers.empty()) {
+            LogMessage(
+                "WinGUI",
+                "No players connected, skipping player list update",
+                true
+            );
+            return;
+        }
+
         // Check if the player list actually changed lol
         bool bPlayersChanged = false;
-        if (vNewPlayers.size() != g_vszPlayers.size()) {
+        if (vNewPlayers.size() != g_vPlayers.size()) {
             bPlayersChanged = true;
         } else {
             // Compare player IDs to see if the list changed
             for (size_t i = 0; i < vNewPlayers.size(); ++i) {
-                if (nullptr == vNewPlayers[i] || nullptr == g_vszPlayers[i] ||
-                    vNewPlayers[i]->PlayerId != g_vszPlayers[i]->PlayerId) {
+                if (nullptr == vNewPlayers[i] || nullptr == g_vPlayers[i] ||
+                    vNewPlayers[i]->PlayerId != g_vPlayers[i]->PlayerId) {
                     bPlayersChanged = true;
                     break;
                 }
@@ -858,15 +866,15 @@ namespace WinGUI {
                 iSelectedPlayerId = (int32_t)lvGetItem.lParam;
             }
         }
-        
+
         // Update the global player list
-        g_vszPlayers = vNewPlayers;
+        g_vPlayers = vNewPlayers;
         
         // Clear and repepopopulate the ListView
         ClearPlayerTable();
         
         int iNewSelectionIndex = -1; // Track where to restore selection
-        for (const auto& lpPlayerState : g_vszPlayers) {
+        for (const auto& lpPlayerState : g_vPlayers) {
             if (nullptr == lpPlayerState) {
                 continue;
             }
@@ -875,10 +883,19 @@ namespace WinGUI {
             int32_t iPlayerId = lpPlayerState->PlayerId;
             bool bHostAuthority = lpPlayerState->HasAuthority();
             std::wstring fszPlayerNameW;
-            
+
+            if (iPlayerId < 0) {
+                LogError(
+                    "WinGUI", 
+                    "Invalid PlayerId: %d" + std::to_string(iPlayerId)
+                );
+                continue; // Skip invalid players
+            }
+
             if (!CoreUtils::Utf8ToWideString(fszPlayerName.ToString(), fszPlayerNameW)) {
                 LogError("WinGUI", "Failed to convert player name to wide string");
-                continue;
+                fszPlayerNameW = L"Unknown Player";
+                //continue;
             }
 
             AddPlayerRow(fszPlayerNameW, iPlayerId, bHostAuthority);
@@ -939,18 +956,18 @@ namespace WinGUI {
 
             case WM_TIMER: {
                 if (wParam == IDC_TIMER_PLAYER_UPDATE) {
-                    HWND hFocusedWindow = GetFocus();
-                    if (
-                        hFocusedWindow == g_hEditItemCount 
-                        || 
-                        hFocusedWindow == g_hEditItemSearch
-                        ||
-                        hFocusedWindow == g_hEditClassSearch
-                    ) {
-                        // Delay update if user is typing try for 2 seconds later lol
-                        SetTimer(g_hMainWnd, IDC_TIMER_PLAYER_UPDATE, 2000, NULL);
-                        return 0;
-                    }
+                    //HWND hFocusedWindow = GetFocus();
+                    //if (
+                    //    hFocusedWindow == g_hEditItemCount 
+                    //    || 
+                    //    hFocusedWindow == g_hEditItemSearch
+                    //    ||
+                    //    hFocusedWindow == g_hEditClassSearch
+                    //) {
+                    //    // Delay update if user is typing try for 2 seconds later lol
+                    //    SetTimer(g_hMainWnd, IDC_TIMER_PLAYER_UPDATE, 2000, NULL);
+                    //    return 0;
+                    //}
                     PopulatePlayerList();
                     // Reset to normal 5-second interval, yes, cutting-edge technology
                     SetTimer(g_hMainWnd, IDC_TIMER_PLAYER_UPDATE, 5000, NULL);
@@ -1433,7 +1450,11 @@ namespace WinGUI {
         LogMessage("WinGUI", "GUI initialized, populating data...");
 
         // Populate player list initially
-        PopulatePlayerList();
+        do {
+            LogMessage("WinGUI", "Populating player list...");
+            PopulatePlayerList();
+            std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+        } while (g_vPlayers.empty());
 
         // Populate DataTable list (TODO: wrap this one too)
         ClearDataTableList();

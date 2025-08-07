@@ -154,15 +154,6 @@ namespace UnrealUtils {
             SDK::FString fszPlayerName = lpPlayerState->GetPlayerName();
             bool bHasAuthority = lpPlayerState->HasAuthority();
 
-            // tento kokot furt a porad piska, do pice s nim
-                /*std::wcout
-                    << L"[PlayerInfo] Player: " << fszPlayerName.ToWString() << "\n"
-                    << L"  * Authority:  " << (bHasAuthority ? L"Yes" : L"No") << "\n"
-                    << L"  * ID:         " << lpPlayerState->PlayerId << "\n"
-                    << L"  * Index:      " << lpPlayerState->Index << "\n"
-                    << L"  * ArrayIndex: " << i
-                    << std::endl;*/
-            
             LogMessage(
                 L"PlayerInfo",
                 L"Player: '" + fszPlayerName.ToWString() + L"'\n" +
@@ -170,6 +161,49 @@ namespace UnrealUtils {
                 L"  * ID:         " + std::to_wstring(lpPlayerState->PlayerId) + L"\n" +
                 L"  * Index:      " + std::to_wstring(lpPlayerState->Index) + L"\n" +
                 L"  * ArrayIndex: " + std::to_wstring(i)
+            );
+        }
+    }
+
+    void DumpConnectedPlayers3(
+        std::vector<SDK::APlayerState*> *vlpPlayerStatesOut
+    ) {
+        SDK::UWorld *lpWorld = SDK::UWorld::GetWorld();
+        if (nullptr == lpWorld) {
+            return;
+        }
+        SDK::TArray<SDK::AActor*> alpFoundActors;
+        SDK::UGameplayStatics::GetAllActorsOfClass(
+            lpWorld,
+            SDK::APlayerState::StaticClass(),
+            &alpFoundActors
+        );
+
+        for (SDK::AActor* lpActor : alpFoundActors) {
+            SDK::APlayerState *lpPlayerState = static_cast<SDK::APlayerState*>(lpActor);
+            if (nullptr == lpPlayerState) {
+                continue;
+            }
+
+            if (lpPlayerState->PlayerId < 240) {
+                // Skip player states with PlayerId < 240, these are likely not valid players
+                continue;
+            }
+
+            // Add to output vector if provided
+            if (nullptr != vlpPlayerStatesOut) {
+                vlpPlayerStatesOut->push_back(lpPlayerState);
+            }
+
+            SDK::FString fszPlayerName = lpPlayerState->GetPlayerName();
+            bool bHasAuthority = lpPlayerState->HasAuthority();
+
+            LogMessage(
+                L"PlayerInfo",
+                L"Player: '" + fszPlayerName.ToWString() + L"'\n" +
+                L"  * Authority:  " + std::wstring(bHasAuthority ? L"Yes" : L"No") + L"\n" +
+                L"  * ID:         " + std::to_wstring(lpPlayerState->PlayerId) + L"\n" +
+                L"  * Index:      " + std::to_wstring(lpPlayerState->Index) + L"\n"
             );
         }
     }

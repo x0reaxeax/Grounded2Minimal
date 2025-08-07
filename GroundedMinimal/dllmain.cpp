@@ -71,6 +71,8 @@ ProcessEvent_t OriginalChatBoxWidgetProcessEvent = nullptr;
 static bool g_bRunning = true;
 static bool g_bDebug = false;
 
+std::vector<SDK::APlayerState*> g_vPlayers;
+
 /*
 inline volatile bool CheckGlobalOutputEnabled(void) {
     volatile bool bForceRead = *((volatile bool *) &GlobalOutputEnabled);
@@ -179,11 +181,12 @@ bool CheckNullAndLog(
     const std::string& szPtrName, 
     const std::string& szContext
 ) {
+    if (!CheckGlobalOutputEnabled() && !g_bDebug) {
+        return false;
+    }
     if (nullptr == lpcPtr) {
         std::string szFullContext = szContext.empty() ? "General" : szContext;
-        if (CheckGlobalOutputEnabled()) {
-            std::cout << "[" << szFullContext << "] " << szPtrName << " is NULL." << std::endl;
-        }
+        std::cout << "[" << szFullContext << "] " << szPtrName << " is NULL." << std::endl;
         return true;
     }
     return false;
@@ -667,7 +670,7 @@ DWORD WINAPI ThreadEntry(
     }
 
     if (!HookManager::InstallHook(
-        UnrealUtils::GetLocalPawn(), 
+        UnrealUtils::GetLocalPawn(),
         _HookedProcessEvent, 
         &OriginalProcessEvent
     )) {

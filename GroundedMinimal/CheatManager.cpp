@@ -28,6 +28,11 @@ namespace CheatManager {
         }
 
         int32_t iLocalPlayerId = UnrealUtils::GetLocalPlayerId();
+        LogMessage(
+            "EnableCheats",
+            "Local player ID: " + std::to_string(iLocalPlayerId),
+            true
+        );
         SDK::APlayerController *lpLocalPlayerController = nullptr;
         for (int32_t i = 0; i < lpOwningGameInstance->LocalPlayers.Num(); i++) {
             SDK::ULocalPlayer *lpLocalPlayer = lpOwningGameInstance->LocalPlayers[i];
