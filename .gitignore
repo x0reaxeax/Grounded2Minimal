@@ -373,3 +373,9 @@ FodyWeavers.xsd
 # Version archives
 *.7z
 *.zip
+/Grounded2Minimal/SDK
+/Grounded2Minimal/NameCollisions.inl
+/Grounded2Minimal/PropertyFixup.hpp
+/Grounded2Minimal/SDK.hpp
+/Grounded2Minimal/UtfN.hpp
+/Grounded2Minimal/UnrealContainers.hpp
