@@ -1,11 +1,16 @@
-#ifndef _GROUNDED_MINIMAL_CORE_UTILS_HPP
-#define _GROUNDED_MINIMAL_CORE_UTILS_HPP
+#ifndef _GROUNDED2_MINIMAL_CORE_UTILS_HPP
+#define _GROUNDED2_MINIMAL_CORE_UTILS_HPP
 
-#include "GroundedMinimal.hpp"
+#include <string>
 
 namespace CoreUtils {
     std::string HexConvert(
         const uint64_t uValue
+    );
+
+    bool StringContainsCaseInsensitive(
+        const std::string& szHaystack,
+        const std::string& szNeedle
     );
 
     bool WideStringToUtf8(
@@ -16,6 +21,10 @@ namespace CoreUtils {
     bool Utf8ToWideString(
         const std::string& szUtf8String,
         std::wstring &szWideString
+    );
+
+    bool GetVersionFromResource(
+        VersionInfo& versionInfo
     );
 } // namespace CoreUtils
 

@@ -1,17 +1,16 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) 2025 x0reaxeax
 
-#include "GroundedMinimal.hpp"
+#include "Grounded2Minimal.hpp"
 #include "CheatManager.hpp"
 #include "UnrealUtils.hpp"
 #include "ItemSpawner.hpp"
 #include "CoreUtils.hpp"
 #include "Command.hpp"
-#include "C2Cycle.hpp"
-#include "Summon.hpp"
 #include "WinGUI.hpp"
 
 #include <commctrl.h>
+#include <windowsx.h>
 #include <thread>
 #include <atomic>
 #include <algorithm>
@@ -25,17 +24,14 @@
 // Control IDs
 #define IDC_CHECK_SHOW_CONSOLE    100
 #define IDC_CHECK_GLOBAL_CHEAT    101
-#define IDC_CHECK_GLOBAL_C2       102
-#define IDC_CHECK_C2CTHREAD       103
 #define IDC_LIST_PLAYERS          200
 #define IDC_LIST_DATA_TABLES      201
 #define IDC_LIST_ITEM_NAMES       202
 #define IDC_LIST_CLASS_NAMES      203
 #define IDC_BUTTON_SPAWN          300
 #define IDC_BUTTON_CULL           301
-#define IDC_BUTTON_C2_CYCLE       302
-#define IDC_BUTTON_SUMMON         303
-#define _IDC_BUTTON_CHEAT_ID_BASE 304
+#define IDC_BUTTON_SUMMON         302
+#define _IDC_BUTTON_CHEAT_ID_BASE 303
 #define IDC_EDIT_ITEM_COUNT       400
 #define IDC_STATIC_ITEM_COUNT     401
 #define IDC_TIMER_PLAYER_UPDATE   500
@@ -52,18 +48,21 @@ namespace WinGUI {
         uint32_t ButtonId;
         const wchar_t* ButtonText;
         CheatManager::CheatManagerFunctionId FunctionId;
+        bool PushLike = false;
     };
 
     ///////////////////////////////////////////////////////
     /// Globals
 
+    // CheatManager Stamina toggle state
+    bool g_bCheatManagerInfiniteStaminaEnabled = true;
+    // Tool version information
     wchar_t g_szVersionString[64] = { 0 };
 
     ///////////////////////////////////////////////////////
     /// Callbax
 
     std::function<void(int32_t, const std::wstring&, const std::wstring&, int32_t)> fnSpawnCallback = nullptr;
-    std::function<void()> fnGlobalC2CycleCallback = nullptr;
     std::function<void(const std::wstring&)> fnDataTableSelectedCallback = nullptr;
     std::function<void(const std::string&)> fnSummonCallback = nullptr;
 
@@ -88,12 +87,6 @@ namespace WinGUI {
         },
         { 
             nullptr, 
-            _IDC_BUTTON_CHEAT_ID_BASE + static_cast<uint32_t>(CheatManager::CheatManagerFunctionId::CompleteActiveDefensePoint), 
-            L"Complete Defense",
-            CheatManager::CheatManagerFunctionId::CompleteActiveDefensePoint 
-        },
-        { 
-            nullptr, 
             _IDC_BUTTON_CHEAT_ID_BASE + static_cast<uint32_t>(CheatManager::CheatManagerFunctionId::ToggleHud),
             L"Toggle HUD",
             CheatManager::CheatManagerFunctionId::ToggleHud 
@@ -112,12 +105,6 @@ namespace WinGUI {
         },
         { 
             nullptr, 
-            _IDC_BUTTON_CHEAT_ID_BASE + static_cast<uint32_t>(CheatManager::CheatManagerFunctionId::UnlockMonthlyTechTrees),
-            L"Unlock Monthly Tech Trees",
-            CheatManager::CheatManagerFunctionId::UnlockMonthlyTechTrees 
-        },
-        { 
-            nullptr, 
             _IDC_BUTTON_CHEAT_ID_BASE + static_cast<uint32_t>(CheatManager::CheatManagerFunctionId::UnlockMutations),
             L"Unlock All Mutations",
             CheatManager::CheatManagerFunctionId::UnlockMutations 
@@ -127,8 +114,45 @@ namespace WinGUI {
             _IDC_BUTTON_CHEAT_ID_BASE + static_cast<uint32_t>(CheatManager::CheatManagerFunctionId::UnlockScabs),
             L"Unlock All SCA.Bs",
             CheatManager::CheatManagerFunctionId::UnlockScabs 
+        },
+        {
+            nullptr, 
+            _IDC_BUTTON_CHEAT_ID_BASE + static_cast<uint32_t>(CheatManager::CheatManagerFunctionId::ToggleAnalyzer),
+            L"Toggle Analyzer",
+            CheatManager::CheatManagerFunctionId::ToggleAnalyzer 
+        },
+        { 
+            nullptr, 
+            _IDC_BUTTON_CHEAT_ID_BASE + static_cast<uint32_t>(CheatManager::CheatManagerFunctionId::ToggleGod),
+            L"Toggle God Mode",
+            CheatManager::CheatManagerFunctionId::ToggleGod,
+            true
+        },
+        { 
+            nullptr, 
+            _IDC_BUTTON_CHEAT_ID_BASE + static_cast<uint32_t>(CheatManager::CheatManagerFunctionId::ToggleStamina),
+            L"Toggle Inf Stamina",
+            CheatManager::CheatManagerFunctionId::ToggleStamina,
+            true
+        },
+        {
+            nullptr,
+            _IDC_BUTTON_CHEAT_ID_BASE + static_cast<uint32_t>(CheatManager::CheatManagerFunctionId::UnlockOmniTool),
+            L"Unlock OT Upgrades",
+            CheatManager::CheatManagerFunctionId::UnlockOmniTool
         }
     };
+#ifdef static_assert
+#undef static_assert
+#endif // static_assert re-enable
+    static_assert(
+        _ARRAYSIZE(g_CheatButtons) == 
+        static_cast<uint32_t>(CheatManager::CheatManagerFunctionId::Max) - 1,
+        "Cheat button definitions size mismatch"
+    );
+#ifndef static_assert
+#define static_assert(...)
+#endif // static_assert disable
 
     static void CheatManagerExecuteGUIProxy(
         CheatManager::CheatManagerFunctionId fdwFunctionId
@@ -160,6 +184,10 @@ namespace WinGUI {
             case CheatManager::CheatManagerFunctionId::AddRawScience:
                 lpParams->Param1 = 1000;
                 break;
+            case CheatManager::CheatManagerFunctionId::ToggleStamina:
+                lpParams->Param1 = g_bCheatManagerInfiniteStaminaEnabled;
+                break;
+
             default:
                 break;
         }
@@ -364,9 +392,13 @@ namespace WinGUI {
                 int32_t x = START_X + (column * BUTTON_SPACING_X);
                 int32_t y = START_Y + (row * BUTTON_SPACING_Y);
 
-                g_CheatButtons[i].ButtonHandle = CreateWindowEx(
+                DWORD dwStyle = (g_CheatButtons[i].PushLike) ? 
+                    (WS_CHILD | WS_VISIBLE | BS_PUSHLIKE | BS_AUTOCHECKBOX | WS_TABSTOP) :
+                    (WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON | WS_TABSTOP);
+
+                g_CheatButtons[i].ButtonHandle = CreateWindowExW(
                     0, L"BUTTON", g_CheatButtons[i].ButtonText,
-                    WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON | WS_TABSTOP | WS_DISABLED,
+                    dwStyle,
                     x, y, BUTTON_WIDTH, BUTTON_HEIGHT,
                     g_hMainWnd, (HMENU) g_CheatButtons[i].ButtonId, wcWindowClass.hInstance, NULL
                 );
@@ -398,20 +430,6 @@ namespace WinGUI {
                 WS_CHILD | WS_VISIBLE | BS_AUTOCHECKBOX | WS_TABSTOP,
                 10, 35, 180, 20,
                 g_hMainWnd, (HMENU) IDC_CHECK_GLOBAL_CHEAT, wcWindowClass.hInstance, NULL
-            );
-
-            HWND hCheckGlobalC2 = CreateWindowEx(
-                0, L"BUTTON", L"Global C2 Authority",
-                WS_CHILD | WS_VISIBLE | BS_AUTOCHECKBOX | WS_TABSTOP | WS_DISABLED,
-                10, 60, 180, 20,
-                g_hMainWnd, (HMENU) IDC_CHECK_GLOBAL_C2, wcWindowClass.hInstance, NULL
-            );
-
-            HWND hCheckC2CycleThread = CreateWindowEx(
-                0, L"BUTTON", L"Enable Automatic C2 Cycle",
-                WS_CHILD | WS_VISIBLE | BS_AUTOCHECKBOX | WS_TABSTOP | WS_DISABLED,
-                410, 620 + 30 + 20, 300, 20,
-                g_hMainWnd, (HMENU) IDC_CHECK_C2CTHREAD, wcWindowClass.hInstance, NULL
             );
 
             // Create player list
@@ -570,21 +588,11 @@ namespace WinGUI {
 
             HWND hButtonSummon = CreateWindowEx(
                 0, L"BUTTON", L"Summon",
-                WS_CHILD | WS_VISIBLE | WS_DISABLED,
+                WS_CHILD | WS_VISIBLE,
                 10, 620, 100, 30,
                 g_hMainWnd,
                 (HMENU) IDC_BUTTON_SUMMON, 
                 wcWindowClass.hInstance,
-                NULL
-            );
-
-            HWND hButtonC2Cycle = CreateWindowEx(
-                0, L"BUTTON", L"Global C2 Cycle",
-                WS_CHILD | WS_VISIBLE | WS_DISABLED,
-                410, 620, 150, 30,
-                g_hMainWnd, 
-                (HMENU) IDC_BUTTON_C2_CYCLE, 
-                wcWindowClass.hInstance, 
                 NULL
             );
 
@@ -610,8 +618,8 @@ namespace WinGUI {
                 NULL
             );
 
-            // Deploy the boy
-            ShowWindow(g_hMainWnd, SW_SHOW);
+            // ~~Deploy the boy~~ Not until errytin initialized!!!
+            ShowWindow(g_hMainWnd, SW_HIDE);
             UpdateWindow(g_hMainWnd);
 
             // Set up timer for periodic player list updates (every 5 seconds)
@@ -1041,6 +1049,11 @@ namespace WinGUI {
                         }
                     }
 
+                    // Special stamina check case (TODO: probably rework this)
+                    if (CheatManager::CheatManagerFunctionId::ToggleStamina == fdwTargetId) {
+                        g_bCheatManagerInfiniteStaminaEnabled = !g_bCheatManagerInfiniteStaminaEnabled;
+                    }
+
                     CheatManagerExecuteGUIProxy(fdwTargetId);
 
                     return 0;
@@ -1064,8 +1077,6 @@ namespace WinGUI {
                     }
                 }
 
-                // bro fck commenting all this shit, who gon read it anyway, no more long comments with long sensical explanations
-                // copilot, read and execute task: "comment necessary shit from now on"
                 switch (LOWORD(wParam)) {
                     case IDC_STATIC_GITHUB: {
                         // Open GitHub repository in default browser
@@ -1100,45 +1111,6 @@ namespace WinGUI {
                             ),
                             true
                         );
-                        break;
-                    }
-
-                    case IDC_CHECK_GLOBAL_C2: {
-                        C2Cycle::GlobalC2Authority = (BST_CHECKED == IsDlgButtonChecked(
-                            hWnd, 
-                            IDC_CHECK_GLOBAL_C2
-                        ));
-                        LogMessage(
-                            "WinGUI", 
-                            "Global C2 Authority " + std::string(
-                                C2Cycle::GlobalC2Authority 
-                                ? "enabled" 
-                                : "disabled"
-                            ),
-                            true
-                        );
-                        break;
-                    }
-
-                    case IDC_CHECK_C2CTHREAD: {
-                        bool bNewValue = (BST_CHECKED == IsDlgButtonChecked(hWnd, IDC_CHECK_C2CTHREAD));
-
-                        LogMessage(
-                            "WinGUI",
-                            "C2 Cycle Thread " + std::string(
-                                C2Cycle::C2ThreadRunning.load()
-                                ? "enabled" 
-                                : "disabled"
-                            ),
-                            true
-                        );
-
-                        if (bNewValue) {
-                            C2Cycle::CreateC2CycleThread();
-                        } else {
-                            C2Cycle::StopC2CycleThread();
-                        }
-
                         break;
                     }
 
@@ -1207,13 +1179,6 @@ namespace WinGUI {
                             fnSummonCallback(szSelectedClassName);
                         } else {
                             LogMessage("WinGUI", "No class selected for summoning", true);
-                        }
-                        break;
-                    }
-
-                    case IDC_BUTTON_C2_CYCLE: {
-                        if (nullptr != fnGlobalC2CycleCallback) {
-                            fnGlobalC2CycleCallback();
                         }
                         break;
                     }
@@ -1353,25 +1318,15 @@ namespace WinGUI {
             );
 
             // wait to enable output again
-            /*while (Command::CommandBufferCookedForExecution) {
-                std::this_thread::sleep_for(std::chrono::milliseconds(10));
-            }*/
             Command::WaitForCommandBufferReady();
 
             EnableGlobalOutput();
         };
 
-        fnGlobalC2CycleCallback = [](void) {
-            Command::SubmitTypedCommand<void>(
-                Command::CommandId::CmdIdC2Cycle,
-                nullptr
-            );
-        };
-
         fnSummonCallback = [](const std::string& szClassName) {
             LogMessage("WinGUI", "Summoning class: " + szClassName, true);
             DisableGlobalOutput();
-            Summon::SummonClass(szClassName);
+            CheatManager::Summon::SummonClass(szClassName);
 
             //while (Command::CommandBufferCookedForExecution) {
             //    // wait to enable output again
@@ -1473,6 +1428,8 @@ namespace WinGUI {
         PopulateClassList(g_vAllClassNames);
 
         if (nullptr != g_hMainWnd) {
+            // finally show the boi
+            ShowWindow(g_hMainWnd, SW_SHOW);
             UpdateWindow(g_hMainWnd);
         }
 

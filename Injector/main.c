@@ -3,19 +3,20 @@
 
 #include <stdio.h>
 
+#define PLATFORM_STEAM
 
 int main(void) {
 
-    CHAR cConsume = 0;
     INT iRet = EXIT_FAILURE;
 
-    HANDLE hProcess = NULL;
-    HANDLE hThread = NULL;
-    
     CHAR szCurrentDir[MAX_PATH] = { 0 };
     CHAR szTargetDllPath[MAX_PATH * 2] = { 0 };
+#if defined(PLATFORM_STEAM)
     LPCSTR cszTargetProcessName = "Grounded2-WinGRTS-Shipping.exe";
-    
+#elif defined(PLATFORM_XGP)
+    LPCSTR cszTargetProcessName = "Grounded2-WinGDK-Shipping.exe";
+#endif // PLATFORM_STEAM
+
     // Get current directory
     if (0 == GetCurrentDirectoryA(
         sizeof(szCurrentDir),
@@ -23,10 +24,10 @@ int main(void) {
     )) {
         fprintf(
             stderr,
-            "[-] GetCurrentDirectoryA() - E%lu\n", 
+            "[-] GetCurrentDirectoryA() - E%lu\n",
             GetLastError()
         );
-        goto _FINAL;
+        return EXIT_FAILURE;
     }
 
     snprintf(
@@ -36,6 +37,8 @@ int main(void) {
         szCurrentDir
     );
 
+    HANDLE hProcess = NULL;
+    HANDLE hThread = NULL;
 
     HANDLE hFile = CreateFileA(
         szTargetDllPath,
@@ -50,10 +53,10 @@ int main(void) {
     if (INVALID_HANDLE_VALUE == hFile) {
         fprintf(
             stderr,
-            "[-] DLL not found: '%s'\n", 
+            "[-] DLL not found: '%s'\n",
             szTargetDllPath
         );
-        goto _FINAL;
+        return EXIT_FAILURE;
     }
     CloseHandle(hFile);
 
@@ -68,7 +71,7 @@ int main(void) {
             "[-] CreateToolhelp32Snapshot() - E%lu\n",
             GetLastError()
         );
-        goto _FINAL;
+        return EXIT_FAILURE;
     }
 
     PROCESSENTRY32 procEntry32 = {
@@ -82,7 +85,7 @@ int main(void) {
             GetLastError()
         );
         CloseHandle(hSnapshot);
-        goto _FINAL;
+        return EXIT_FAILURE;
     }
 
     DWORD dwTargetProcessId = 0;
@@ -103,7 +106,7 @@ int main(void) {
             stderr,
             "[-] Grounded2 process not found.\n"
         );
-        goto _FINAL;
+        return EXIT_FAILURE;
     }
 
     printf(
@@ -124,7 +127,7 @@ int main(void) {
             "[-] OpenProcess() - E%lu\n",
             GetLastError()
         );
-        goto _FINAL;
+        return EXIT_FAILURE;
     }
 
     printf(
@@ -233,11 +236,8 @@ int main(void) {
     printf("[+] Success\n");
 
     iRet = EXIT_SUCCESS;
-    goto _SKIP;
+
 _FINAL:
-    cConsume = getchar();
-    
-_SKIP:
     if (NULL != hThread) {
         CloseHandle(hThread);
     }

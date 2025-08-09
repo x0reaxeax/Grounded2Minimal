@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) 2025 x0reaxeax
 
-#ifndef _GROUNDED_MINIMAL_COMMAND_HPP
-#define _GROUNDED_MINIMAL_COMMAND_HPP
+#ifndef _GROUNDED2_MINIMAL_COMMAND_HPP
+#define _GROUNDED2_MINIMAL_COMMAND_HPP
 
 #include <cstdint>
 #include <string>
@@ -23,9 +23,9 @@ namespace Command {
         CmdIdSpawnItem,
         CmdIdEnumPlayers,
         CmdIdCullItemInstance,
-        CmdIdC2Cycle,
         CmdIdSummon,
         CmdIdCheatManagerExecute,
+        CmdIdEnableCheats,
         CmdIdMax
     };
 
@@ -47,7 +47,7 @@ namespace Command {
         T* Params
     ) {
         std::unique_lock<std::mutex> lock(CommandBufferMutex);
-        
+
         // Wait until buffer is free while holding the lock
         CommandBufferCondition.wait(lock, []() {
             return !CommandBufferCookedForExecution.load();
@@ -61,7 +61,7 @@ namespace Command {
             };
         }
         CommandBufferCookedForExecution.store(true);
-        
+
         lock.unlock();
         CommandBufferCondition.notify_one();
     }
@@ -70,4 +70,4 @@ namespace Command {
     void ProcessCommands(void);
 }
 
-#endif // _GROUNDED_MINIMAL_COMMAND_HPP
+#endif // _GROUNDED2_MINIMAL_COMMAND_HPP

@@ -9,8 +9,8 @@ std::unordered_set<void**> HookManager::s_HookedVTables;
 std::mutex HookManager::s_HookMutex;
 
 bool HookManager::InstallHook(
-    SDK::UObject* lpObject, 
-    HookedFn fnHook, 
+    SDK::UObject* lpObject,
+    HookedFn fnHook,
     ProcessEvent_t* lpOutOriginal
 ) {
     if (nullptr == lpObject || nullptr == fnHook) {
@@ -26,7 +26,7 @@ bool HookManager::InstallHook(
 
     if (s_HookedVTables.contains(lpVTable)) {
         LogMessage(
-            "HookManager", 
+            "HookManager",
             "VTable already hooked, skipping duplicate hook"
         );
         return false;
@@ -34,9 +34,9 @@ bool HookManager::InstallHook(
 
     DWORD dwOldProtect;
     if (!VirtualProtect(
-        &lpVTable[SDK::Offsets::ProcessEventIdx], 
-        sizeof(void*), 
-        PAGE_EXECUTE_READWRITE, 
+        &lpVTable[SDK::Offsets::ProcessEventIdx],
+        sizeof(void*),
+        PAGE_EXECUTE_READWRITE,
         &dwOldProtect
     )) {
         return false;
@@ -46,9 +46,9 @@ bool HookManager::InstallHook(
     lpVTable[SDK::Offsets::ProcessEventIdx] = reinterpret_cast<void*>(fnHook);
 
     VirtualProtect(
-        &lpVTable[SDK::Offsets::ProcessEventIdx], 
-        sizeof(void*), 
-        dwOldProtect, 
+        &lpVTable[SDK::Offsets::ProcessEventIdx],
+        sizeof(void*),
+        dwOldProtect,
         &dwOldProtect
     );
 
@@ -60,7 +60,7 @@ bool HookManager::InstallHook(
     }
 
     LogMessage(
-        "HookManager", 
+        "HookManager",
         "Hook installed on: " + lpObject->GetName()
     );
     return true;

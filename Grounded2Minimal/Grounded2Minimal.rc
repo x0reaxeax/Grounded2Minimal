@@ -17,7 +17,6 @@
 
 #if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_ENU)
 LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
-#pragma code_page(1252)
 
 #ifdef APSTUDIO_INVOKED
 /////////////////////////////////////////////////////////////////////////////
@@ -25,21 +24,21 @@ LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
 // TEXTINCLUDE
 //
 
-1 TEXTINCLUDE
+1 TEXTINCLUDE 
 BEGIN
-"resource.h\0"
+    "resource.h\0"
 END
 
-2 TEXTINCLUDE
+2 TEXTINCLUDE 
 BEGIN
-"#include ""winres.h""\r\n"
-"\0"
+    "#include ""winres.h""\r\n"
+    "\0"
 END
 
-3 TEXTINCLUDE
+3 TEXTINCLUDE 
 BEGIN
-"\r\n"
-"\0"
+    "\r\n"
+    "\0"
 END
 
 #endif    // APSTUDIO_INVOKED
@@ -51,36 +50,36 @@ END
 //
 
 VS_VERSION_INFO VERSIONINFO
-FILEVERSION 0,1,14,0
-PRODUCTVERSION 0,1,14,0
-FILEFLAGSMASK 0x3fL
+FILEVERSION 2,0,3,10
+PRODUCTVERSION 2,0,3,10
+ FILEFLAGSMASK 0x3fL
 #ifdef _DEBUG
-FILEFLAGS 0x1L
+ FILEFLAGS 0x1L
 #else
-FILEFLAGS 0x0L
+ FILEFLAGS 0x0L
 #endif
-FILEOS 0x40004L
-FILETYPE 0x2L
-FILESUBTYPE 0x0L
+ FILEOS 0x40004L
+ FILETYPE 0x2L
+ FILESUBTYPE 0x0L
 BEGIN
-BLOCK "StringFileInfo"
-BEGIN
-BLOCK "240004b0"
-BEGIN
-VALUE "CompanyName", "x0reaxeax"
-VALUE "FileDescription", "Grounded2Minimal Tool"
-VALUE "FileVersion", "0.1.14.0"
-VALUE "InternalName", "Grounded2Minimal"
-VALUE "LegalCopyright", "Copyright (C) 2025 x0reaxeax"
-VALUE "OriginalFilename", "GroundedMinimal.dll"
-VALUE "ProductName", "GroundedMinimal"
-VALUE "ProductVersion", "0.1.14.0"
-END
-END
-BLOCK "VarFileInfo"
-BEGIN
-VALUE "Translation", 0x2400, 1200
-END
+    BLOCK "StringFileInfo"
+    BEGIN
+        BLOCK "240004b0"
+        BEGIN
+            VALUE "CompanyName", "x0reaxeax"
+            VALUE "FileDescription", "Grounded2Minimal Tool"
+            VALUE "FileVersion", "2.0.3.10"
+            VALUE "InternalName", "Grounded2Minimal.dll"
+            VALUE "LegalCopyright", "Copyright (C) 2025 x0reaxeax"
+            VALUE "OriginalFilename", "Grounded2Minimal.dll"
+            VALUE "ProductName", "Grounded2Minimal"
+            VALUE "ProductVersion", "2.0.3.10"
+        END
+    END
+    BLOCK "VarFileInfo"
+    BEGIN
+        VALUE "Translation", 0x2400, 1200
+    END
 END
 
 #endif    // English (United States) resources
@@ -97,6 +96,13 @@ END
 
 /////////////////////////////////////////////////////////////////////////////
 #endif    // not APSTUDIO_INVOKED
+
+
+
+
+
+
+
 
 
 

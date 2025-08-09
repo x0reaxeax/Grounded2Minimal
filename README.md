@@ -1,11 +1,4 @@
-# Grounded2Minimal - Small debug/cheat/mod tool for Grounded 2 (Steam version)
-
-**The only thing that works right now is the Item Spawner.**  
-**I'm currently rewriting the tool from scratch.**
-
-# - EVERYTHING BELOW IS CONSIDERED OUTDATED -
-
-
+# Grounded2Minimal - Small debug/cheat/mod tool for Grounded 2 (Steam + Xbox Game Pass)
 
 ## !!!IMPORTANT PLZ READ!!!
 Under set configurations, this tool can allow any connected players to **EXECUTE CONTROLLED CODE ON YOUR MACHINE**.  
@@ -17,7 +10,7 @@ It is highly recommended to **BACKUP YOUR SAVE FILES** before using this tool, e
 Please refer to the [Notes](#notes) section for more information.
 
 **This tool works both with Singleplayer and Multiplayer.  
-However, in case of multiplayer lobbies, only the LOBBY HOST should use this.**
+However, in case of multiplayer lobbies, only the LOBBY HOST can use this.**
 
 ## Interfaces
  - **Ugly-ass GUI:** A simple window for convenience and abstraction of command line, copypasted straight out of MS Docs Examples.
@@ -25,7 +18,6 @@ However, in case of multiplayer lobbies, only the LOBBY HOST should use this.**
  - **Chat Commands:** If you don't want to ALT-TAB all the time.
 
 ## Features
- - **C2Cycle (TM pending):** A "fix" for massive amount of clumped AntHill food chunks. Features automated "Collect and Cull" cycles, which detect big amounts of clumped food items inside various "hotspots" on the map, and clean them up. Also features the worst possible existing algorithm that a sentient being could use.
  - **Item Spawner:** Allows either the host of the game lobby, but optionally also all connected players to spawn game items into their inventories.
  - **Class Summon:** Internal `CheatManager` summon command for internal classes. Can summon JuiceBoxes with this! (gl not getting stuck in them)
  - **Cheat Manager:** Internal `CheatManager` invokes for stuff like adding molars, raw science, unlocking stuff, etc.
@@ -33,25 +25,18 @@ However, in case of multiplayer lobbies, only the LOBBY HOST should use this.**
  - **That's it:** Adheres to the "Minimal" part of the program's name.
 
 ## Getting started
- 1. Download or build GroundedMinimal.dll
+ 1. Download or build Grounded2Minimal.dll
  2. Load into the game. Like actually load into the world, not just main menu.
- 3. Inject GroundedMinimal.dll into `Maine-Win64-Shipping.exe` using your fave injector.
+ 3. Inject Grounded2Minimal.dll into `Grounded2-WinGRTS-Shipping.exe` (Steam), or `Grounded2-WinGDK-Shipping.exe` (Xbox Game Pass) using your fave injector.
  4. Enjoy
-
-*Sideloading is broken rn, don't try to sideload this as `DBGCORE.DLL`*
 
 ## GUI Usage
 ![GUI](GUIScreenshot.png)  
 
 The simple GUI provides the following features:
 ### Settings
- - **Shod Debug Console:** Shows/Hides the debug console.
+ - **Show Debug Console:** Shows/Hides the debug console.
  - **Global Cheat Mode:** Controls whether connected players are allowed to spawn items using chat commands.
- - **Global C2 Authority:** Controls whether connected players are allowed to trigger C2Cycles using chat commands.
-
-### C2Cycle
- - **C2Cycle:** Triggers a C2Cycle (the game might freeze for a second or two).  
-If "Global C2 Authority" is enabled, all connected players can trigger a C2Cycle using the in-game chat command `/c2cycle`. Yep, just type it. The host can always use this command, regardless of the setting.  
 
 ### Item Spawner
 #### Spawning via GUI
@@ -96,11 +81,9 @@ The debug console can be used to execute the following commands:
 
 | Command              | Description               |
 | -------------------- | ------------------------- |
-| `C2`                 | Triggers a C2Cycle |
 | `H_GetAuthority`     | Checks if you're the host |
 | `X_DebugToggle`      | Toggles debug output (very spammy and performance heavy) |
 | `X_GlobalCheatMode`  | Toggles Global Cheat Mode |
-| `X_UnlockCheats`     | Patches 'EnableCheats' function to skip multiplayer checks |
 | `X_InitCheatManager` | Initializes CheatManager |
 | `P_ShowPlayers`      | Lists connected players |
 | `F_ClassDump`        | Finds all classes containing a given string needle |
@@ -108,8 +91,6 @@ The debug console can be used to execute the following commands:
 | `F_FindItemTable`    | Finds all data tables containing a given item name |
 | `F_FunctionDump`     | Finds all functions containing a given string needle |
 | `F_ItemDump`         | Finds all items within a given data table name |
-| `C_CullItem`         | Culls a specific item via the item's ID |
-| `C_CullItemType`     | Culls all items of a specific type (name) around the players |
 | `I_SpawnItem`        | Spawns a selected item into a selected player's inventory |
 | `S_SummonClass`      | Summons a selected class |
 | `<Item Name Needle>` | Searches for spawned items around the player by a given name needle (empty input displays all) |
@@ -117,10 +98,10 @@ The debug console can be used to execute the following commands:
 
 ## Building
 To build the project, you need to have a valid SDK dump generated via [Dumper-7](https://github.com/Encryqed/Dumper-7).  
-Once you have the SDK dump, place the contents of `CppSDK` directory into `GroundedMinimal\GroundedMinimal`, i.e. `$(ProjectDir)`.  
+Once you have the SDK dump, place the contents of `CppSDK` directory into `Grounded2Minimal\Grounded2Minimal`, i.e. `$(ProjectDir)`.  
 Here's a reference tree:
 ```
-GroundedMinimal [$(ProjectDir)]:
+Grounded2Minimal [$(ProjectDir)]:
 |   dllmain.cpp
 |   blah blah blah cpp/hpp
 |   NameCollisions.inl
@@ -141,59 +122,50 @@ C++17 or higher is required.
  - Please note that if "Global Cheat Mode" or "Global C2 Authority" is enabled, all connected players can use the chat commands to spawn items or trigger C2Cycles, respectively, which means that players can **!!!EXECUTE CONTROLLED CODE ON YOUR MACHINE!!!**.  
   This code is controlled, but I cannot guarantee that it cannot be exploited, so please only use this tool with people you trust.
  - Crashes may occur when (re)loading saves, or backing out to the main menu.
- - The game might temporarily freeze when cleaning up MASSIVE number of items from the ground. Just give it some time.
  - Upon exiting the game, the tool sometimes keeps the game process running, so consider killing it manually.
- - The tool was only tested with the Steam version of Grounded, and may not work with Xbox Game Pass or *other* versions.
  - The tool was only tested with 2 players, because I don't have friends (F).
 
 ## Extending
 The code is a complete dog<bleep> mess, I have no idea what I'm doing when it comes to OOP and Unreal Engine, but I tried to keep it as modular as possible.  
 File Index:
 
-* `C2Cycle.cpp/hpp` - C2Cycle implementation, the original purpose of this tool, internally referred to as "GroundedAntDiet".
 * `Command.cpp/hpp` - Command buffer processed inside the game thread via hooked process events.
+* `CoreUtils.cpp/hpp` - Core/Standard utility functions.
 * `HookManager.cpp/hpp` - Manages ProcessEvent hooks.
+* `CheatManager.cpp/hpp` - CheatManager functions.
 * `ItemSpawner.cpp/hpp` - Item Spawner implementation.
 * `UnrealUtils.cpp/hpp` - Misc Unreal Engine helper utilities.
 * `WinGUI.cpp/hpp` - The GUI "implementation" lol.
+* `Interpreter.cpp/hpp` - Command line interpreter implementation.
+* `Logging.cpp/hpp` - Logging utilities.
 * `dllmain.cpp` - The main entry and command line interpreter implementation.
-* `dbgcore.cpp` - Unfinished/broken `DBGCORE.DLL` sideloading implementation (don't rely on this).
+
+### Extending CheatManager
+Cheat Manager functions can be added via the following steps:
+1. Define a new `CheatManagerFunctionId` enum value for the wanted function in `CheatManager.hpp`.
+2. Implement the function call in `CheatManagerExecute` (`CheatManager.cpp`).
+3. Optionally, add a GUI button for the function inside `CheatButtonDefinition g_CheatButtons[]` in `WinGUI.cpp`, or a callable CLI command in `Interpreter.cpp`.  
 
 ## Credits
  - [Dumper-7](https://github.com/Encryqed/Dumper-7) - Used to generate the SDK dump.
  - [Unreal Engine Documentation](https://dev.epicgames.com/documentation/en-us/unreal-engine) - Misc UE stuff.
  - [MS Docs](https://learn.microsoft.com/en-us/windows/win32/learnwin32/learn-to-program-for-windows--sample-code) - GUI skeleton copypasta.
 
-## FAQ
-**Q:** How is this different than using Universal Unreal Engine 4 Unlocker and using the summon command?
-**A:** Please refer to the following table:
-
-| Feature                                  | GroundedMinimal           | UUU |
-| ---------------------------------------- | ------------------------- | --- |
-| Spawn items in multiplayer               | Yes                       | No  |
-| Spawn items in custom quantity	          | Yes	                      | No  |
-| Spawn items directly into inventory	     | Yes                       |	No  |
-| Summon classes in multiplayer	           | Yes                       |	No  |
-| Open-Source	                             | Yes                       |	No  |
-| In-game chat commands	                   | Yes                       |	No  |
-
-*This is not a "dig" at UUU, the tool serves a completely different purpose.*
-*The main limitation of using UUU is that you can't summon in multiplayer.*
 
 **Q:** Can I get banned for using this tool?  
 **A:** No, there's no anti-cheat.  
 
 **Q:** My Anti-Virus software detected this as a threat, what do I do?  
-**A:** If you downloaded this tool from [GitHub Releases](https://github.com/x0reaxeax/GroundedMinimal/releases) or [NexusMods](https://www.nexusmods.com/grounded/mods/189), then this is a false positive, and you can ignore it.  
+**A:** If you downloaded this tool from [GitHub Releases](https://github.com/x0reaxeax/Grounded2Minimal/releases) or [NexusMods](https://www.nexusmods.com/grounded2/mods/14), then this is a false positive, and you can ignore it.  
 
 **Q:** How can I trust that?  
 **A:** The tool is open-source, you can analyze the source code yourself, or ask AI to do so for you. Additionally, you can compile the tool yourself.  
 
 **Q:** I am crashing when using the tool.  
-**A:** Please submit a [bug report](https://github.com/x0reaxeax/GroundedMinimal/issues/new).  
+**A:** Please submit a [bug report](https://github.com/x0reaxeax/Grounded2Minimal/issues/new).  
 
 **Q:** Will an XYZ feature be added?  
-**A:** Unlikely, but not impossible. I will be mainly focused on Grounded 2.  
+**A:** Possibly! Check the [Trello Board](https://trello.com/b/On1YdILA/grounded2minimal-status-map)!
 
 **Q:** Why is this being released now, when Grounded 2 is dropping in less than 2 weeks?  
 **A:** Good question xD  
@@ -202,8 +174,11 @@ File Index:
 This project is licensed under the [GNU General Public License v3.0](#license).  
 The content of this repository exists purely for educational purposes, and the author is not responsible for any damages caused by this software.  
 
+Distribution of this software without providing the source code is a violation of the GNU General Public License v3.0.  
+Don't trust sketchy dipshits about claims of their modified versions having super-duper-secret features. You're probably looking at amateur malware. Yes, this is a dig.  
+
 ## License
-    GroundedMinimal - Debugging tool for Grounded (Steam version)
+    Grounded2Minimal - Debugging tool for Grounded 2
     Copyright (C) 2025  x0reaxeax
 
     This program is free software: you can redistribute it and/or modify

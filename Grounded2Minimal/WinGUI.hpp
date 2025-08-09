@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) 2025 x0reaxeax
 
-#ifndef _GROUNDED_WINGUI_WRAPPER_HPP
-#define _GROUNDED_WINGUI_WRAPPER_HPP
+#ifndef _GROUNDED2_WINGUI_WRAPPER_HPP
+#define _GROUNDED2_WINGUI_WRAPPER_HPP
 
 #include <windows.h>
 #include <string>
@@ -24,4 +24,4 @@ namespace WinGUI {
     void Stop(void);
 }
 
-#endif // _GROUNDED_WINGUI_WRAPPER_HPP
+#endif // _GROUNDED2_WINGUI_WRAPPER_HPP

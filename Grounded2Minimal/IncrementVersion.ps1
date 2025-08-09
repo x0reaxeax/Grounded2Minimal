@@ -15,8 +15,8 @@ $lines = Get-Content $rcPath | ForEach-Object {
         $tag = $matches[1]
         $v1 = [int]$matches[2]
         $v2 = [int]$matches[3]
-        $v3 = ([int]$matches[4] + 1)  # increment build number
-        $v4 = [int]$matches[5]
+        $v3 = [int]$matches[4]
+        $v4 = ([int]$matches[5] + 1)  # increment build number
         $versionNumbers = @($v1, $v2, $v3, $v4)
         Write-Host "Updated $tag to $v1,$v2,$v3,$v4"
         "$tag $v1,$v2,$v3,$v4"

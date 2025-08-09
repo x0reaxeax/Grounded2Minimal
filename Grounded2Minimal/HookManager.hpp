@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) 2025 x0reaxeax
 
-#ifndef _GROUNDED_HOOK_MANAGER_HPP
-#define _GROUNDED_HOOK_MANAGER_HPP
+#ifndef _GROUNDED2_HOOK_MANAGER_HPP
+#define _GROUNDED2_HOOK_MANAGER_HPP
 
-#include "GroundedMinimal.hpp"
+#include "Grounded2Minimal.hpp"
 
 #include <unordered_map>
 #include <unordered_set>
@@ -14,13 +14,15 @@
 #include <vector>
 #include <algorithm>
 
+typedef void (*ProcessEvent_t)(const SDK::UObject *, SDK::UFunction *, LPVOID);
+
 class HookManager {
 public:
     using HookedFn = void(__fastcall*)(SDK::UObject*, SDK::UFunction*, void*);
 
     static bool InstallHook(
-        SDK::UObject* Object, 
-        HookedFn HookFn, 
+        SDK::UObject* Object,
+        HookedFn HookFn,
         ProcessEvent_t* OutOriginal = nullptr
     );
     static void RestoreHooks(void);

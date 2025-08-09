@@ -1,7 +1,14 @@
-#include "GroundedMinimal.hpp"
+#include "Grounded2Minimal.hpp"
+#include "CoreUtils.hpp"
+
+#include <Windows.h>
+#include <algorithm>
+
+#pragma comment (lib, "Version.lib")
 
 namespace CoreUtils {
-    std::string g_szHexConvertBuffer;
+    static std::string g_szHexConvertBuffer;
+
     std::string HexConvert(
         const uint64_t uValue
     ) {
@@ -16,6 +23,34 @@ namespace CoreUtils {
             }
         }
         return g_szHexConvertBuffer;
+    }
+
+    bool StringContainsCaseInsensitive(
+        const std::string& szHaystack,
+        const std::string& szNeedle
+    ) {
+        std::string szHaystackLower = szHaystack;
+        std::string szNeedleLower = szNeedle;
+
+        std::transform(
+            szHaystackLower.begin(),
+            szHaystackLower.end(),
+            szHaystackLower.begin(),
+            [](unsigned char c) {
+                return std::tolower(c);
+            }
+        );
+
+        std::transform(
+            szNeedleLower.begin(),
+            szNeedleLower.end(),
+            szNeedleLower.begin(),
+            [](unsigned char c) {
+                return std::tolower(c);
+            }
+        );
+
+        return szHaystackLower.find(szNeedleLower) != std::string::npos;
     }
 
     bool WideStringToUtf8(
@@ -84,5 +119,48 @@ namespace CoreUtils {
         }
         szWideString = std::move(szBuffer);
         return true;
+    }
+
+    bool GetVersionFromResource(
+        VersionInfo& versionInfo
+    ) {
+        HMODULE hModule = GetModuleHandleA("Grounded2Minimal.dll");
+
+        HRSRC hResource = FindResource(
+            hModule,
+            MAKEINTRESOURCE(VS_VERSION_INFO),
+            RT_VERSION
+        );
+        if (nullptr == hResource) {
+            return false;
+        }
+
+        HGLOBAL hGlobal = LoadResource(hModule, hResource);
+        if (nullptr == hGlobal) {
+            return false;
+        }
+
+        LPVOID pVersionInfo = LockResource(hGlobal);
+        if (!pVersionInfo) {
+            return false;
+        }
+
+        VS_FIXEDFILEINFO* pFileInfo = nullptr;
+        UINT uiLen;
+
+        if (VerQueryValueW(
+            pVersionInfo,
+            L"\\",
+            (LPVOID*) &pFileInfo,
+            &uiLen
+        )) {
+            versionInfo.major = HIWORD(pFileInfo->dwFileVersionMS);
+            versionInfo.minor = LOWORD(pFileInfo->dwFileVersionMS);
+            versionInfo.patch = HIWORD(pFileInfo->dwFileVersionLS);
+            versionInfo.build = LOWORD(pFileInfo->dwFileVersionLS);
+            return true;
+        }
+
+        return false;
     }
 }

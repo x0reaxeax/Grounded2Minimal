@@ -1,12 +1,14 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) 2025 x0reaxeax
 
-#include "GroundedMinimal.hpp"
+#include "Grounded2Minimal.hpp"
 #include "ItemSpawner.hpp"
 #include "UnrealUtils.hpp"
 #include "Command.hpp"
 
 #include <sstream>
+
+#include "SDK/BP_SurvivalGameMode_classes.hpp"
 
 namespace ItemSpawner {
     // Allows everyone (not just host) to utilize the host to spawn them items.
@@ -18,12 +20,12 @@ namespace ItemSpawner {
         const std::string& szDataTableName,
         int32_t iItemCount // No default argument here
     ) {
-        SDK::UWorld *lpWorld = SDK::UWorld::GetWorld();
+        SDK::UWorld *lpWorld = UnrealUtils::GetWorld(true);
         if (nullptr == lpWorld) {
             LogError("ItemSpawner", "UWorld is NULL");
             return false;
         }
-        
+
         if (nullptr == lpWorld->AuthorityGameMode) {
             LogError("ItemSpawner", "Client has no host authority");
             return false;
@@ -43,9 +45,8 @@ namespace ItemSpawner {
 
         int32_t iTotalPlayers = g_vPlayers.size();
         LogMessage(
-            "ItemSpawner", 
-            "Total players in game: " + std::to_string(iTotalPlayers),
-            true
+            "ItemSpawner",
+            "Total players in game: " + std::to_string(iTotalPlayers)
         );
 
         for (int32_t i = 0; i < iTotalPlayers; i++) {
@@ -57,10 +58,10 @@ namespace ItemSpawner {
             if (iPlayerId != lpPlayerState->PlayerId) {
                 continue; // didnt wanna give it to this guy anyway
             }
-            
+
             std::string szPlayerName = lpPlayerState->GetPlayerName().ToString();
             LogMessage(
-                "ItemSpawner", 
+                "ItemSpawner",
                 "Found player: " + szPlayerName + " (ID: " + std::to_string(iPlayerId) + ")"
             );
 
@@ -91,8 +92,8 @@ namespace ItemSpawner {
             }
 
             lpSurvivalGameMode->GrantItemsToPlayer(
-                lpPlayerCharacter, 
-                ItemRowHandle, 
+                lpPlayerCharacter,
+                ItemRowHandle,
                 iItemCount
             );
             return true;
@@ -109,7 +110,7 @@ namespace ItemSpawner {
         if (nullptr == lpMessageData) {
             LogError("ItemSpawner", "Null message data received", true);
             EnableGlobalOutput();   // could just fking goto to the end like in a normal language,
-                                    // but the compiler complains about some shit, tupy kokot
+            // but the compiler complains about some shit, tupy kokot
             return;
         }
 
@@ -120,8 +121,8 @@ namespace ItemSpawner {
             return;
         }
 
-        int32_t iHostPlayerId = UnrealUtils::GetLocalPlayerId();
-        if (iHostPlayerId < 0) {
+        int32_t iHostPlayerId = UnrealUtils::GetLocalPlayerId(true);
+        if (iHostPlayerId <= 0) {
             LogError("ItemSpawner", "Invalid host player ID", true);
             EnableGlobalOutput();
             return;
@@ -134,10 +135,10 @@ namespace ItemSpawner {
         }
 
         // Validate sender ID
-        if (lpMessageData->iSenderId < 0) {
+        if (lpMessageData->iSenderId <= 0) {
             LogError(
-                "ItemSpawner", 
-                "Invalid sender player ID: " + std::to_string(lpMessageData->iSenderId), 
+                "ItemSpawner",
+                "Invalid sender player ID: " + std::to_string(lpMessageData->iSenderId),
                 true
             );
             EnableGlobalOutput();
@@ -155,8 +156,8 @@ namespace ItemSpawner {
         size_t nPos = lpMessageData->szMessage.find(szCommandPrefix);
         if (nPos == std::string::npos) {
             LogError(
-                "ItemSpawner", 
-                "Command prefix not found in chat message", 
+                "ItemSpawner",
+                "Command prefix not found in chat message",
                 true
             );
             EnableGlobalOutput();
@@ -166,14 +167,14 @@ namespace ItemSpawner {
         std::string szCommandPart = lpMessageData->szMessage.substr(
             nPos + szCommandPrefix.length()
         );
-        
+
         // Trim leading spaces
         szCommandPart.erase(0, szCommandPart.find_first_not_of(" \t"));
 
         // Validate command has content after prefix
         if (szCommandPart.empty()) {
             LogError(
-                "ItemSpawner", 
+                "ItemSpawner",
                 "No parameters provided for spawn command",
                 true
             );
@@ -185,11 +186,11 @@ namespace ItemSpawner {
         std::istringstream issCommandStream(szCommandPart);
         std::string szTargetItemName;
         std::string szItemCountStr;
-        
+
         if (!(issCommandStream >> szTargetItemName)) {
             LogError(
-                "ItemSpawner", 
-                "Missing target item name in chat message", 
+                "ItemSpawner",
+                "Missing target item name in chat message",
                 true
             );
             EnableGlobalOutput();
@@ -199,8 +200,8 @@ namespace ItemSpawner {
         // Validate item name
         if (szTargetItemName.empty() || szTargetItemName.length() > 100) { // Reasonable limit
             LogError(
-                "ItemSpawner", 
-                "Invalid item name: " + szTargetItemName, 
+                "ItemSpawner",
+                "Invalid item name: " + szTargetItemName,
                 true
             );
             EnableGlobalOutput();
@@ -214,7 +215,7 @@ namespace ItemSpawner {
                 iItemCount = std::stoi(szItemCountStr);
             } catch (const std::invalid_argument& e) {
                 LogError(
-                    "ItemSpawner", 
+                    "ItemSpawner",
                     "Invalid item count format: " + szItemCountStr,
                     true
                 );
@@ -222,7 +223,7 @@ namespace ItemSpawner {
                 return;
             } catch (const std::out_of_range& e) {
                 LogError(
-                    "ItemSpawner", 
+                    "ItemSpawner",
                     "Item count out of range: " + szItemCountStr,
                     true
                 );
@@ -234,8 +235,8 @@ namespace ItemSpawner {
         // Validate item count range
         if (iItemCount <= 0 || iItemCount > 999) { // enough is enough
             LogError(
-                "ItemSpawner", 
-                "Item count out of valid range (1-999): " + std::to_string(iItemCount), 
+                "ItemSpawner",
+                "Item count out of valid range (1-999): " + std::to_string(iItemCount),
                 true
             );
             EnableGlobalOutput();
@@ -247,8 +248,8 @@ namespace ItemSpawner {
 
         if (nullptr == lpAllItemsTable) {
             LogError(
-                "ItemSpawner", 
-                "DataTable not found for item: " + szTargetItemName, 
+                "ItemSpawner",
+                "DataTable not found for item: " + szTargetItemName,
                 true
             );
             EnableGlobalOutput();
@@ -256,13 +257,13 @@ namespace ItemSpawner {
         }
 
         if (!UnrealUtils::GetItemRowMap(
-            lpAllItemsTable, 
-            szTargetItemName, 
+            lpAllItemsTable,
+            szTargetItemName,
             nullptr
         )) {
             LogError(
-                "ItemSpawner", 
-                "Item '" + szTargetItemName + "' not found in DataTable: " + szDataTableName, 
+                "ItemSpawner",
+                "Item '" + szTargetItemName + "' not found in DataTable: " + szDataTableName,
                 true
             );
             EnableGlobalOutput();
@@ -270,10 +271,10 @@ namespace ItemSpawner {
         }
 
         LogMessage(
-            "ItemSpawner", "Spawning item: " + szTargetItemName + 
-            " (Count: " + std::to_string(iItemCount) + 
-            ", Table: " + szDataTableName + 
-            ", Player: " + std::to_string(lpMessageData->iSenderId) + 
+            "ItemSpawner", "Spawning item: " + szTargetItemName +
+            " (Count: " + std::to_string(iItemCount) +
+            ", Table: " + szDataTableName +
+            ", Player: " + std::to_string(lpMessageData->iSenderId) +
             " - " + lpMessageData->szSenderName + ")",
             true
         );
@@ -288,8 +289,8 @@ namespace ItemSpawner {
 
         if (nullptr == lpParams) {
             LogError(
-                "ItemSpawner", 
-                "Failed to allocate memory for spawn command parameters", 
+                "ItemSpawner",
+                "Failed to allocate memory for spawn command parameters",
                 true
             );
             EnableGlobalOutput();
@@ -299,25 +300,25 @@ namespace ItemSpawner {
         // Submit command with error handling
         try {
             Command::SubmitTypedCommand(
-                Command::CommandId::CmdIdSpawnItem, 
+                Command::CommandId::CmdIdSpawnItem,
                 lpParams
             );
             LogMessage(
-                "ItemSpawner", 
-                "Spawn command submitted successfully", 
+                "ItemSpawner",
+                "Spawn command submitted successfully",
                 true
             );
         } catch (const std::exception& e) {
             LogError(
-                "ItemSpawner", 
-                "Exception submitting spawn command: " + std::string(e.what()), 
+                "ItemSpawner",
+                "Exception submitting spawn command: " + std::string(e.what()),
                 true
             );
             delete lpParams;
         } catch (...) {
             LogError(
-                "ItemSpawner", 
-                "Unknown exception submitting spawn command", 
+                "ItemSpawner",
+                "Unknown exception submitting spawn command",
                 true
             );
             delete lpParams; // and fuk ur skins too

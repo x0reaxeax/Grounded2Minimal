@@ -1,16 +1,40 @@
-// SPDX-License-Identifier: GPL-3.0-or-later
-// Copyright (C) 2025 x0reaxeax
-
-#include "GroundedMinimal.hpp"
 #include "UnrealUtils.hpp"
+#include "CoreUtils.hpp"
 
 #include <iostream>
 #include <iomanip>
 #include <sstream>
+#include <thread>
 
 namespace UnrealUtils {
+    SDK::UWorld *GetWorld(bool bCached) {
+        if (bCached && g_lpWorld != nullptr) {
+            return g_lpWorld;
+        }
+        int32_t iRetryCount = 0;
+        const int32_t iMaxRetries = 10;
+        SDK::UWorld *lpWorld = nullptr;
+        do {
+            lpWorld = SDK::UWorld::GetWorld();
+            if (nullptr == lpWorld) {
+                std::this_thread::sleep_for(std::chrono::milliseconds(250));
+                if (++iRetryCount >= iMaxRetries) {
+                    LogError(
+                        "GetWorld", 
+                        "Failed to get UWorld after " 
+                        + std::to_string(iMaxRetries) + " retries, aborting.."
+                    );
+                    return nullptr;
+                }
+            }
+        } while (nullptr == lpWorld);
+        g_lpWorld = lpWorld;
+
+        return lpWorld;
+    }
+
     SDK::APawn* GetLocalPawn(void) {
-        SDK::UWorld *lpWorld = SDK::UWorld::GetWorld();
+        SDK::UWorld *lpWorld = GetWorld();
         if (CheckNullAndLog(lpWorld, "UWorld", "Misc")) {
             return nullptr;
         }
@@ -23,7 +47,7 @@ namespace UnrealUtils {
         return lpLocalPlayer->PlayerController->Pawn;
     }
 
-    SDK::ABP_SurvivalPlayerCharacter_C* GetSurvivalPlayerCharacter(void) {
+    SDK::ABP_SurvivalPlayerCharacter_C* GetLocalSurvivalPlayerCharacter(void) {
         SDK::APawn *lpPawn = GetLocalPawn();
         if (nullptr == lpPawn) {
             LogError("Misc", "Pawn is NULL");
@@ -32,6 +56,7 @@ namespace UnrealUtils {
 
         return static_cast<SDK::ABP_SurvivalPlayerCharacter_C*>(lpPawn);
     }
+
 
     void DumpClasses(
         std::vector<std::string>* vszClassesOut,
@@ -49,7 +74,7 @@ namespace UnrealUtils {
             }
 
             if (bOnlyBlueprints) {
-                if (!StringContainsCaseInsensitive(
+                if (!CoreUtils::StringContainsCaseInsensitive(
                     lpObj->GetFullName(),
                     szBlueprintClassPrefix
                 )) {
@@ -58,7 +83,7 @@ namespace UnrealUtils {
             }
 
             if (!szTargetClassNameNeedle.empty()) {
-                if (!StringContainsCaseInsensitive(
+                if (!CoreUtils::StringContainsCaseInsensitive(
                     lpObj->GetFullName(),
                     szTargetClassNameNeedle
                 )) {
@@ -88,8 +113,8 @@ namespace UnrealUtils {
                 continue;
             }
 
-            if (!StringContainsCaseInsensitive(
-                lpObj->GetName(), 
+            if (!CoreUtils::StringContainsCaseInsensitive(
+                lpObj->GetName(),
                 szTargetFunctionNameNeedle
             )) {
                 continue;
@@ -113,8 +138,8 @@ namespace UnrealUtils {
                 continue;
             }
 
-            if (!StringContainsCaseInsensitive(
-                lpObj->GetName(), 
+            if (!CoreUtils::StringContainsCaseInsensitive(
+                lpObj->GetName(),
                 szPartialName
             )) {
                 continue;
@@ -126,10 +151,11 @@ namespace UnrealUtils {
         return nullptr; // function not found
     }
 
+    // Don't cache this one, since we now have auto-retry on GetWorld()
     void DumpConnectedPlayers(
         std::vector<SDK::APlayerState*> *vlpPlayerStatesOut
     ) {
-        SDK::UWorld *lpWorld = SDK::UWorld::GetWorld();
+        SDK::UWorld *lpWorld = GetWorld();
         if (nullptr == lpWorld) {
             return;
         }
@@ -165,53 +191,10 @@ namespace UnrealUtils {
         }
     }
 
-    void DumpConnectedPlayers3(
-        std::vector<SDK::APlayerState*> *vlpPlayerStatesOut
-    ) {
-        SDK::UWorld *lpWorld = SDK::UWorld::GetWorld();
-        if (nullptr == lpWorld) {
-            return;
-        }
-        SDK::TArray<SDK::AActor*> alpFoundActors;
-        SDK::UGameplayStatics::GetAllActorsOfClass(
-            lpWorld,
-            SDK::APlayerState::StaticClass(),
-            &alpFoundActors
-        );
-
-        for (SDK::AActor* lpActor : alpFoundActors) {
-            SDK::APlayerState *lpPlayerState = static_cast<SDK::APlayerState*>(lpActor);
-            if (nullptr == lpPlayerState) {
-                continue;
-            }
-
-            if (lpPlayerState->PlayerId < 240) {
-                // Skip player states with PlayerId < 240, these are likely not valid players
-                continue;
-            }
-
-            // Add to output vector if provided
-            if (nullptr != vlpPlayerStatesOut) {
-                vlpPlayerStatesOut->push_back(lpPlayerState);
-            }
-
-            SDK::FString fszPlayerName = lpPlayerState->GetPlayerName();
-            bool bHasAuthority = lpPlayerState->HasAuthority();
-
-            LogMessage(
-                L"PlayerInfo",
-                L"Player: '" + fszPlayerName.ToWString() + L"'\n" +
-                L"  * Authority:  " + std::wstring(bHasAuthority ? L"Yes" : L"No") + L"\n" +
-                L"  * ID:         " + std::to_wstring(lpPlayerState->PlayerId) + L"\n" +
-                L"  * Index:      " + std::to_wstring(lpPlayerState->Index) + L"\n"
-            );
-        }
-    }
-
     bool IsPlayerHostAuthority(
         int32_t iPlayerId
     ) {
-        SDK::UWorld *lpWorld = SDK::UWorld::GetWorld();
+        SDK::UWorld *lpWorld = GetWorld(true);
         if (nullptr == lpWorld) {
             return false;
         }
@@ -245,9 +228,9 @@ namespace UnrealUtils {
             bool bHasAuthority = lpPlayerState->HasAuthority();
 
             LogMessage(
-                "HostCheck", 
-                "Local player: " + fszPlayerName.ToString() 
-                + " (Authority: " + std::string(bHasAuthority ? "Yes" : "No") + ")", 
+                "HostCheck",
+                "Local player: " + fszPlayerName.ToString()
+                + " (Authority: " + std::string(bHasAuthority ? "Yes" : "No") + ")",
                 true
             );
 
@@ -268,8 +251,8 @@ namespace UnrealUtils {
             bool bHasAuthority = lpPlayerState->HasAuthority();
 
             LogMessage(
-                "HostCheck", 
-                "Player: " + fszPlayerName.ToString() 
+                "HostCheck",
+                "Player: " + fszPlayerName.ToString()
                 + " (Authority: " + std::string(bHasAuthority ? "Yes" : "No") + ")"
             );
 
@@ -296,8 +279,8 @@ namespace UnrealUtils {
 
         std::ostringstream ossFind;
         ossFind << "[Find " << std::setfill('0') << std::setw(4) << iItemIndex
-                << "] Found '" << lpSpawnedItem->Class->GetFullName()
-                << "': " << lpSpawnedItem->GetFullName();
+            << "] Found '" << lpSpawnedItem->Class->GetFullName()
+            << "': " << lpSpawnedItem->GetFullName();
         LogMessage("", ossFind.str());
 
         std::ostringstream ossIndex;
@@ -311,7 +294,7 @@ namespace UnrealUtils {
             << vItemLocation.X << ", "
             << vItemLocation.Y << ", "
             << vItemLocation.Z << ")";
-        LogMessage("", ossLocation.str());        
+        LogMessage("", ossLocation.str());
     }
 
     SDK::ASpawnedItem *GetSpawnedItemByIndex(
@@ -335,8 +318,8 @@ namespace UnrealUtils {
 
             // Name verification
             if (!szTargetItemTypeName.empty()) {
-                if (!StringContainsCaseInsensitive(
-                    lpSpawnedItem->Class->GetFullName(), 
+                if (!CoreUtils::StringContainsCaseInsensitive(
+                    lpSpawnedItem->Class->GetFullName(),
                     szTargetItemTypeName
                 )) {
                     continue;
@@ -363,7 +346,7 @@ namespace UnrealUtils {
             }
 
             std::string szFullObjectName = lpObj->GetFullName();
-            if (StringContainsCaseInsensitive(szFullObjectName, szTargetItemTypeName)) {
+            if (CoreUtils::StringContainsCaseInsensitive(szFullObjectName, szTargetItemTypeName)) {
                 SDK::ASpawnedItem *lpSpawnedItem = static_cast<SDK::ASpawnedItem*>(lpObj);
                 PrintFoundItemInfo(lpSpawnedItem, i, &bFoundAtLeastOne);
             }
@@ -384,8 +367,8 @@ namespace UnrealUtils {
             }
 
             if (lpObj->IsA(SDK::UDataTable::StaticClass())) {
-                if (StringContainsCaseInsensitive(
-                    lpObj->GetName(), 
+                if (CoreUtils::StringContainsCaseInsensitive(
+                    lpObj->GetName(),
                     szTargetTableStringNeedle
                 )) {
                     // yea first we do a negative check and now we flip it, 
@@ -408,12 +391,12 @@ namespace UnrealUtils {
         SDK::TMap<class SDK::FName, SDK::uint8*> &rowMap = lpDataTable->RowMap;
 
         LogMessage(
-            "DataTable", 
+            "DataTable",
             "Dumping RowMap entries for DataTable: " + lpDataTable->GetName()
             +
             " (filter: '" + szFilterNeedle + "')"
         );
-        
+
         int32_t iValidEntryCount = 0;
         for (const auto& entry : rowMap) {
             const SDK::FName& rowName = entry.Key();
@@ -426,8 +409,8 @@ namespace UnrealUtils {
                 if (nullptr != vlpRowNamesOut) {
                     // check if filter is applied, and if yes, only add contains(filter)
                     if (!szFilterNeedle.empty()) {
-                        if (StringContainsCaseInsensitive(
-                            rowName.ToString(), 
+                        if (CoreUtils::StringContainsCaseInsensitive(
+                            rowName.ToString(),
                             szFilterNeedle
                         )) {
                             vlpRowNamesOut->push_back(rowName.ToString());
@@ -439,10 +422,10 @@ namespace UnrealUtils {
                 }
             }
         }
-        
+
         LogMessage(
-            "DataTable", 
-            "Finished dumping RowMap entries. Found " 
+            "DataTable",
+            "Finished dumping RowMap entries. Found "
             + std::to_string(iValidEntryCount) + " valid entries"
         );
     }
@@ -464,7 +447,7 @@ namespace UnrealUtils {
 
             if (nullptr != lpRowData && rowName.ToString() == szItemName) {
                 LogMessage(
-                    "DataTable", 
+                    "DataTable",
                     "Found item '" + szItemName + "' in DataTable: " + lpDataTable->GetName()
                 );
                 if (nullptr != lpRowHandleOut) {
@@ -494,7 +477,7 @@ namespace UnrealUtils {
             SDK::UDataTable *lpDataTable = static_cast<SDK::UDataTable*>(lpObj);
 
             if (!szDataTableFilterNeedle.empty()) {
-                if (!StringContainsCaseInsensitive(
+                if (!CoreUtils::StringContainsCaseInsensitive(
                     lpDataTable->GetName(),
                     szDataTableFilterNeedle
                 )) {
@@ -506,19 +489,19 @@ namespace UnrealUtils {
             if (nullptr != vlpDataTableInfoOut) {
                 // Create a DataTableInfo entry
                 DataTableInfo tableInfo(lpDataTable->GetName());
-                
+
                 // Parse items for this table - this will populate tableInfo.vszItemNames
                 ParseRowMapManually(lpDataTable, &tableInfo.vszItemNames);
-                
+
                 // Store the table name before moving
                 std::string szTableName = tableInfo.szTableName;
-                
+
                 // Add the complete info to the output vector
                 vlpDataTableInfoOut->push_back(std::move(tableInfo));
-                
+
                 LogMessage(
-                    "DataTable", 
-                    "Added DataTable '" + szTableName 
+                    "DataTable",
+                    "Added DataTable '" + szTableName
                     + "' with " + std::to_string(vlpDataTableInfoOut->back().GetItemCount()) + " items"
                 );
             } else {
@@ -526,10 +509,10 @@ namespace UnrealUtils {
                 ParseRowMapManually(lpDataTable, nullptr);
             }
         }
-        
+
         if (nullptr != vlpDataTableInfoOut) {
             LogMessage(
-                "DataTable", 
+                "DataTable",
                 "Total DataTables processed: " + std::to_string(vlpDataTableInfoOut->size())
             );
         }
@@ -578,8 +561,11 @@ namespace UnrealUtils {
         }
     }
 
-    int32_t GetLocalPlayerId(void) {
-        SDK::UWorld *lpWorld = SDK::UWorld::GetWorld();
+    int32_t GetLocalPlayerId(bool bCached) {
+        if (bCached && -1 != g_iLocalPlayerId) {
+            return g_iLocalPlayerId;
+        }
+        SDK::UWorld *lpWorld = GetWorld();
         if (nullptr == lpWorld) {
             LogError("Lookup", "UWorld is NULL");
             return -1;
@@ -596,13 +582,46 @@ namespace UnrealUtils {
             return -1;
         }
 
+        if (lpPlayerState->PlayerId < 200) {
+            LogError(
+                "Lookup",
+                "PlayerId is less than 200, this is likely a bot or non-local player: "
+                + std::to_string(lpPlayerState->PlayerId)
+            );
+            return -1;
+        }
+
+        // Refresh the cached player ID if requested
+        g_iLocalPlayerId = lpPlayerState->PlayerId;
+
         return lpPlayerState->PlayerId;
+    }
+
+    SDK::APlayerState *GetLocalPlayerState(void) {
+        SDK::UWorld *lpWorld = GetWorld(true);
+        if (nullptr == lpWorld) {
+            LogError("Lookup", "UWorld is NULL");
+            return nullptr;
+        }
+
+        SDK::ULocalPlayer *lpLocalPlayer = lpWorld->OwningGameInstance->LocalPlayers[0];
+        if (nullptr == lpLocalPlayer) {
+            return nullptr;
+        }
+
+        SDK::APlayerState *lpPlayerState = lpLocalPlayer->PlayerController->PlayerState;
+        if (nullptr == lpPlayerState) {
+            LogError("Lookup", "PlayerState is NULL for local player");
+            return nullptr;
+        }
+
+        return lpPlayerState;
     }
 
     int32_t GetPlayerIdByName(
         const std::string& szPlayerName
     ) {
-        SDK::UWorld *lpWorld = SDK::UWorld::GetWorld();
+        SDK::UWorld *lpWorld = GetWorld(true);
         if (nullptr == lpWorld) {
             return -1;
         }
@@ -630,7 +649,7 @@ namespace UnrealUtils {
     }
 
     SDK::UGameInstance *GetOwningGameInstance(void) {
-        SDK::UWorld *lpWorld = SDK::UWorld::GetWorld();
+        SDK::UWorld *lpWorld = GetWorld(true);
         if (nullptr == lpWorld) {
             LogError("GameInstance", "UWorld is NULL");
             return nullptr;
@@ -644,7 +663,7 @@ namespace UnrealUtils {
     }
 
     SDK::APlayerController *GetLocalPlayerController(void) {
-        SDK::UWorld *lpWorld = SDK::UWorld::GetWorld();
+        SDK::UWorld *lpWorld = GetWorld(true);
         if (nullptr == lpWorld) {
             LogError("PlayerController", "UWorld is NULL");
             return nullptr;
@@ -656,7 +675,7 @@ namespace UnrealUtils {
             return nullptr;
         }
 
-        int32_t iLocalPlayerId = UnrealUtils::GetLocalPlayerId();
+        int32_t iLocalPlayerId = GetLocalPlayerId();
         for (int32_t i = 0; i < lpWorld->OwningGameInstance->LocalPlayers.Num(); i++) {
             SDK::ULocalPlayer *lpLocalPlayer = lpOwningGameInstance->LocalPlayers[i];
             if (nullptr == lpLocalPlayer) {
@@ -679,5 +698,202 @@ namespace UnrealUtils {
         }
 
         return nullptr;
+    }
+
+    SDK::ASurvivalPlayerController *GetLocalSurvivalPlayerController(void) {
+        SDK::UWorld *lpWorld = GetWorld();
+        if (nullptr == lpWorld) {
+            LogError("CheatManagerInit", "Failed to get UWorld instance");
+            return nullptr;
+        }
+        
+        int32_t iPlayerId = UnrealUtils::GetLocalPlayerId(true);
+        for (int32_t i = 0; i < lpWorld->GObjects->Num(); i++) {
+            SDK::UObject *lpObj = lpWorld->GObjects->GetByIndex(i);
+            if (nullptr == lpObj) {
+                continue;
+            }
+            if (!lpObj->IsA(SDK::ASurvivalPlayerController::StaticClass())) {
+                continue;
+            }
+
+            SDK::ASurvivalPlayerController *lpSurvivalPlayerControllerCandidate =
+                static_cast<SDK::ASurvivalPlayerController*>(lpObj);
+
+            if (nullptr == lpSurvivalPlayerControllerCandidate) {
+                LogError("CheatManagerInit", "Failed to cast to ASurvivalPlayerController");
+                continue;
+            }
+
+            SDK::APlayerState *lpPlayerState = lpSurvivalPlayerControllerCandidate->PlayerState;
+            if (nullptr == lpPlayerState) {
+                LogError("CheatManagerInit", "PlayerState is NULL for ASurvivalPlayerController");
+                continue;
+            }
+
+            if (iPlayerId != lpPlayerState->PlayerId) {
+                continue; // Not the local player controller
+            }
+
+            LogMessage(
+                "FindLocalSPC",
+                "Found SurvivalPlayerController at index "
+                + std::to_string(i) + " ["
+                + std::to_string(i + 1) + "/"
+                + std::to_string(lpWorld->GObjects->Num()) + "]",
+                true
+            );
+
+            return lpSurvivalPlayerControllerCandidate;
+        }
+        return nullptr;
+    }
+
+    SDK::UPartyComponent *FindLocalPlayerParty(void) {
+        SDK::UWorld *lpWorld = GetWorld(true);
+        if (nullptr == lpWorld) {
+            LogError("PartyParser", "Failed to get UWorld instance");
+            return nullptr;
+        }
+
+        int32_t iLocalPlayerId = UnrealUtils::GetLocalPlayerId();
+
+        for (int32_t i = 0; i < SDK::UPartyComponent::GObjects->Num(); i++) {
+            SDK::UObject *lpObj = lpWorld->GObjects->GetByIndex(i);
+            if (nullptr == lpObj) {
+                continue;
+            }
+            if (!lpObj->IsA(SDK::UPartyComponent::StaticClass())) {
+                continue;
+            }
+
+            LogMessage(
+                "PartyParser",
+                "Evaluating possible UPartyComponent.."
+            );
+
+            SDK::UPartyComponent *lpPartyComponent = static_cast<SDK::UPartyComponent*>(lpObj);
+            if (nullptr == lpPartyComponent) {
+                LogError("PartyParser", "Failed to cast to UPartyComponent");
+                continue;
+            }
+
+            LogMessage(
+                "PartyParser",
+                "Evaluating party of " + std::to_string(lpPartyComponent->PartyMembers.Num())
+                + " members"
+            );
+            LogMessage(
+                "PartyParser",
+                "Evaluating party of " + std::to_string(lpPartyComponent->PlayerIdentities.Num())
+                + " identities"
+            );
+
+            for (int32_t j = 0; j < lpPartyComponent->PartyMembers.Num(); j++) {
+                SDK::ASurvivalPlayerCharacter *lpPartyMember = lpPartyComponent->PartyMembers[j];
+                if (nullptr == lpPartyMember) {
+                    LogError("PartyParser", "Party member is NULL at index " + std::to_string(j));
+                    continue;
+                }
+
+                SDK::APlayerState *lpPlayerState = lpPartyMember->PlayerState;
+                if (nullptr == lpPlayerState) {
+                    LogError(
+                        "PartyParser",
+                        "PlayerState is NULL for party member at index " + std::to_string(j)
+                    );
+                    continue;
+                }
+                if (lpPlayerState->PlayerId == iLocalPlayerId) {
+                    return lpPartyComponent; // Found the local player in the party
+                } else {
+                    LogMessage(
+                        "PartyParser",
+                        "PlayerState ID " + std::to_string(lpPlayerState->PlayerId)
+                        + " does not match local player ID " + std::to_string(iLocalPlayerId)
+                    );
+                }
+            }
+        }
+
+        return nullptr;
+    }
+
+    SDK::ASurvivalPlayerState *GetLocalSurvivalPlayerState(void) {
+        SDK::UWorld *lpWorld = GetWorld(true);
+        if (nullptr == lpWorld) {
+            LogError("PartyParser", "Failed to get UWorld instance");
+            return nullptr;
+        }
+
+        int32_t iLocalPlayerId = UnrealUtils::GetLocalPlayerId();
+
+        for (int32_t i = 0; i < lpWorld->GObjects->Num(); i++) {
+            SDK::UObject *lpObj = lpWorld->GObjects->GetByIndex(i);
+            if (nullptr == lpObj) {
+                continue;
+            }
+            if (!lpObj->IsA(SDK::UPartyComponent::StaticClass())) {
+                continue;
+            }
+
+            SDK::UPartyComponent *lpPartyComponent = static_cast<SDK::UPartyComponent*>(lpObj);
+            if (nullptr == lpPartyComponent) {
+                LogError("PartyParser", "Failed to cast to UPartyComponent");
+                continue;
+            }
+
+            for (int32_t j = 0; j < lpPartyComponent->PartyMembers.Num(); j++) {
+                SDK::ASurvivalPlayerCharacter *lpPartyMember = lpPartyComponent->PartyMembers[j];
+                if (nullptr == lpPartyMember) {
+                    LogError("PartyParser", "Party member is NULL at index " + std::to_string(j));
+                    continue;
+                }
+
+                SDK::APlayerState *lpPlayerState = lpPartyMember->PlayerState;
+                if (nullptr == lpPlayerState) {
+                    LogError(
+                        "PartyParser",
+                        "PlayerState is NULL for party member at index " + std::to_string(j)
+                    );
+                    continue;
+                }
+                if (lpPlayerState->PlayerId == iLocalPlayerId) {
+                    return lpPartyMember->GetAssociatedPlayerState();
+                }
+            }
+        }
+        LogError("PartyParser", "Local player state not found in any party");
+        return nullptr; // Local player state not found in any party
+    }
+
+    void DumpSurvivalCheatManagerInstances(void) {
+        SDK::UWorld *lpWorld = GetWorld(true);
+        if (nullptr == lpWorld) {
+            LogError("PartyParser", "Failed to get UWorld instance");
+            return;
+        }
+
+        for (int32_t i = 0; i < lpWorld->GObjects->Num(); i++) {
+            SDK::UObject *lpObj = lpWorld->GObjects->GetByIndex(i);
+            if (nullptr == lpObj) {
+                continue;
+            }
+            if (!lpObj->IsA(SDK::USurvivalCheatManager::StaticClass())) {
+                continue;
+            }
+
+            SDK::USurvivalCheatManager *lpSurvivalCheatManager = static_cast<SDK::USurvivalCheatManager*>(lpObj);
+            if (nullptr == lpSurvivalCheatManager) {
+                LogError("PartyParser", "Failed to cast to USurvivalCheatManager");
+                continue;
+            }
+
+            LogMessage(
+                "Dump",
+                "Found SurvivalCheatManager instance: " + lpSurvivalCheatManager->GetFullName()
+                + " (index: " + std::to_string(lpSurvivalCheatManager->Index) + ")"
+            );
+        }
     }
 }
