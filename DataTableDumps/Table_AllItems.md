@@ -143,7 +143,7 @@
 | `CaterpillarHide` | |
 | `MilkweedTuft` | |
 | `MilkweedFiber` | |
-| `Fabric` | |
+| `Fabric` | Blueberry Leather |
 | `LeatherBerryRed` | |
 | `FiberWoven` | Crude Rope |
 | `Rubber` | Bug Rubber |
