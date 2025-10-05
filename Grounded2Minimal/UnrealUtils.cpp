@@ -12,7 +12,7 @@ namespace UnrealUtils {
             return g_lpWorld;
         }
         int32_t iRetryCount = 0;
-        const int32_t iMaxRetries = 10;
+        const int32_t iMaxRetries = 20;
         SDK::UWorld *lpWorld = nullptr;
         do {
             lpWorld = SDK::UWorld::GetWorld();
@@ -121,7 +121,10 @@ namespace UnrealUtils {
             }
 
             SDK::UFunction *lpFunction = static_cast<SDK::UFunction*>(lpObj);
-            LogMessage("Dump", "Found function: " + lpFunction->GetFullName());
+            LogMessage(
+                "Dump", 
+                "Found function: '" + lpFunction->GetFullName() + "' ['" + lpFunction->GetName() + "']"
+            );
         }
     }
 

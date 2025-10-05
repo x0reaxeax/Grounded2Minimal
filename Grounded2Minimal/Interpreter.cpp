@@ -149,7 +149,22 @@ namespace Interpreter {
         );
     }
 
+    void HandleBuildAnywhere(void) {
+        bool bCurrent = g_GameOptions.BuildAnywhere.load();
+        g_GameOptions.BuildAnywhere.store(!bCurrent);
+        LogMessage(
+            "GameOptions",
+            "PlaceAnywhere is now " + std::string(
+                g_GameOptions.BuildAnywhere.load() ? "enabled" : "disabled"
+            ),
+            false
+        );
+    }
+
+    void PrintAvailableCommands(void);
+
     ConsoleCommand g_Commands[] = {
+        {"Help", "Show available commands", PrintAvailableCommands },
         {"F_DataTableNeedle", "Search for DataTable", HandleDataTableSearch },
         {"F_ItemDump", "Dump DataTable items", HandleItemDump },
         {"F_FindItemTable", "Find DataTable for item", HandleFindItemTable },
@@ -200,8 +215,32 @@ namespace Interpreter {
                     );
                 }
             }
+        },
+        { 
+            "OPT_BuildAnywhere", "Toggle BuildAnywhere option", []() {
+                // todo: make a macro for global output enable for a function call
+                bool bGlobalOutput = IsGlobalOutputEnabled();
+                EnableGlobalOutput();
+                HandleBuildAnywhere();
+                if (!bGlobalOutput) {
+                    DisableGlobalOutput();
+                }
+            }
         }
     };
+
+    void PrintAvailableCommands(
+        void
+    ) {
+        const int32_t iCommandCount = _ARRAYSIZE(g_Commands);
+        LogMessage("Help", "Available commands:");
+        for (int32_t i = 0; i < iCommandCount; i++) {
+            LogMessage(
+                "Help", 
+                " - " + g_Commands[i].szCommand + ": " + g_Commands[i].szDescription
+            );
+        }
+    }
 
     bool IsCommandAvailable(
         const std::string& szInput

@@ -245,5 +245,9 @@ _FINAL:
         CloseHandle(hProcess);
     }
 
+    if (EXIT_SUCCESS != iRet) {
+        system("pause");
+    }
+
     return iRet;
 }

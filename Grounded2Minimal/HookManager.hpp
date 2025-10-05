@@ -33,12 +33,36 @@ private:
         void** VTable;
         ProcessEvent_t OriginalFn;
         HookedFn HookFn;
+        std::string szObjName; // store name for safe logging
     };
 
     static std::unordered_map<SDK::UObject*, HookData> s_Hooks;
     static std::unordered_set<void**> s_HookedVTables;
     static std::mutex s_HookMutex;
 };
+
+namespace NativeHooker {
+
+    using NativeFunc_t = void(*)(SDK::UObject* lpObject, void *lpFFrame, void* lpResult);
+    
+    struct HookEntry {
+        SDK::UFunction*  FuncObj;
+        NativeFunc_t     Original;
+        NativeFunc_t     Hook;
+        std::string      Name;
+    };
+
+    // Hook by short name (first match wins, flawless victory, fatality)
+    HookEntry* HookNativeFunction(
+        const std::string& cszNeedle,
+        NativeFunc_t fnHook, 
+        NativeFunc_t* pfnOutOriginal = nullptr
+    );
+
+    bool Restore(SDK::UFunction* lpTargetFunc);
+    void RestoreAll(void);
+    NativeFunc_t GetOriginal(SDK::UFunction* lpTargetFunc);
+}
 
 
 #endif // _GROUNDED_HOOK_MANAGER_HPP

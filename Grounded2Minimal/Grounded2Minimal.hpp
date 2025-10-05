@@ -26,6 +26,12 @@ struct VersionInfo {
     DWORD build;
 };
 
+struct GameOptions {
+    std::atomic<bool> BuildAnywhere{ false };
+    std::atomic<bool> GodMode{ false };
+    std::atomic<bool> InfiniteStamina{ false };
+};
+
 ///////////////////////////////////////////////////////////////
 /// Globals
 
@@ -40,6 +46,8 @@ extern int32_t g_iLocalPlayerId;
 // Cached world instance
 extern SDK::UWorld* g_lpWorld;
 
+// Game options
+extern GameOptions g_GameOptions;
 
 //////////////////////////////////////////////////////////////////
 /// Function declarations

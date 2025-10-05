@@ -12,6 +12,7 @@
 #include <thread>
 
 #include "SDK/UI_ChatLog_classes.hpp"
+#include "SDK/Maine_parameters.hpp"
 
 #define _RELEASE
 
@@ -31,6 +32,9 @@ ProcessEvent_t OriginalChatBoxWidgetProcessEvent = nullptr;
 
 // Version information
 VersionInfo GroundedMinimalVersionInfo = { 0 };
+
+// Game options
+GameOptions g_GameOptions;
 
 /////////////////////////////////////////////////////////////
 // Cached data
@@ -58,6 +62,11 @@ void ShowConsole(
     }
 }
 
+///////////////////////////////////////////////////////////////
+// Hooked functions
+
+
+///// ProcessEvent hooks
 void __fastcall _HookedProcessEvent(
     SDK::UObject *lpObject,
     SDK::UFunction *lpFunction,
@@ -112,6 +121,51 @@ void __fastcall _HookedChatBoxProcessEvent(
     }).detach();
 }
 
+///// Native function hooks
+NativeHooker::NativeFunc_t fnOriginalUpdateCollisionStateChange = nullptr;
+
+static void __stdcall Hook_UpdateCollisionStateChange(
+    SDK::UObject* lpObj,
+    void* lpFFrame,
+    void* lpResult
+) {
+    SDK::ABuilding* lpBuilding = nullptr;
+    if (!g_GameOptions.BuildAnywhere.load()) {
+        goto _RYUJI;
+    }
+
+    if (nullptr == lpObj) {
+        goto _RYUJI;
+    }
+
+    if (!lpObj->IsA(SDK::ABuilding::StaticClass())) {
+        goto _RYUJI;
+    }
+
+    lpBuilding = static_cast<SDK::ABuilding*>(lpObj);
+    if (nullptr == lpBuilding) {
+        goto _RYUJI;
+    }
+
+    if (
+        SDK::EBuildingGridSurfaceType::None == lpBuilding->AnchoredSurface
+        ||
+        SDK::EBuildingGridSurfaceType::Invalid == lpBuilding->AnchoredSurface
+    ) {
+        lpBuilding->AnchoredSurface = SDK::EBuildingGridSurfaceType::Default;
+    }
+
+    if (SDK::EBuildingState::BeingPlacedInvalid == lpBuilding->BuildingState) {
+        lpBuilding->BuildingState = SDK::EBuildingState::BeingPlaced;
+    }
+
+_RYUJI:
+    if (nullptr != fnOriginalUpdateCollisionStateChange) {
+        fnOriginalUpdateCollisionStateChange(lpObj, lpFFrame, lpResult);
+    }
+}
+/////////////////////////////////////////////////////////////
+
 DWORD WINAPI ThreadEntry(
     LPVOID lpParam
 ) { 
@@ -120,8 +174,12 @@ DWORD WINAPI ThreadEntry(
 #endif // _RELEASE
     EnableGlobalOutput();
 
+    INT iRet = EXIT_FAILURE;
     HMODULE hLocalModule = static_cast<HMODULE>(lpParam);
     FILE *lpStdout = nullptr, *lpStderr = nullptr, *lpStdin = nullptr;
+
+    NativeHooker::HookEntry *lpEntry = nullptr;
+
     AllocConsole();
     freopen_s(&lpStdout, "CONOUT$", "w", stdout);
     freopen_s(&lpStderr, "CONOUT$", "w", stderr);
@@ -182,6 +240,21 @@ DWORD WINAPI ThreadEntry(
         goto _RYUJI; // lol
     }
 
+    lpEntry = NativeHooker::HookNativeFunction(
+        "UpdateCollisionStateChange",
+        &Hook_UpdateCollisionStateChange,
+        &fnOriginalUpdateCollisionStateChange
+    );
+
+    if (nullptr == lpEntry) {
+        LogError(
+            "Init", 
+            "Failed to hook Building::UpdateCollisionStateChange"
+        );
+        goto _RYUJI;
+    }
+
+
     LogMessage("Init", "Hooks initialized");
 
     LogMessage("Init", "Initializing CheatManager..");
@@ -218,13 +291,29 @@ DWORD WINAPI ThreadEntry(
         }
     }
 
+    iRet = EXIT_SUCCESS;
+
     WinGUI::Stop();
 
 _RYUJI:
     LogMessage("Exit", "GroundedMinimal2: Unhooking and cleaning up...");
 
+    LogMessage(
+        "Exit", "Restoring ProcessEvent hooks..."
+    );
     HookManager::RestoreHooks();
     std::this_thread::sleep_for(std::chrono::milliseconds(500));
+    
+    LogMessage(
+        "Exit", "Restoring native function hooks..."
+    );
+    NativeHooker::RestoreAll();
+    std::this_thread::sleep_for(std::chrono::milliseconds(500));
+
+    if (EXIT_SUCCESS != iRet) {
+        LogError("Exit", "GroundedMinimal2: Exiting due to errors");
+        system("pause");
+    }
 
     // Close all console streams
     if (lpStdin) {
@@ -244,7 +333,7 @@ _RYUJI:
 
     FreeLibraryAndExitThread(hLocalModule, EXIT_SUCCESS);
 
-    return EXIT_SUCCESS;
+    return iRet;
 }
 
 BOOL APIENTRY DllMain(HMODULE hModule, DWORD dwReason, LPVOID lpReserved) {

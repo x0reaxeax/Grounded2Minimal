@@ -24,6 +24,7 @@
 // Control IDs
 #define IDC_CHECK_SHOW_CONSOLE    100
 #define IDC_CHECK_GLOBAL_CHEAT    101
+#define IDC_TOGGLE_BUILD_ANYWHERE 102
 #define IDC_LIST_PLAYERS          200
 #define IDC_LIST_DATA_TABLES      201
 #define IDC_LIST_ITEM_NAMES       202
@@ -54,8 +55,6 @@ namespace WinGUI {
     ///////////////////////////////////////////////////////
     /// Globals
 
-    // CheatManager Stamina toggle state
-    bool g_bCheatManagerInfiniteStaminaEnabled = true;
     // Tool version information
     wchar_t g_szVersionString[64] = { 0 };
 
@@ -185,9 +184,11 @@ namespace WinGUI {
                 lpParams->Param1 = 1000;
                 break;
             case CheatManager::CheatManagerFunctionId::ToggleStamina:
-                lpParams->Param1 = g_bCheatManagerInfiniteStaminaEnabled;
+                lpParams->Param1 = !g_GameOptions.InfiniteStamina.load();
                 break;
-
+            case CheatManager::CheatManagerFunctionId::ToggleGod:
+                lpParams->Param1 = !g_GameOptions.GodMode.load();
+                break;
             default:
                 break;
         }
@@ -224,13 +225,17 @@ namespace WinGUI {
     static HWND g_hListItemNames = nullptr;
     static HWND g_hListClassNames = nullptr;
     static HWND g_hEditItemCount = nullptr;
-    static HWND g_hCheckShowConsole = nullptr;
     static HWND g_hEditItemSearch = nullptr;
     static HWND g_hStaticItemSearch = nullptr;
     static HWND g_hEditClassSearch = nullptr;
     static HWND g_hStaticClassSearch = nullptr;
     static HWND g_hStaticVersion = nullptr;
     static HWND g_hStaticGithub = nullptr;
+    
+    // Top checkboxes
+    static HWND g_hCheckShowConsole = nullptr;
+    static HWND g_hCheckGlobalCheat = nullptr;
+    static HWND g_hButtonToggleBuildAnywhere = nullptr;
 
     ///////////////////////////////////////////////////////
     /// Forward declarations
@@ -425,11 +430,18 @@ namespace WinGUI {
                 );
             }
 
-            HWND hCheckGlobalCheat = CreateWindowEx(
+            g_hCheckGlobalCheat = CreateWindowEx(
                 0, L"BUTTON", L"Global Cheat Mode",
                 WS_CHILD | WS_VISIBLE | BS_AUTOCHECKBOX | WS_TABSTOP,
                 10, 35, 180, 20,
                 g_hMainWnd, (HMENU) IDC_CHECK_GLOBAL_CHEAT, wcWindowClass.hInstance, NULL
+            );
+
+            g_hButtonToggleBuildAnywhere = CreateWindowEx(
+                0, L"BUTTON", L"Toggle Build Anywhere",
+                WS_CHILD | WS_VISIBLE | BS_AUTOCHECKBOX | WS_TABSTOP,
+                210, 10, 180, 20,
+                g_hMainWnd, (HMENU) IDC_TOGGLE_BUILD_ANYWHERE, wcWindowClass.hInstance, NULL
             );
 
             // Create player list
@@ -940,6 +952,25 @@ namespace WinGUI {
         }
     }
 
+    static void ProcessToggleAction(
+        CheatManager::CheatManagerFunctionId fdwFunctionId = CheatManager::CheatManagerFunctionId::None
+    ) {
+        switch (fdwFunctionId) {
+            case CheatManager::CheatManagerFunctionId::ToggleGod: {
+                bool bCurrentState = g_GameOptions.GodMode.load();
+                g_GameOptions.GodMode.store(!bCurrentState);
+                break;
+            }
+            case CheatManager::CheatManagerFunctionId::ToggleStamina: {
+                bool bCurrentState = g_GameOptions.InfiniteStamina.load();
+                g_GameOptions.InfiniteStamina.store(!bCurrentState);
+                break;
+            }
+            default:
+                break;
+        }
+    }
+
     // Window procedure
     LRESULT CALLBACK WndProc(
         HWND hWnd, 
@@ -1049,10 +1080,7 @@ namespace WinGUI {
                         }
                     }
 
-                    // Special stamina check case (TODO: probably rework this)
-                    if (CheatManager::CheatManagerFunctionId::ToggleStamina == fdwTargetId) {
-                        g_bCheatManagerInfiniteStaminaEnabled = !g_bCheatManagerInfiniteStaminaEnabled;
-                    }
+                    ProcessToggleAction(fdwTargetId);
 
                     CheatManagerExecuteGUIProxy(fdwTargetId);
 
@@ -1111,6 +1139,27 @@ namespace WinGUI {
                             ),
                             true
                         );
+                        break;
+                    }
+
+                    case IDC_TOGGLE_BUILD_ANYWHERE: {
+                        bool bNewState = (BST_CHECKED == IsDlgButtonChecked(
+                            hWnd, 
+                            IDC_TOGGLE_BUILD_ANYWHERE
+                        ));
+                        g_GameOptions.BuildAnywhere.store(
+                            bNewState
+                        );
+                        LogMessage(
+                            "WinGUI", 
+                            "Build Anywhere " + std::string(
+                                bNewState 
+                                ? "enabled" 
+                                : "disabled"
+                            ),
+                            true
+                        );
+
                         break;
                     }
 

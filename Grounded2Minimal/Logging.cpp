@@ -1,29 +1,33 @@
 #include "Logging.hpp"
 
-bool GlobalOutputEnabled = true;
-bool g_bDebug = false;
+std::atomic<bool> GlobalOutputEnabled{ true };
+std::atomic<bool> g_bDebug = { false };
 
 ///////////////////////////////////////////////////////
 /// Logging n stuff
 
+bool IsGlobalOutputEnabled(void) {
+    return GlobalOutputEnabled.load();
+}
+
 void EnableGlobalOutput(void) {
-    GlobalOutputEnabled = true;
+    GlobalOutputEnabled.store(true);
 }
 
 void DisableGlobalOutput(void) {
-    GlobalOutputEnabled = false;
+    GlobalOutputEnabled.store(false);
 }
 
 bool IsDebugOutputEnabled(void) {
-    return g_bDebug;
+    return g_bDebug.load();
 }
 
 void EnableDebugOutput(void) {
-    g_bDebug = true;
+    g_bDebug.store(true);
 }
 
 void DisableDebugOutput(void) {
-    g_bDebug = false;
+    g_bDebug.store(false);
 }
 
 bool CheckNullAndLog(
@@ -45,11 +49,11 @@ void LogChar(
     const char cChar,
     bool bOnlyDebug
 ) {
-    if (!CheckGlobalOutputEnabled() && !g_bDebug) {
+    if (!CheckGlobalOutputEnabled() && !IsDebugOutputEnabled()) {
         return;
     }
 
-    if (bOnlyDebug && !g_bDebug) {
+    if (bOnlyDebug && !IsDebugOutputEnabled()) {
         return; // Skip logging if debug mode is off
     }
 
@@ -61,11 +65,11 @@ void LogMessage(
     const std::string& szMessage,
     bool bOnlyDebug
 ) {
-    if (!CheckGlobalOutputEnabled() && !g_bDebug) {
+    if (!CheckGlobalOutputEnabled() && !IsDebugOutputEnabled()) {
         return;
     }
 
-    if (bOnlyDebug && !g_bDebug) {
+    if (bOnlyDebug && !IsDebugOutputEnabled()) {
         return; // Skip logging if debug mode is off
     }
     std::cout << "[" << szPrefix << "] " << szMessage << std::endl;
@@ -76,10 +80,10 @@ void LogMessage(
     const std::wstring& wszMessage,
     bool bOnlyDebug
 ) {
-    if (!CheckGlobalOutputEnabled() && !g_bDebug) {
+    if (!CheckGlobalOutputEnabled() && !IsDebugOutputEnabled()) {
         return;
     }
-    if (bOnlyDebug && !g_bDebug) {
+    if (bOnlyDebug && !IsDebugOutputEnabled()) {
         return; // Skip logging if debug mode is off
     }
 
@@ -91,11 +95,11 @@ void LogError(
     const std::string& szMessage, 
     bool bOnlyDebug
 ) {
-    if (!CheckGlobalOutputEnabled() && !g_bDebug) {
+    if (!CheckGlobalOutputEnabled() && !IsDebugOutputEnabled()) {
         return;
     }
 
-    if (bOnlyDebug && !g_bDebug) {
+    if (bOnlyDebug && !IsDebugOutputEnabled()) {
         return; // Skip logging if debug mode is off
     }
     std::cout << "[" << szPrefix << "] ERROR: " << szMessage << std::endl;

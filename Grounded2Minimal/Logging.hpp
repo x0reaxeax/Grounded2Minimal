@@ -4,13 +4,14 @@
 #include <Windows.h>
 #include <iostream>
 
-extern bool GlobalOutputEnabled;
+extern std::atomic<bool> GlobalOutputEnabled;
 
-#define CheckGlobalOutputEnabled() (GlobalOutputEnabled)
+#define CheckGlobalOutputEnabled() (GlobalOutputEnabled.load())
 
 void EnableGlobalOutput(void);
 void DisableGlobalOutput(void);
 
+bool IsGlobalOutputEnabled(void);
 bool IsDebugOutputEnabled(void);
 void EnableDebugOutput(void);
 void DisableDebugOutput(void);
