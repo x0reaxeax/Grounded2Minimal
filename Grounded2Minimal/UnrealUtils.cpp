@@ -57,6 +57,10 @@ namespace UnrealUtils {
         return static_cast<SDK::ABP_SurvivalPlayerCharacter_C*>(lpPawn);
     }
 
+    SDK::USurvivalGameplayStatics* GetSurvivalGameplayStatics(void) {
+        SDK::USurvivalGameplayStatics* lpStatics = nullptr;
+        
+    }
 
     void DumpClasses(
         std::vector<std::string>* vszClassesOut,

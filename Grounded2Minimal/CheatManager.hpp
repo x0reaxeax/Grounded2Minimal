@@ -4,6 +4,18 @@
 #include "Grounded2Minimal.hpp"
 
 namespace CheatManager {
+    namespace StaticCheats {
+        bool SetMaxActiveMutations(
+            uint32_t uMaxMutations
+        );
+    }
+    
+    namespace InvokedCheats {
+        void SetPlayerCollision(
+            bool bNewCollisionState
+        );
+    }
+
     namespace Summon {
         struct BufferParamsSummon {
             int32_t iPlayerId;

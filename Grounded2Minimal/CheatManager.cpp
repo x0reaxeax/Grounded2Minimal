@@ -6,6 +6,36 @@
 #include "Command.hpp"
 
 namespace CheatManager {
+    namespace StaticCheats {
+        bool SetMaxActiveMutations(
+            uint32_t uMaxMutations
+        ) {
+            SDK::ASurvivalPlayerState *lpSurvivalPlayerState = UnrealUtils::GetLocalSurvivalPlayerState();
+            if (nullptr == lpSurvivalPlayerState) {
+                LogError("CheatManager", "Failed to get local SurvivalPlayerState");
+                return false;
+            }
+            lpSurvivalPlayerState->PerkComponent->MaxEquippedPerks = uMaxMutations;
+            return true;
+        }
+    }
+
+    namespace InvokedCheats {
+        void SetPlayerCollision(
+            bool bNewCollisionState
+        ) {
+            Command::Params::SetCollision *scParams = new Command::Params::SetCollision {
+                .lpPlayerState = UnrealUtils::GetLocalSurvivalPlayerState(),
+                .bNewCollisionState = bNewCollisionState
+            };
+
+            Command::SubmitTypedCommand(
+                Command::CommandId::CmdIdSetCollision,
+                scParams
+            );
+        }
+    }
+
     namespace Summon {
         void SummonClass(
         const std::string& szClassName

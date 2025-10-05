@@ -25,7 +25,7 @@ namespace Command {
         });
     }
 
-    void ProcessCommands(void) {
+    void __gamethread ProcessCommands(void) {
         std::unique_lock<std::mutex> lockUnique(CommandBufferMutex);
 
         if (!CommandBufferCookedForExecution.load()) {
@@ -158,6 +158,52 @@ namespace Command {
                     lpParams
                 );
 
+                break;
+            }
+
+            case CommandId::CmdIdUnlockAchievement: {
+                LogMessage("ProcessEvent", "Command: Unlock Achievement");
+                if (nullptr == localBuffer.Params) {
+                    LogError("ProcessEvent", "CmdIdUnlockAchievement: Params are null");
+                    break;
+                }
+                Params::UnlockAchievement* lpParams =
+                    static_cast<Params::UnlockAchievement*>(localBuffer.Params);
+                if (nullptr == lpParams->lpPlayerState) {
+                    LogError("ProcessEvent", "CmdIdUnlockAchievement: PlayerState is null");
+                    break;
+                }
+                LogMessage(
+                    "ProcessEvent",
+                    "UnlockAchievement - Player: " +
+                    lpParams->lpPlayerState->GetPlayerName().ToString() +
+                    ", Achievement: " + lpParams->AchievementName.ToString(),
+                    true
+                );
+                lpParams->lpPlayerState->AwardAchievement(lpParams->AchievementName);
+                break;
+            }
+
+            case CommandId::CmdIdSetCollision: {
+                LogMessage("ProcessEvent", "Command: Set Collision");
+                if (nullptr == localBuffer.Params) {
+                    LogError("ProcessEvent", "CmdIdSetCollision: Params are null");
+                    break;
+                }
+                Params::SetCollision* lpParams =
+                    static_cast<Params::SetCollision*>(localBuffer.Params);
+                if (nullptr == lpParams->lpPlayerState) {
+                    LogError("ProcessEvent", "CmdIdSetCollision: PlayerState is null");
+                    break;
+                }
+                LogMessage(
+                    "ProcessEvent",
+                    "SetCollision - Player: " +
+                    lpParams->lpPlayerState->GetPlayerName().ToString() +
+                    ", New State: " + std::string(lpParams->bNewCollisionState ? "Enabled" : "Disabled"),
+                    true
+                );
+                lpParams->lpPlayerState->SetActorEnableCollision(lpParams->bNewCollisionState);
                 break;
             }
 

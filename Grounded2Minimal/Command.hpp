@@ -12,6 +12,18 @@
 #include <atomic>
 
 namespace Command {
+    namespace Params {
+        struct UnlockAchievement {
+            SDK::ASurvivalPlayerState* lpPlayerState = nullptr;
+            SDK::FName AchievementName;
+        };
+
+        struct SetCollision {
+            SDK::ASurvivalPlayerState* lpPlayerState = nullptr;
+            bool bNewCollisionState;
+        };
+    }
+    
     enum class Status : uint32_t { // woah, you can do this in cpp?? jk, i hate this fucking language
         CmdStatusIdle,
         CmdStatusReady,
@@ -26,6 +38,8 @@ namespace Command {
         CmdIdSummon,
         CmdIdCheatManagerExecute,
         CmdIdEnableCheats,
+        CmdIdUnlockAchievement,
+        CmdIdSetCollision,
         CmdIdMax
     };
 

@@ -161,10 +161,40 @@ namespace Interpreter {
         );
     }
 
+    void HandleSetCollision(void) {
+        bool bNewCollision = (bool) ReadIntegerInput(
+            "[SetCollision] Collision [0/1]: ",
+            1
+        );
+
+        CheatManager::InvokedCheats::SetPlayerCollision(bNewCollision);
+    }
+
+    void HandleSetMaxActiveMutations(void) {
+        uint32_t uMaxMutations = (uint32_t) ReadIntegerInput(
+            "[SetMaxActiveMutations] Enter max active mutations: ",
+            0
+        );
+        if (0 == uMaxMutations) {
+            LogError("SetMaxActiveMutations", "Max active mutations cannot be zero");
+            return;
+        }
+        if (!CheatManager::StaticCheats::SetMaxActiveMutations(uMaxMutations)) {
+            LogError("SetMaxActiveMutations", "Failed to set max active mutations");
+            return;
+        }
+
+        LogMessage(
+            "SetMaxActiveMutations",
+            "Max active mutations set to " + std::to_string(uMaxMutations)
+        );
+    }
+
     void PrintAvailableCommands(void);
 
     ConsoleCommand g_Commands[] = {
         {"Help", "Show available commands", PrintAvailableCommands },
+        {"help", "Show available commands", PrintAvailableCommands },
         {"F_DataTableNeedle", "Search for DataTable", HandleDataTableSearch },
         {"F_ItemDump", "Dump DataTable items", HandleItemDump },
         {"F_FindItemTable", "Find DataTable for item", HandleFindItemTable },
@@ -226,7 +256,9 @@ namespace Interpreter {
                     DisableGlobalOutput();
                 }
             }
-        }
+        }, 
+        { "OPT_SetCollision", "Toggle SetCollision option", HandleSetCollision },
+        { "OPT_SetMaxActiveMutations", "Set max active mutations", HandleSetMaxActiveMutations  }
     };
 
     void PrintAvailableCommands(
