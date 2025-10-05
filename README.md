@@ -21,7 +21,9 @@ However, in case of multiplayer lobbies, only the LOBBY HOST can use this.**
  - **Item Spawner:** Allows either the host of the game lobby, but optionally also all connected players to spawn game items into their inventories.
  - **Class Summon:** Internal `CheatManager` summon command for internal classes. Can summon JuiceBoxes with this! (gl not getting stuck in them)
  - **Cheat Manager:** Internal `CheatManager` invokes for stuff like adding molars, raw science, unlocking stuff, etc.
+ - **Build Anywhere:** Bypasses building restrictions, allowing for building without construction support, overriding obstructions and the need for land rights.
  - **Debug Helpers:** Misc utils for dumping internal item names and data tables, as well as gathering lobby and player info.
+ - **Native Function Hooking:** Easily extendable hook manager that allows for `UFunction` hooking.
  - **That's it:** Adheres to the "Minimal" part of the program's name.
 
 ## Getting started
@@ -81,6 +83,7 @@ The debug console can be used to execute the following commands:
 
 | Command              | Description               |
 | -------------------- | ------------------------- |
+| `Help`               | Displays all available commands |
 | `H_GetAuthority`     | Checks if you're the host |
 | `X_DebugToggle`      | Toggles debug output (very spammy and performance heavy) |
 | `X_GlobalCheatMode`  | Toggles Global Cheat Mode |
@@ -93,6 +96,7 @@ The debug console can be used to execute the following commands:
 | `F_ItemDump`         | Finds all items within a given data table name |
 | `I_SpawnItem`        | Spawns a selected item into a selected player's inventory |
 | `S_SummonClass`      | Summons a selected class |
+| `OPT_BuildAnywhere`  | Enables 'Build Anywhere' mode |
 | `<Item Name Needle>` | Searches for spawned items around the player by a given name needle (empty input displays all) |
 | `exit` or `quit`     | Unloads game hooks and exits the tool |
 
