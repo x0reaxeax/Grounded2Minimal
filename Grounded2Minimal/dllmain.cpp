@@ -32,13 +32,7 @@ GameOptions g_GameOptions;
 
 /////////////////////////////////////////////////////////////
 // Cached data
-
-// Cached player list
-std::vector<SDK::APlayerState*> g_vPlayers;
-// Cached local player ID
-int32_t g_iLocalPlayerId = -1;
-// Cached world instance
-SDK::UWorld* g_lpWorld = nullptr;
+struct CachedData g_CachedData{};
 
 void HideConsole(
     void
@@ -197,12 +191,12 @@ PROCESSEVENTHOOK __fastcall _HookedChatBoxProcessEvent(
         goto _RYUJI;
     }
 
-    // Require expected types
+    // Require expected types - the check logic is INTENTIONAL
     if (
         !lpObject->IsA(SDK::UUI_ChatLog_C::StaticClass())
         || 
-        !lpObject->IsA(SDK::UChatBoxWidget::StaticClass()
-    )) {
+        !lpObject->IsA(SDK::UChatBoxWidget::StaticClass())
+    ) {
         goto _RYUJI;
     }
 
@@ -232,10 +226,24 @@ _RYUJI:
 
     // Launch async evaluation if we captured a message
     if (nullptr != lpMessageDataCopy) {
-        std::thread([lpMessageDataCopy]() {
-            ItemSpawner::EvaluateChatSpawnRequestSafe(lpMessageDataCopy);
+        try {
+            std::thread([lpMessageDataCopy]() {
+                ItemSpawner::EvaluateChatSpawnRequestSafe(lpMessageDataCopy);
+                delete lpMessageDataCopy;
+            }).detach();
+        } catch (const std::exception& e) {
+            LogError(
+                "ChatBoxProcessEvent",
+                "Exception launching chat evaluation thread: " + std::string(e.what())
+            );
             delete lpMessageDataCopy;
-        }).detach();
+        } catch (...) {
+            LogError(
+                "ChatBoxProcessEvent",
+                "Unknown exception launching chat evaluation thread"
+            );
+            delete lpMessageDataCopy;
+        }
     }
 
     if (lpHookData->bDebugFilterEnabled.load()) {

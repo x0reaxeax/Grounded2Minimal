@@ -857,13 +857,13 @@ namespace WinGUI {
 
         // Check if the player list actually changed lol
         bool bPlayersChanged = false;
-        if (vNewPlayers.size() != g_vPlayers.size()) {
+        if (vNewPlayers.size() != g_CachedData.Players.size()) {
             bPlayersChanged = true;
         } else {
             // Compare player IDs to see if the list changed
             for (size_t i = 0; i < vNewPlayers.size(); ++i) {
-                if (nullptr == vNewPlayers[i] || nullptr == g_vPlayers[i] ||
-                    vNewPlayers[i]->PlayerId != g_vPlayers[i]->PlayerId) {
+                if (nullptr == vNewPlayers[i] || nullptr == g_CachedData.Players[i] ||
+                    vNewPlayers[i]->PlayerId != g_CachedData.Players[i]->PlayerId) {
                     bPlayersChanged = true;
                     break;
                 }
@@ -887,13 +887,13 @@ namespace WinGUI {
         }
 
         // Update the global player list
-        g_vPlayers = vNewPlayers;
+        g_CachedData.Players = vNewPlayers;
         
         // Clear and repepopopulate the ListView
         ClearPlayerTable();
         
         int iNewSelectionIndex = -1; // Track where to restore selection
-        for (const auto& lpPlayerState : g_vPlayers) {
+        for (const auto& lpPlayerState : g_CachedData.Players) {
             if (nullptr == lpPlayerState) {
                 continue;
             }
@@ -1459,7 +1459,7 @@ namespace WinGUI {
             LogMessage("WinGUI", "Populating player list...");
             PopulatePlayerList();
             std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-        } while (g_vPlayers.empty());
+        } while (g_CachedData.Players.empty());
 
         // Populate DataTable list (TODO: wrap this one too)
         ClearDataTableList();

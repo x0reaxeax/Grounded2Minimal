@@ -8,8 +8,8 @@
 
 namespace UnrealUtils {
     SDK::UWorld *GetWorld(bool bCached) {
-        if (bCached && g_lpWorld != nullptr) {
-            return g_lpWorld;
+        if (bCached && g_CachedData.WorldInstance != nullptr) {
+            return g_CachedData.WorldInstance;
         }
         int32_t iRetryCount = 0;
         const int32_t iMaxRetries = 20;
@@ -28,7 +28,7 @@ namespace UnrealUtils {
                 }
             }
         } while (nullptr == lpWorld);
-        g_lpWorld = lpWorld;
+        g_CachedData.WorldInstance = lpWorld;
 
         return lpWorld;
     }
@@ -576,8 +576,8 @@ namespace UnrealUtils {
     }
 
     int32_t GetLocalPlayerId(bool bCached) {
-        if (bCached && -1 != g_iLocalPlayerId) {
-            return g_iLocalPlayerId;
+        if (bCached && -1 != g_CachedData.LocalPlayerId) {
+            return g_CachedData.LocalPlayerId;
         }
         SDK::UWorld *lpWorld = GetWorld();
         if (nullptr == lpWorld) {
@@ -606,7 +606,7 @@ namespace UnrealUtils {
         }
 
         // Refresh the cached player ID if requested
-        g_iLocalPlayerId = lpPlayerState->PlayerId;
+        g_CachedData.LocalPlayerId = lpPlayerState->PlayerId;
 
         return lpPlayerState->PlayerId;
     }

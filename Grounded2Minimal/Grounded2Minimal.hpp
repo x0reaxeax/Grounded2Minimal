@@ -48,11 +48,14 @@ struct ProcessEventParams {
     void* lpParams = nullptr;
 };
 
-struct UnrealCache {
-    SDK::UWorld* lpWorld = nullptr;
-    int32_t iLocalPlayerId = -1;
-    std::vector<SDK::APlayerState*> vPlayers = {};
-}; // TODO: use this
+struct CachedData {
+    // Cached player list
+    std::vector<SDK::APlayerState*> Players;
+    // Cached local player ID
+    int32_t LocalPlayerId = -1;
+    // Cached world instance
+    SDK::UWorld* WorldInstance = nullptr;
+};
 
 ///////////////////////////////////////////////////////////////
 /// Globals
@@ -62,12 +65,8 @@ extern G2MOptions g_G2MOptions;
 
 // Version information
 extern VersionInfo GroundedMinimalVersionInfo;
-// Cached player list
-extern std::vector<SDK::APlayerState*> g_vPlayers;
-// Cached local player ID
-extern int32_t g_iLocalPlayerId;
-// Cached world instance
-extern SDK::UWorld* g_lpWorld;
+// Unreal cached data
+extern struct CachedData g_CachedData;
 
 // Game options
 extern GameOptions g_GameOptions;
