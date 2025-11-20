@@ -86,6 +86,9 @@ namespace CheatManager {
 
     //bool Initialize(void);
     bool ManualInitialize(void);
+
+    // Cleans up the artificially crafted cheat manager instance
+    void Destroy(void);
 }
 
 #endif // _GROUNDED2_MINIMAL_CHEAT_MANAGER_HPP

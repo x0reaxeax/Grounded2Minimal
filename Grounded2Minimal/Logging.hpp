@@ -45,4 +45,6 @@ void LogError(
     bool bOnlyDebug = false
 );
 
+HANDLE *InitalizeLogFile(void);
+
 #endif // _GROUNDED2_MINIMAL_LOGGING_HPP

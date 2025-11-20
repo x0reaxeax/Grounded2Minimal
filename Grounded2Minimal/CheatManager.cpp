@@ -135,6 +135,56 @@ namespace CheatManager {
         return true;
     }
 
+    void Destroy(void) {
+        if (nullptr != SurvivalCheatManager) {
+            SDK::APlayerController *lpPlayerController = 
+                static_cast<SDK::APlayerController*>(SurvivalCheatManager->Outer);
+
+            if (
+                nullptr != lpPlayerController 
+                && 
+                lpPlayerController->CheatManager == SurvivalCheatManager
+            ) {
+                LogMessage(
+                    "CheatManager",
+                    "Destroying SurvivalCheatManager instance: "
+                    + CoreUtils::HexConvert(
+                        reinterpret_cast<uintptr_t>(SurvivalCheatManager)
+                    ),
+                    true
+                );
+                lpPlayerController->CheatManager = nullptr;
+
+                if (lpPlayerController->CheatClass == SDK::USurvivalCheatManager::StaticClass()) {
+                    LogMessage(
+                        "CheatManager",
+                        "Clearing CheatClass for player controller: "
+                        + CoreUtils::HexConvert(
+                            reinterpret_cast<uintptr_t>(lpPlayerController)
+                        ),
+                        true
+                    );
+                    lpPlayerController->CheatClass = nullptr;
+                }
+            }
+
+            LogMessage(
+                "CheatManager",
+                "Cleaning up SurvivalCheatManager pointers...",
+                true
+            );
+
+            SurvivalCheatManager->Outer = nullptr;
+            SurvivalCheatManager = nullptr;
+
+            LogMessage(
+                "CheatManager",
+                "Cleanup successful",
+                true
+            );
+        }
+    }
+
     bool ManualInitialize(void) {
         if (!g_G2MOptions.bIsClientHost) {
             LogError(

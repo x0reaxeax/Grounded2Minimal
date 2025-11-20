@@ -3,6 +3,10 @@
 std::atomic<bool> GlobalOutputEnabled{ true };
 std::atomic<bool> g_bDebug = { false };
 
+const char *G2M_LOG_PATH = "Grounded2MinimalLog.txt";
+
+GLOBALHANDLE g_hLogFile = INVALID_HANDLE_VALUE;
+
 ///////////////////////////////////////////////////////
 /// Logging n stuff
 
@@ -30,6 +34,12 @@ void DisableDebugOutput(void) {
     g_bDebug.store(false);
 }
 
+static bool IsHandleValid(
+    const HANDLE hHandle
+) {
+    return (INVALID_HANDLE_VALUE != hHandle) && (nullptr != hHandle);
+}
+
 bool CheckNullAndLog(
     const void* lpcPtr,
     const std::string& szPtrName,
@@ -49,6 +59,19 @@ void LogChar(
     const char cChar,
     bool bOnlyDebug
 ) {
+    if (IsHandleValid(g_hLogFile)) {
+        DWORD dwBytesWritten = 0;
+        WriteFile(
+            g_hLogFile,
+            &cChar,
+            sizeof(cChar),
+            &dwBytesWritten,
+            nullptr
+        );
+        // flush the file buffers to ensure immediate write
+        FlushFileBuffers(g_hLogFile);
+    }
+
     if (!IsGlobalOutputEnabled() && !IsDebugOutputEnabled()) {
         return;
     }
@@ -65,6 +88,20 @@ void LogMessage(
     const std::string& szMessage,
     bool bOnlyDebug
 ) {
+    std::string szLogMessage = "[" + szPrefix + "] " + szMessage + "\r\n";
+    if (IsHandleValid(g_hLogFile)) {
+        DWORD dwBytesWritten = 0;
+        WriteFile(
+            g_hLogFile,
+            szLogMessage.c_str(),
+            static_cast<DWORD>(szLogMessage.length()),
+            &dwBytesWritten,
+            nullptr
+        );
+        // flush the file buffers to ensure immediate write
+        FlushFileBuffers(g_hLogFile);
+    }
+
     if (!IsGlobalOutputEnabled() && !IsDebugOutputEnabled()) {
         return;
     }
@@ -72,7 +109,8 @@ void LogMessage(
     if (bOnlyDebug && !IsDebugOutputEnabled()) {
         return; // Skip logging if debug mode is off
     }
-    std::cout << "[" << szPrefix << "] " << szMessage << std::endl;
+    //std::cout << "[" << szPrefix << "] " << szMessage << std::endl;
+    std::cout << szLogMessage;
 }
 
 void LogMessage(
@@ -80,6 +118,20 @@ void LogMessage(
     const std::wstring& wszMessage,
     bool bOnlyDebug
 ) {
+    std::wstring wszLogMessage = L"[" + wszPrefix + L"] " + wszMessage + L"\r\n";
+    if (IsHandleValid(g_hLogFile)) {
+        DWORD dwBytesWritten = 0;
+        WriteFile(
+            g_hLogFile,
+            wszLogMessage.c_str(),
+            static_cast<DWORD>(wszLogMessage.length() * sizeof(wchar_t)),
+            &dwBytesWritten,
+            nullptr
+        );
+        // flush the file buffers to ensure immediate write
+        FlushFileBuffers(g_hLogFile);
+    }
+
     if (!IsGlobalOutputEnabled() && !IsDebugOutputEnabled()) {
         return;
     }
@@ -87,7 +139,8 @@ void LogMessage(
         return; // Skip logging if debug mode is off
     }
 
-    std::wcout << L"[" << wszPrefix << L"] " << wszMessage << std::endl;
+    //std::wcout << L"[" << wszPrefix << L"] " << wszMessage << std::endl;
+    std::wcout << wszLogMessage;
 }
 
 void LogError(
@@ -95,6 +148,21 @@ void LogError(
     const std::string& szMessage, 
     bool bOnlyDebug
 ) {
+    std::string szErrorMessage = "[" + szPrefix + "] ERROR: " + szMessage + "\r\n";
+    if (IsHandleValid(g_hLogFile)) {
+        DWORD dwBytesWritten = 0;
+        WriteFile(
+            g_hLogFile,
+            szErrorMessage.c_str(),
+            static_cast<DWORD>(szErrorMessage.length()),
+            &dwBytesWritten,
+            nullptr
+        );
+
+        // flush the file buffers to ensure immediate write
+        FlushFileBuffers(g_hLogFile);
+    }
+
     if (!IsGlobalOutputEnabled() && !IsDebugOutputEnabled()) {
         return;
     }
@@ -102,5 +170,28 @@ void LogError(
     if (bOnlyDebug && !IsDebugOutputEnabled()) {
         return; // Skip logging if debug mode is off
     }
-    std::cout << "[" << szPrefix << "] ERROR: " << szMessage << std::endl;
+    //std::cout << "[" << szPrefix << "] ERROR: " << szMessage << std::endl;
+    std::cout << szErrorMessage;
+}
+
+HANDLE *InitalizeLogFile(void) {
+    g_hLogFile = CreateFileA(
+        G2M_LOG_PATH,
+        GENERIC_WRITE,
+        FILE_SHARE_READ,
+        nullptr,
+        CREATE_ALWAYS,
+        FILE_ATTRIBUTE_NORMAL,
+        nullptr
+    );
+
+    if (INVALID_HANDLE_VALUE == g_hLogFile) {
+        LogError(
+            "Logging",
+            "Failed to create log file: " + std::string(G2M_LOG_PATH)
+        );
+        return nullptr;
+    }
+
+    return &g_hLogFile;
 }

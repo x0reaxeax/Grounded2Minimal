@@ -333,7 +333,7 @@ NATIVEHOOK __stdcall _HookedUpdateCollisionStateChange(
     if (SDK::EBuildingState::BeingPlacedInvalid == lpBuilding->BuildingState) {
         lpBuilding->BuildingState = SDK::EBuildingState::BeingPlaced;
     }
-
+    
 _RYUJI:
     lpHookData->OriginalFn(lpObj, lpFFrame, lpResult);
 }
@@ -358,6 +358,13 @@ DWORD WINAPI ThreadEntry(
     freopen_s(&lpStdin, "CONIN$", "r", stdin);
     
     g_hConsole = GetConsoleWindow();
+
+    // Init log file
+    g_G2MOptions.hLogFile = InitalizeLogFile();
+    if (nullptr == g_G2MOptions.hLogFile) {
+        LogError("Init", "Failed to initialize log file");
+        // we still continue
+    }
 
     if (!CoreUtils::GetVersionFromResource(
         GroundedMinimalVersionInfo
@@ -488,8 +495,14 @@ DWORD WINAPI ThreadEntry(
 
     WinGUI::Stop();
 
+    /////// Cleanup ///////
 _RYUJI:
     LogMessage("Exit", "GroundedMinimal2: Unhooking and cleaning up...");
+
+    if (g_G2MOptions.bIsClientHost) {
+        LogMessage("Exit", "Cleaning up CheatManager instance...");
+        CheatManager::Destroy();
+    }
 
     LogMessage(
         "Exit", "Restoring ProcessEvent hooks..."
@@ -521,6 +534,8 @@ _RYUJI:
         fclose(lpStderr);
         lpStderr = nullptr;
     }
+
+    CloseHandle(g_G2MOptions.hLogFile);
 
     FreeConsole();
 
