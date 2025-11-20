@@ -2,6 +2,7 @@
 #include "Interpreter.hpp"
 #include "UnrealUtils.hpp"
 #include "ItemSpawner.hpp"
+#include "HookManager.hpp"
 #include "Command.hpp"
 
 namespace Interpreter {
@@ -150,8 +151,7 @@ namespace Interpreter {
     }
 
     void HandleBuildAnywhere(void) {
-        bool bCurrent = g_GameOptions.BuildAnywhere.load();
-        g_GameOptions.BuildAnywhere.store(!bCurrent);
+        g_GameOptions.BuildAnywhere.fetch_xor(1, std::memory_order_acq_rel);
         LogMessage(
             "GameOptions",
             "PlaceAnywhere is now " + std::string(
@@ -190,6 +190,76 @@ namespace Interpreter {
         );
     }
 
+    void HandleSetDebugFilter(void) {
+        int32_t iHookId = ReadIntegerInput(
+            "[DebugFilter] Enter hook ID to apply filter to (empty for all): ",
+            HookManager::UniqueHookIdSpecial::AllHooks
+        );
+
+        if (iHookId < 0) {
+            LogError(
+                "DebugFilter", 
+                "Invalid hook ID, must be -1 (all) or a valid hook ID"
+            );
+            return;
+        }
+
+        std::string szInputDebugFilter;
+
+        if (!ReadInterpreterInput(
+            "[DebugFilter] Enter debug function substring filter: ",
+            szInputDebugFilter
+        )) {
+            LogError(
+                "DebugFilter",
+                "Invalid input, please provide a valid debug filter"
+            );
+            return;
+        }
+
+        if (
+            szInputDebugFilter == ""
+            ||
+            szInputDebugFilter == " "
+            ||
+            szInputDebugFilter == "\n"
+        ) {
+            szInputDebugFilter.clear();
+        }
+
+        HookManager::HookType eHookType = HookManager::GetHookTypeById(iHookId);
+        switch (eHookType) {
+            case HookManager::HookType::ProcessEvent:
+                HookManager::ProcessEventHooker::SetHookDebugFilterById(
+                    iHookId,
+                    szInputDebugFilter
+                );
+                break;
+            case HookManager::HookType::NativeFunction:
+                HookManager::NativeHooker::SetHookDebugFilterById(
+                    iHookId,
+                    szInputDebugFilter
+                );
+                break;
+            case HookManager::HookType::Invalid:
+            default:
+                LogError(
+                    "DebugFilter",
+                    "Invalid hook ID, no such hook found: " + std::to_string(iHookId)
+                );
+                return;
+        }
+
+        if (szInputDebugFilter.empty()) {
+            LogMessage("DebugFilter", "Cleared debug filter");
+        } else {
+            LogMessage(
+                "DebugFilter",
+                "DebugFilter needle set to '" + szInputDebugFilter + "'"
+            );
+        }
+    }
+
     void PrintAvailableCommands(void);
 
     ConsoleCommand g_Commands[] = {
@@ -216,6 +286,26 @@ namespace Interpreter {
                 LogMessage(
                     "Debug",
                     "Debug mode " + std::string(IsDebugOutputEnabled() ? "enabled" : "disabled")
+                );
+            }
+        },
+        { "X_DebugFilter", "Set debug function filter", HandleSetDebugFilter },
+        {
+            "X_HookInfo", "Show installed hooks", []() {
+                LogMessage("HookInfo", "Listing ProcessEvent hooks..");
+                HookManager::ProcessEventHooker::ListActiveHooks();
+                LogMessage("HookInfo", "Listing Native function hooks..");
+                HookManager::NativeHooker::ListActiveHooks();
+            }
+        },
+        {
+            "X_ToggleDebugPlayerReport", "Toggle automatic timed player report when debug output is enabled", []() {
+                g_G2MOptions.bHideAutoPlayerDbgInfo.fetch_xor(1, std::memory_order_acq_rel);
+                LogMessage(
+                    "Debug",
+                    "Automatic player report " + std::string(
+                        g_G2MOptions.bHideAutoPlayerDbgInfo.load() ? "disabled" : "enabled"
+                    )
                 );
             }
         },
@@ -320,7 +410,10 @@ namespace Interpreter {
             } catch (const std::exception& e) {
                 // Fall back to local player ID if available
                 if (iLocalPlayerId == -1) {
-                    LogError("PlayerResolver", "Unable to determine local player ID");
+                    LogError(
+                        "PlayerResolver", 
+                        "Unable to determine local player ID (" + std::string(e.what()) + ")"
+                    );
                     return -1;
                 }
                 LogMessage(
@@ -393,7 +486,11 @@ namespace Interpreter {
         try {
             return std::stoi(szInput);
         } catch (const std::exception& e) {
-            LogError("Input", "Invalid number format", true);
+            LogError(
+                "Input", 
+                "Invalid number format (" + std::string(e.what()) + ")",
+                true
+            );
             return iDefaultValue;
         }
     }

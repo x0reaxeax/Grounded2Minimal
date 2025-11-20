@@ -12,7 +12,7 @@
 
 namespace ItemSpawner {
     // Allows everyone (not just host) to utilize the host to spawn them items.
-    bool GlobalCheatMode = false;
+    std::atomic<bool> GlobalCheatMode{ false };
 
     bool GiveItemToPlayer(
         int32_t iPlayerId,
@@ -43,20 +43,18 @@ namespace ItemSpawner {
             return false;
         }
 
-        int32_t iTotalPlayers = g_vPlayers.size();
-        LogMessage(
-            "ItemSpawner",
-            "Total players in game: " + std::to_string(iTotalPlayers)
-        );
+        auto& players = lpGameStateBase->PlayerArray;
+        const int32_t iTotalPlayers = players.Num();
+        LogMessage("ItemSpawner", "Total players in game: " + std::to_string(iTotalPlayers));
 
-        for (int32_t i = 0; i < iTotalPlayers; i++) {
-            SDK::APlayerState *lpPlayerState = g_vPlayers.at(i);
+        for (int32_t i = 0; i < iTotalPlayers; ++i) {
+            SDK::APlayerState *lpPlayerState = players[i];
             if (nullptr == lpPlayerState) {
                 continue;
             }
 
             if (iPlayerId != lpPlayerState->PlayerId) {
-                continue; // didnt wanna give it to this guy anyway
+                continue; // didn't wanna give it to this guy anyway
             }
 
             std::string szPlayerName = lpPlayerState->GetPlayerName().ToString();
@@ -115,7 +113,7 @@ namespace ItemSpawner {
         }
 
         // I forgot whether this is checked inside chat hook, so let's waste some time here
-        if (!GlobalCheatMode) {
+        if (!GlobalCheatMode.load()) {
             LogMessage("ItemSpawner", "Global cheat mode is disabled", true);
             EnableGlobalOutput();
             return;
@@ -216,7 +214,7 @@ namespace ItemSpawner {
             } catch (const std::invalid_argument& e) {
                 LogError(
                     "ItemSpawner",
-                    "Invalid item count format: " + szItemCountStr,
+                    "Invalid item count format: '" + szItemCountStr + "' (" + std::string(e.what()) + ")",
                     true
                 );
                 EnableGlobalOutput();
@@ -224,7 +222,7 @@ namespace ItemSpawner {
             } catch (const std::out_of_range& e) {
                 LogError(
                     "ItemSpawner",
-                    "Item count out of range: " + szItemCountStr,
+                    "Item count out of range: '" + szItemCountStr + "' (" + std::string(e.what()) + ")",
                     true
                 );
                 EnableGlobalOutput();
@@ -323,7 +321,7 @@ namespace ItemSpawner {
             );
             delete lpParams; // and fuk ur skins too
         }
-
+#pragma warning(suppress : 4102)
 _RYUJI:
         // Wait for command processing to complete
         /*while (Command::CommandBufferCookedForExecution) {

@@ -163,4 +163,9 @@ namespace CoreUtils {
 
         return false;
     }
+
+    int32_t GenerateUniqueId(void) {
+        static std::atomic<int32_t> s_iCurrentId{ 0 };
+        return ++s_iCurrentId;
+    }
 }

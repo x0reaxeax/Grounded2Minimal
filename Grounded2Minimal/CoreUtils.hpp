@@ -26,6 +26,8 @@ namespace CoreUtils {
     bool GetVersionFromResource(
         VersionInfo& versionInfo
     );
+
+    int32_t GenerateUniqueId(void);
 } // namespace CoreUtils
 
 #endif // _GROUNDED_MINIMAL_CORE_UTILS_HPP

@@ -400,11 +400,12 @@ namespace WinGUI {
                 DWORD dwStyle = (g_CheatButtons[i].PushLike) ? 
                     (WS_CHILD | WS_VISIBLE | BS_PUSHLIKE | BS_AUTOCHECKBOX | WS_TABSTOP) :
                     (WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON | WS_TABSTOP);
-
+                
                 g_CheatButtons[i].ButtonHandle = CreateWindowExW(
                     0, L"BUTTON", g_CheatButtons[i].ButtonText,
                     dwStyle,
                     x, y, BUTTON_WIDTH, BUTTON_HEIGHT,
+#pragma warning(suppress : 4312) // Disable warning for casting to HMENU
                     g_hMainWnd, (HMENU) g_CheatButtons[i].ButtonId, wcWindowClass.hInstance, NULL
                 );
 
@@ -426,7 +427,7 @@ namespace WinGUI {
                 CheckDlgButton(
                     g_hMainWnd,
                     IDC_CHECK_SHOW_CONSOLE,
-                    ShowDebugConsole ? BST_CHECKED : BST_UNCHECKED
+                    g_G2MOptions.bShowDebugConsole.load() ? BST_CHECKED : BST_UNCHECKED
                 );
             }
 
@@ -843,9 +844,7 @@ namespace WinGUI {
         
         // Get fresh player data, so fresh omg
         std::vector<SDK::APlayerState*> vNewPlayers;
-        DisableGlobalOutput();
-        UnrealUtils::DumpConnectedPlayers(&vNewPlayers);
-        EnableGlobalOutput();
+        UnrealUtils::DumpConnectedPlayers(&vNewPlayers, (bool) g_G2MOptions.bHideAutoPlayerDbgInfo.load());
 
         if (vNewPlayers.empty()) {
             LogMessage(
@@ -957,13 +956,11 @@ namespace WinGUI {
     ) {
         switch (fdwFunctionId) {
             case CheatManager::CheatManagerFunctionId::ToggleGod: {
-                bool bCurrentState = g_GameOptions.GodMode.load();
-                g_GameOptions.GodMode.store(!bCurrentState);
+                g_GameOptions.GodMode.fetch_xor(1, std::memory_order_acq_rel);
                 break;
             }
             case CheatManager::CheatManagerFunctionId::ToggleStamina: {
-                bool bCurrentState = g_GameOptions.InfiniteStamina.load();
-                g_GameOptions.InfiniteStamina.store(!bCurrentState);
+                g_GameOptions.InfiniteStamina.fetch_xor(1, std::memory_order_acq_rel);
                 break;
             }
             default:
@@ -1113,11 +1110,13 @@ namespace WinGUI {
                     }
 
                     case IDC_CHECK_SHOW_CONSOLE: {
-                        ShowDebugConsole = (BST_CHECKED == IsDlgButtonChecked(
-                            hWnd, 
-                            IDC_CHECK_SHOW_CONSOLE
-                        ));
-                        if (ShowDebugConsole) {
+                        g_G2MOptions.bShowDebugConsole.store(
+                            (BST_CHECKED == IsDlgButtonChecked(
+                                hWnd, 
+                                IDC_CHECK_SHOW_CONSOLE
+                            ))
+                        );
+                        if (g_G2MOptions.bShowDebugConsole.load()) {
                             ShowConsole();
                         } else {
                             HideConsole();
@@ -1126,14 +1125,16 @@ namespace WinGUI {
                     }
 
                     case IDC_CHECK_GLOBAL_CHEAT: {
-                        ItemSpawner::GlobalCheatMode = (BST_CHECKED == IsDlgButtonChecked(
-                            hWnd, 
-                            IDC_CHECK_GLOBAL_CHEAT
-                        ));
+                        ItemSpawner::GlobalCheatMode.store(
+                            (BST_CHECKED == IsDlgButtonChecked(
+                                hWnd, 
+                                IDC_CHECK_GLOBAL_CHEAT
+                            ))
+                        );
                         LogMessage(
                             "WinGUI", 
                             "Global Cheat Mode " + std::string(
-                                ItemSpawner::GlobalCheatMode 
+                                ItemSpawner::GlobalCheatMode.load()
                                 ? "enabled" 
                                 : "disabled"
                             ),

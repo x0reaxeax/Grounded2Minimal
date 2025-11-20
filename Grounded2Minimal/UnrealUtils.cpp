@@ -127,7 +127,11 @@ namespace UnrealUtils {
             SDK::UFunction *lpFunction = static_cast<SDK::UFunction*>(lpObj);
             LogMessage(
                 "Dump", 
-                "Found function: '" + lpFunction->GetFullName() + "' ['" + lpFunction->GetName() + "']"
+                "Found function: '" + lpFunction->GetFullName() 
+                + 
+                "' ['" + lpFunction->GetName() + "'] @" 
+                + 
+                CoreUtils::HexConvert(reinterpret_cast<uintptr_t>(lpFunction))
             );
         }
     }
@@ -160,7 +164,8 @@ namespace UnrealUtils {
 
     // Don't cache this one, since we now have auto-retry on GetWorld()
     void DumpConnectedPlayers(
-        std::vector<SDK::APlayerState*> *vlpPlayerStatesOut
+        std::vector<SDK::APlayerState*> *vlpPlayerStatesOut,
+        bool bHideOutput
     ) {
         SDK::UWorld *lpWorld = GetWorld();
         if (nullptr == lpWorld) {
@@ -187,14 +192,16 @@ namespace UnrealUtils {
             SDK::FString fszPlayerName = lpPlayerState->GetPlayerName();
             bool bHasAuthority = lpPlayerState->HasAuthority();
 
-            LogMessage(
-                L"PlayerInfo",
-                L"Player: '" + fszPlayerName.ToWString() + L"'\n" +
-                L"  * Authority:  " + std::wstring(bHasAuthority ? L"Yes" : L"No") + L"\n" +
-                L"  * ID:         " + std::to_wstring(lpPlayerState->PlayerId) + L"\n" +
-                L"  * Index:      " + std::to_wstring(lpPlayerState->Index) + L"\n" +
-                L"  * ArrayIndex: " + std::to_wstring(i)
-            );
+            if (!bHideOutput) {
+                LogMessage(
+                    L"PlayerInfo",
+                    L"Player: '" + fszPlayerName.ToWString() + L"'\n" +
+                    L"  * Authority:  " + std::wstring(bHasAuthority ? L"Yes" : L"No") + L"\n" +
+                    L"  * ID:         " + std::to_wstring(lpPlayerState->PlayerId) + L"\n" +
+                    L"  * Index:      " + std::to_wstring(lpPlayerState->Index) + L"\n" +
+                    L"  * ArrayIndex: " + std::to_wstring(i)
+                );
+            }
         }
     }
 
@@ -710,7 +717,7 @@ namespace UnrealUtils {
     SDK::ASurvivalPlayerController *GetLocalSurvivalPlayerController(void) {
         SDK::UWorld *lpWorld = GetWorld();
         if (nullptr == lpWorld) {
-            LogError("CheatManagerInit", "Failed to get UWorld instance");
+            LogError("FindLocalSPC", "Failed to get UWorld instance");
             return nullptr;
         }
         
@@ -728,13 +735,13 @@ namespace UnrealUtils {
                 static_cast<SDK::ASurvivalPlayerController*>(lpObj);
 
             if (nullptr == lpSurvivalPlayerControllerCandidate) {
-                LogError("CheatManagerInit", "Failed to cast to ASurvivalPlayerController");
+                LogError("FindLocalSPC", "Failed to cast to ASurvivalPlayerController");
                 continue;
             }
 
             SDK::APlayerState *lpPlayerState = lpSurvivalPlayerControllerCandidate->PlayerState;
             if (nullptr == lpPlayerState) {
-                LogError("CheatManagerInit", "PlayerState is NULL for ASurvivalPlayerController");
+                LogError("FindLocalSPC", "PlayerState is NULL for ASurvivalPlayerController");
                 continue;
             }
 

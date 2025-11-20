@@ -16,19 +16,13 @@
 
 #define _RELEASE
 
-// Main console input loop control
-static bool g_bRunning = true;
-// Debug console visibility status
-bool ShowDebugConsole = true;
+// Tool options
+G2MOptions g_G2MOptions{};
+
 // Main thread handle
 GLOBALHANDLE g_hThread = nullptr;
 // Global console handle
 HWND g_hConsole = nullptr;
-
-// Original ProcessEvent function pointer
-ProcessEvent_t OriginalProcessEvent = nullptr;
-// Original ChatBoxWidget ProcessEvent function pointer
-ProcessEvent_t OriginalChatBoxWidgetProcessEvent = nullptr;
 
 // Version information
 VersionInfo GroundedMinimalVersionInfo = { 0 };
@@ -65,70 +59,243 @@ void ShowConsole(
 ///////////////////////////////////////////////////////////////
 // Hooked functions
 
+void ProcessDebugFilter(
+    HookManager::ProcessEventHooker::HookData *lpHookData,
+    ProcessEventParams *lpParams
+) {
+    if (nullptr == lpHookData) {
+        return;
+    }
+    
+    if (lpHookData->szDebugFilter.empty()) {
+        return;
+    }
+
+    if (nullptr == lpParams) {
+        return;
+    }
+
+    if (nullptr == lpParams->lpObject || nullptr == lpParams->lpFunction) {
+        return;
+    }
+
+    if (CoreUtils::StringContainsCaseInsensitive(
+        lpParams->lpFunction->GetFullName(),
+        lpHookData->szDebugFilter
+    )) {
+        LogMessage(
+            lpHookData->szHookName,
+            "Function: " + lpParams->lpFunction->GetName() + " ['" + lpParams->lpFunction->GetFullName() + "']",
+            true
+        );
+
+        LogMessage(
+            lpHookData->szHookName,
+            "Object: " + lpParams->lpObject->GetName() + " ['" + lpParams->lpObject->GetFullName() + "']",
+            true
+        );
+    }
+}
+
+void ProcessDebugFilter(
+    HookManager::NativeHooker::HookEntry* lpHookData,
+    ProcessEventParams* lpParams
+) {
+    if (nullptr == lpHookData) {
+        return;
+    }
+    if (lpHookData->szDebugFilter.empty()) {
+        return;
+    }
+    if (nullptr == lpParams) {
+        return;
+    }
+    if (nullptr == lpParams->lpObject || nullptr == lpParams->lpFunction) {
+        return;
+    }
+    if (CoreUtils::StringContainsCaseInsensitive(
+        lpParams->lpFunction->GetFullName(),
+        lpHookData->szDebugFilter
+    )) {
+        LogMessage(
+            lpHookData->szHookName,
+            "Function: " + lpParams->lpFunction->GetName() + " ['" + lpParams->lpFunction->GetFullName() + "']",
+            true
+        );
+        LogMessage(
+            lpHookData->szHookName,
+            "Object: " + lpParams->lpObject->GetName() + " ['" + lpParams->lpObject->GetFullName() + "']",
+            true
+        );
+    }
+}
 
 ///// ProcessEvent hooks
-void __fastcall _HookedProcessEvent(
+// BP_SurvivalPlayerCharacter
+PROCESSEVENTHOOK __fastcall _HookedSPCProcessEvent(
     SDK::UObject *lpObject,
     SDK::UFunction *lpFunction,
     void *lpParams
 ) {
-    OriginalProcessEvent(lpObject, lpFunction, lpParams);
-
-    if (Command::CommandBufferCookedForExecution.load()) {
-        Command::ProcessCommands();
+    using namespace HookManager;
+    ProcessEventHooker::HookData* lpHookData = ProcessEventHooker::GetHookByHookedFunction(
+        _HookedSPCProcessEvent
+    );
+    if (nullptr == lpHookData) {
+        // catastrophic cataclysmic shit
+        throw std::runtime_error("SPCProcessEvent: Hook data not found");
+        return;
     }
+    // Re-entrancy guard for command processing on the same thread
+    static thread_local bool s_InProcessCommands = false;
+
+    // Process pending commands before calling the original, to avoid
+    // nested ProcessEvent re-entry while the flag is still set.
+    if (!s_InProcessCommands && Command::CommandBufferCookedForExecution.load()) {
+        s_InProcessCommands = true;
+        Command::ProcessCommands();
+        s_InProcessCommands = false;
+    }
+
+    // Call the original ProcessEvent
+    lpHookData->OriginalProcessEvent(lpObject, lpFunction, lpParams);
+
+    if (lpHookData->bDebugFilterEnabled.load()) {
+        ProcessEventParams funcParams{
+            lpObject,
+            lpFunction,
+            lpParams
+        };
+        ProcessDebugFilter(lpHookData, &funcParams);
+    }
+    // Do NOT process here anymore to avoid re-entrancy while commands run
 }
 
-void __fastcall _HookedChatBoxProcessEvent(
+PROCESSEVENTHOOK __fastcall _HookedChatBoxProcessEvent(
     SDK::UObject* lpObject,
     SDK::UFunction* lpFunction,
     LPVOID lpParams
 ) {
-    OriginalChatBoxWidgetProcessEvent(lpObject, lpFunction, lpParams);
+    using namespace HookManager;
+    ProcessEventHooker::HookData* lpHookData = ProcessEventHooker::GetHookByHookedFunction(
+        _HookedChatBoxProcessEvent
+    );
+    if (nullptr == lpHookData) {
+        // catastrophic cataclysmic shit
+        throw std::runtime_error("ChatBoxProcessEvent: Hook data not found");
+        return;
+    }
+    SDK::FChatBoxMessage* lpMessage = nullptr;
+    ItemSpawner::SafeChatMessageData* lpMessageDataCopy = nullptr;
     
-    if (!ItemSpawner::GlobalCheatMode) {
-        return;
+    // Fast-path: if cheat mode is off, just pass through.
+    if (!ItemSpawner::GlobalCheatMode.load()) {
+        goto _RYUJI;
     }
 
+    if (nullptr == lpObject || nullptr == lpFunction) {
+        goto _RYUJI;
+    }
+
+    // Require expected types
     if (
-        !lpObject->IsA(SDK::UUI_ChatLog_C::StaticClass()) 
+        !lpObject->IsA(SDK::UUI_ChatLog_C::StaticClass())
         || 
-        !lpObject->IsA(SDK::UChatBoxWidget::StaticClass())
-    ) {
-        return;
+        !lpObject->IsA(SDK::UChatBoxWidget::StaticClass()
+    )) {
+        goto _RYUJI;
     }
 
+    // Only handle incoming chat events
     if (!lpFunction->GetName().contains("HandleChatMessageReceived")) {
+        goto _RYUJI;
+    }
+
+    if (nullptr == lpParams) {
+        goto _RYUJI;
+    }
+    
+    lpMessage = static_cast<SDK::FChatBoxMessage*>(lpParams);
+    if (lpMessage && lpMessage->SenderPlayerState) {
+        lpMessageDataCopy = new ItemSpawner::SafeChatMessageData{
+            lpMessage->SenderPlayerState->PlayerId,
+            lpMessage->Message.ToString(),
+            lpMessage->SenderPlayerState->GetPlayerName().ToString(),
+            lpMessage->Color,
+            lpMessage->Type
+        };
+    }
+
+_RYUJI:
+    // Call the original event handler
+    lpHookData->OriginalProcessEvent(lpObject, lpFunction, lpParams);
+
+    // Launch async evaluation if we captured a message
+    if (nullptr != lpMessageDataCopy) {
+        std::thread([lpMessageDataCopy]() {
+            ItemSpawner::EvaluateChatSpawnRequestSafe(lpMessageDataCopy);
+            delete lpMessageDataCopy;
+        }).detach();
+    }
+
+    if (lpHookData->bDebugFilterEnabled.load()) {
+        ProcessEventParams funcParams{
+            lpObject,
+            lpFunction,
+            lpParams
+        };
+        ProcessDebugFilter(lpHookData, &funcParams);
+    }
+}
+
+PROCESSEVENTHOOK __fastcall _HookedBuildingGridHudInterface(
+    SDK::UObject *lpObject,
+    SDK::UFunction *lpFunction,
+    void *lpParams
+) {
+    using namespace HookManager;
+    ProcessEventHooker::HookData* lpHookData = ProcessEventHooker::GetHookByHookedFunction(
+        _HookedBuildingGridHudInterface
+    );
+    if (nullptr == lpHookData) {
+        throw std::runtime_error("BuildingGridHudInterface: Hook data not found");
         return;
     }
 
-    SDK::FChatBoxMessage *lpMessage = static_cast<SDK::FChatBoxMessage *>(lpParams);
-    if (nullptr == lpMessage || nullptr == lpMessage->SenderPlayerState) {
+    lpHookData->OriginalProcessEvent(lpObject, lpFunction, lpParams);
+
+    if (nullptr == lpObject || nullptr == lpFunction) {
         return;
     }
 
-    ItemSpawner::SafeChatMessageData* lpMessageDataCopy = new ItemSpawner::SafeChatMessageData{
-        .iSenderId = lpMessage->SenderPlayerState->PlayerId,
-        .szMessage = lpMessage->Message.ToString(),
-        .szSenderName = lpMessage->SenderPlayerState->GetPlayerName().ToString(),
-        .Color = lpMessage->Color,
-        .Type = lpMessage->Type
-    };
-
-    std::thread([lpMessageDataCopy]() {
-        ItemSpawner::EvaluateChatSpawnRequestSafe(lpMessageDataCopy);
-        delete lpMessageDataCopy;
-    }).detach();
+    if (lpHookData->bDebugFilterEnabled.load()) {
+        ProcessEventParams funcParams{
+            lpObject,
+            lpFunction,
+            lpParams
+        };
+        ProcessDebugFilter(lpHookData, &funcParams);
+    }
 }
 
 ///// Native function hooks
-NativeHooker::NativeFunc_t fnOriginalUpdateCollisionStateChange = nullptr;
-
-static void __stdcall Hook_UpdateCollisionStateChange(
+NATIVEHOOK __stdcall _HookedUpdateCollisionStateChange(
     SDK::UObject* lpObj,
     void* lpFFrame,
     void* lpResult
 ) {
+    using namespace HookManager;
+
+    NativeHooker::HookEntry* lpHookData = NativeHooker::GetHookByHookedFunction(
+        &_HookedUpdateCollisionStateChange
+    );
+
+    if (nullptr == lpHookData) {
+        // catastrophic cataclysmic shit
+        throw std::runtime_error("UpdateCollisionStateChange: Hook data not found");
+        return;
+    }
+
     SDK::ABuilding* lpBuilding = nullptr;
     if (!g_GameOptions.BuildAnywhere.load()) {
         goto _RYUJI;
@@ -160,10 +327,9 @@ static void __stdcall Hook_UpdateCollisionStateChange(
     }
 
 _RYUJI:
-    if (nullptr != fnOriginalUpdateCollisionStateChange) {
-        fnOriginalUpdateCollisionStateChange(lpObj, lpFFrame, lpResult);
-    }
+    lpHookData->OriginalFn(lpObj, lpFFrame, lpResult);
 }
+
 /////////////////////////////////////////////////////////////
 
 DWORD WINAPI ThreadEntry(
@@ -177,8 +343,6 @@ DWORD WINAPI ThreadEntry(
     INT iRet = EXIT_FAILURE;
     HMODULE hLocalModule = static_cast<HMODULE>(lpParam);
     FILE *lpStdout = nullptr, *lpStderr = nullptr, *lpStdin = nullptr;
-
-    NativeHooker::HookEntry *lpEntry = nullptr;
 
     AllocConsole();
     freopen_s(&lpStdout, "CONOUT$", "w", stdout);
@@ -217,10 +381,10 @@ DWORD WINAPI ThreadEntry(
 
     LogMessage("Init", "Starting hooks initialization...");
     LogMessage("Init", "Initializing APawn ProcessEvent hook...", true);
-    if (!HookManager::InstallHook(
-        UnrealUtils::GetLocalPawn(),
-        _HookedProcessEvent,
-        &OriginalProcessEvent
+    if (!HookManager::ProcessEventHooker::InstallHook(
+        UnrealUtils::GetLocalSurvivalPlayerController(),
+        _HookedSPCProcessEvent,    // BP_SurvivalPlayerCharacter
+        "SPC_ProcessEvent"
     )) {
         LogError(
             "Init", 
@@ -231,29 +395,29 @@ DWORD WINAPI ThreadEntry(
 
     LogMessage("Init", "Initializing ChatBoxWidget ProcessEvent hook...", true);
 
-    if (!HookManager::InstallHook(
+    if (!HookManager::ProcessEventHooker::InstallHook(
         SDK::UChatBoxWidget::GetDefaultObj(),
         _HookedChatBoxProcessEvent,
-        &OriginalChatBoxWidgetProcessEvent
+        "ChatBoxWidget_ProcessEvent"
     )) {
         LogError("Init", "Failed to hook ChatBoxWidget ProcessEvent");
         goto _RYUJI; // lol
     }
 
-    lpEntry = NativeHooker::HookNativeFunction(
-        "UpdateCollisionStateChange",
-        &Hook_UpdateCollisionStateChange,
-        &fnOriginalUpdateCollisionStateChange
-    );
 
-    if (nullptr == lpEntry) {
+    LogMessage("Init", "Initializing Building::UpdateCollisionStateChange native hook...", true);
+
+    if (nullptr == HookManager::NativeHooker::HookNativeFunction(
+        "UpdateCollisionStateChange",
+        &_HookedUpdateCollisionStateChange,
+        "UpdateCollisionStateChange_Native"
+    )) {
         LogError(
             "Init", 
             "Failed to hook Building::UpdateCollisionStateChange"
         );
         goto _RYUJI;
     }
-
 
     LogMessage("Init", "Hooks initialized");
 
@@ -273,7 +437,7 @@ DWORD WINAPI ThreadEntry(
     }
     LogMessage("Init", "Grounded2Minimal: GUI thread launched successfully");
 
-    while (g_bRunning) {
+    while (g_G2MOptions.bRunning.load()) {
         Command::WaitForCommandBufferReady();
 
         std::string szInput;
@@ -281,7 +445,7 @@ DWORD WINAPI ThreadEntry(
 
         if (szInput == "quit" || szInput == "exit") {
             LogMessage("Exit", "Exiting GroundedInternal...");
-            g_bRunning = false;
+            g_G2MOptions.bRunning.store(false);
 
             break;
         }
@@ -301,13 +465,13 @@ _RYUJI:
     LogMessage(
         "Exit", "Restoring ProcessEvent hooks..."
     );
-    HookManager::RestoreHooks();
+    HookManager::ProcessEventHooker::RestoreHooks();
     std::this_thread::sleep_for(std::chrono::milliseconds(500));
     
     LogMessage(
         "Exit", "Restoring native function hooks..."
     );
-    NativeHooker::RestoreAll();
+    HookManager::NativeHooker::RestoreAll();
     std::this_thread::sleep_for(std::chrono::milliseconds(500));
 
     if (EXIT_SUCCESS != iRet) {
@@ -353,7 +517,7 @@ BOOL APIENTRY DllMain(HMODULE hModule, DWORD dwReason, LPVOID lpReserved) {
             break;
         }
         case DLL_PROCESS_DETACH: {
-            g_bRunning = FALSE;
+            g_G2MOptions.bRunning.store(false);
             break;
         }
     }

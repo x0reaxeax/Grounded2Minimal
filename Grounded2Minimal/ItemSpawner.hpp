@@ -9,7 +9,7 @@
 #include <string>
 
 namespace ItemSpawner {
-    extern bool GlobalCheatMode;
+    extern std::atomic<bool> GlobalCheatMode;
 
     struct BufferParamsSpawnItem {
         int32_t iPlayerId;          // ID of the player to spawn items for, check GUI when in doubt

@@ -50,7 +50,8 @@ namespace UnrealUtils {
     );
 
     void DumpConnectedPlayers(
-        std::vector<SDK::APlayerState*> *vlpPlayerStatesOut = nullptr
+        std::vector<SDK::APlayerState*> *vlpPlayerStatesOut = nullptr,
+        bool bHideOutput = false
     );
 
     bool IsPlayerHostAuthority(

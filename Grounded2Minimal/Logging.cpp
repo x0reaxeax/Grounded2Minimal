@@ -37,7 +37,7 @@ bool CheckNullAndLog(
 ) {
     if (nullptr == lpcPtr) {
         std::string szFullContext = szContext.empty() ? "General" : szContext;
-        if (CheckGlobalOutputEnabled()) {
+        if (IsGlobalOutputEnabled()) {
             std::cout << "[" << szFullContext << "] " << szPtrName << " is NULL." << std::endl;
         }
         return true;
@@ -49,7 +49,7 @@ void LogChar(
     const char cChar,
     bool bOnlyDebug
 ) {
-    if (!CheckGlobalOutputEnabled() && !IsDebugOutputEnabled()) {
+    if (!IsGlobalOutputEnabled() && !IsDebugOutputEnabled()) {
         return;
     }
 
@@ -65,7 +65,7 @@ void LogMessage(
     const std::string& szMessage,
     bool bOnlyDebug
 ) {
-    if (!CheckGlobalOutputEnabled() && !IsDebugOutputEnabled()) {
+    if (!IsGlobalOutputEnabled() && !IsDebugOutputEnabled()) {
         return;
     }
 
@@ -80,7 +80,7 @@ void LogMessage(
     const std::wstring& wszMessage,
     bool bOnlyDebug
 ) {
-    if (!CheckGlobalOutputEnabled() && !IsDebugOutputEnabled()) {
+    if (!IsGlobalOutputEnabled() && !IsDebugOutputEnabled()) {
         return;
     }
     if (bOnlyDebug && !IsDebugOutputEnabled()) {
@@ -95,7 +95,7 @@ void LogError(
     const std::string& szMessage, 
     bool bOnlyDebug
 ) {
-    if (!CheckGlobalOutputEnabled() && !IsDebugOutputEnabled()) {
+    if (!IsGlobalOutputEnabled() && !IsDebugOutputEnabled()) {
         return;
     }
 
