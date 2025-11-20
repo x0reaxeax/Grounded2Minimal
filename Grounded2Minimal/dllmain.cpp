@@ -380,7 +380,7 @@ DWORD WINAPI ThreadEntry(
      );
 
     LogMessage("Init", "Starting hooks initialization...");
-    LogMessage("Init", "Initializing APawn ProcessEvent hook...", true);
+    LogMessage("Init", "Initializing SurvivalPlayerController ProcessEvent hook...", true);
     if (!HookManager::ProcessEventHooker::InstallHook(
         UnrealUtils::GetLocalSurvivalPlayerController(),
         _HookedSPCProcessEvent,    // BP_SurvivalPlayerCharacter
@@ -388,7 +388,7 @@ DWORD WINAPI ThreadEntry(
     )) {
         LogError(
             "Init", 
-            "Failed to hook LocalPawn ProcessEvent"
+            "Failed to hook SurvivalPlayerController ProcessEvent"
         );
         return EXIT_FAILURE;
     }
