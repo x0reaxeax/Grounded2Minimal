@@ -391,7 +391,7 @@ DWORD WINAPI ThreadEntry(
     LogMessage("Init", "Initializing SurvivalPlayerController ProcessEvent hook...", true);
     if (!HookManager::ProcessEventHooker::InstallHook(
         UnrealUtils::GetLocalSurvivalPlayerController(),
-        _HookedSPCProcessEvent,    // BP_SurvivalPlayerCharacter
+        _HookedSPCProcessEvent,    // ASurvivalPlayerController
         "SPC_ProcessEvent"
     )) {
         LogError(
