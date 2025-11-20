@@ -387,31 +387,50 @@ DWORD WINAPI ThreadEntry(
         true
      );
 
+    // Host authority check
+    LogMessage(
+        "Init",
+        "Checking client host authority"
+    );
+
+    g_G2MOptions.bIsClientHost = UnrealUtils::IsPlayerHostAuthority(
+        UnrealUtils::GetLocalPlayerId()
+    );
+
+    if (!g_G2MOptions.bIsClientHost) {
+        LogMessage("Init", "Client is NOT host authority, tool will have limited functionality");
+    }
+
     LogMessage("Init", "Starting hooks initialization...");
-    LogMessage("Init", "Initializing SurvivalPlayerController ProcessEvent hook...", true);
-    if (!HookManager::ProcessEventHooker::InstallHook(
-        UnrealUtils::GetLocalSurvivalPlayerController(),
-        _HookedSPCProcessEvent,    // ASurvivalPlayerController
-        "SPC_ProcessEvent"
-    )) {
-        LogError(
-            "Init", 
-            "Failed to hook SurvivalPlayerController ProcessEvent"
-        );
-        return EXIT_FAILURE;
+    
+    // Don't hook SPC and ChatBox events if client is not host
+    if (g_G2MOptions.bIsClientHost) {
+        LogMessage("Init", "Initializing SurvivalPlayerController ProcessEvent hook...", true);
+        if (!HookManager::ProcessEventHooker::InstallHook(
+            UnrealUtils::GetLocalSurvivalPlayerController(),
+            _HookedSPCProcessEvent,    // ASurvivalPlayerController
+            "SPC_ProcessEvent"
+        )) {
+            LogError(
+                "Init",
+                "Failed to hook SurvivalPlayerController ProcessEvent"
+            );
+            return EXIT_FAILURE;
+        }
+
+        LogMessage("Init", "Initializing ChatBoxWidget ProcessEvent hook...", true);
+
+        if (!HookManager::ProcessEventHooker::InstallHook(
+            SDK::UChatBoxWidget::GetDefaultObj(),
+            _HookedChatBoxProcessEvent,
+            "ChatBoxWidget_ProcessEvent"
+        )) {
+            LogError("Init", "Failed to hook ChatBoxWidget ProcessEvent");
+            goto _RYUJI; // lol
+        }
+    } else {
+        LogMessage("Init", "Skipping SurvivalPlayerController and ChatBoxWidget ProcessEvent hooks - no host authority");
     }
-
-    LogMessage("Init", "Initializing ChatBoxWidget ProcessEvent hook...", true);
-
-    if (!HookManager::ProcessEventHooker::InstallHook(
-        SDK::UChatBoxWidget::GetDefaultObj(),
-        _HookedChatBoxProcessEvent,
-        "ChatBoxWidget_ProcessEvent"
-    )) {
-        LogError("Init", "Failed to hook ChatBoxWidget ProcessEvent");
-        goto _RYUJI; // lol
-    }
-
 
     LogMessage("Init", "Initializing Building::UpdateCollisionStateChange native hook...", true);
 
@@ -429,12 +448,14 @@ DWORD WINAPI ThreadEntry(
 
     LogMessage("Init", "Hooks initialized");
 
-    LogMessage("Init", "Initializing CheatManager..");
-    if (!CheatManager::ManualInitialize()) {
-        LogError("Init", "Failed to initialize CheatManager");
-        goto _RYUJI;
+    if (g_G2MOptions.bIsClientHost) {
+        LogMessage("Init", "Initializing CheatManager..");
+        if (!CheatManager::ManualInitialize()) {
+            LogError("Init", "Failed to initialize CheatManager");
+            goto _RYUJI;
+        }
+        LogMessage("Init", "CheatManager initialized successfully");
     }
-    LogMessage("Init", "CheatManager initialized successfully");
 
     // GUI initialization
     LogMessage("Init", "Grounded2Minimal: Launching GUI thread...");

@@ -100,6 +100,14 @@ namespace Interpreter {
     }
 
     void HandleSpawnItem(void) {
+        if (!g_G2MOptions.bIsClientHost) {
+            LogError(
+                "ItemSpawner",
+                "Cannot spawn items without host authority"
+            );
+            return;
+        }
+
         std::string szItemName, szDataTableName;
 
         if (
@@ -131,6 +139,14 @@ namespace Interpreter {
     }
 
     void HandleSummon(void) {
+        if (!g_G2MOptions.bIsClientHost) {
+            LogError(
+                "Summon",
+                "Cannot summon classes without host authority"
+            );
+            return;
+        }
+
         std::string szClassName;
         if (!ReadInterpreterInput(
             "[Summon] Enter class name to summon: ",

@@ -136,6 +136,14 @@ namespace CheatManager {
     }
 
     bool ManualInitialize(void) {
+        if (!g_G2MOptions.bIsClientHost) {
+            LogError(
+                "CheatManager",
+                "Cannot initialize CheatManager without host authority"
+            );
+            return false;
+        }
+
         SDK::APlayerController *lpLocalPlayerController = UnrealUtils::GetLocalPlayerController();
         if (nullptr == lpLocalPlayerController) {
             LogError("CheatManager", "Failed to get local player controller");

@@ -40,6 +40,7 @@ struct G2MOptions {
     std::atomic<ubool> bShowDebugConsole{ true };       // Debug console visibility status
     std::atomic<ubool> bHideAutoPlayerDbgInfo{ true };  // Automatic player debug info control flag
     std::atomic<bool> bIsGamePaused{ false };           // Game paused state
+    bool bIsClientHost{ false };                        // Client is host flag
 };
 
 struct ProcessEventParams {
