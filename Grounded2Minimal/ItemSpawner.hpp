@@ -26,7 +26,7 @@ namespace ItemSpawner {
         SDK::EChatBoxMessageType Type;
     };
 
-    bool GiveItemToPlayer(
+    bool __gamethread GiveItemToPlayer(
         int32_t iPlayerId,
         const std::string& szItemName,
         const std::string& szDataTableName,

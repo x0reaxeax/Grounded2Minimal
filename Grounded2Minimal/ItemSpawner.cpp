@@ -14,7 +14,7 @@ namespace ItemSpawner {
     // Allows everyone (not just host) to utilize the host to spawn them items.
     std::atomic<bool> GlobalCheatMode{ false };
 
-    bool GiveItemToPlayer(
+    bool __gamethread GiveItemToPlayer(
         int32_t iPlayerId,
         const std::string& szItemName,
         const std::string& szDataTableName,
