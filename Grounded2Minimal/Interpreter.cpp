@@ -187,6 +187,14 @@ namespace Interpreter {
     }
 
     void HandleSetMaxActiveMutations(void) {
+        if (!g_G2MOptions.bIsClientHost) {
+            LogError(
+                "SetMaxActiveMutations",
+                "Cannot use CheatManager functions to set max active mutations without host authority"
+            );
+            return;
+        }
+
         uint32_t uMaxMutations = (uint32_t) ReadIntegerInput(
             "[SetMaxActiveMutations] Enter max active mutations: ",
             0
