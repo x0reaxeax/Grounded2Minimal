@@ -5,6 +5,9 @@
 #define _GROUNDED2_MINIMAL_HPP
 
 #include <Windows.h>
+#include <unordered_map>
+#include <atomic>
+
 #include "Logging.hpp"
 
 #include "SDK/Basic.hpp"
@@ -18,6 +21,7 @@
 #include "SDK/Engine_parameters.hpp"
 
 #define __gamethread
+#define __unused
 
 struct VersionInfo {
     DWORD major;
@@ -28,6 +32,8 @@ struct VersionInfo {
 
 typedef uint8_t ubool;
 typedef void (*ProcessEvent_t)(const SDK::UObject *, SDK::UFunction *, void *);
+
+constexpr int32_t INVALID_PLAYER_ID = -1;
 
 struct GameOptions {
     std::atomic<ubool> BuildAnywhere{ false };
@@ -50,31 +56,20 @@ struct ProcessEventParams {
     void* lpParams = nullptr;
 };
 
-struct CachedData {
-    // Cached player list
-    std::vector<SDK::APlayerState*> Players;
-    // Cached local player ID
-    int32_t LocalPlayerId = -1;
-    // Cached world instance
-    SDK::UWorld* WorldInstance = nullptr;
-};
-
 ///////////////////////////////////////////////////////////////
 /// Globals
 
-
+// Tool options
 extern G2MOptions g_G2MOptions;
 
 // Version information
 extern VersionInfo GroundedMinimalVersionInfo;
-// Unreal cached data
-extern struct CachedData g_CachedData;
 
 // Game options
 extern GameOptions g_GameOptions;
 
 //////////////////////////////////////////////////////////////////
-/// Function declarations
+/// Function declarations and inline implementations
 
 // Hide debug console
 void HideConsole(

@@ -23,6 +23,14 @@ namespace CoreUtils {
         std::wstring &szWideString
     );
 
+    LPCWSTR InlineMultiByteToWideChar(
+        LPCSTR szMultiByteString
+    );
+
+    LPCWSTR InlineStringToWideChar(
+        std::string szString
+    );
+
     bool GetVersionFromResource(
         VersionInfo& versionInfo
     );

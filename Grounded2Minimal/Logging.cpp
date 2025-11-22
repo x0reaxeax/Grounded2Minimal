@@ -40,6 +40,7 @@ static bool IsHandleValid(
     return (INVALID_HANDLE_VALUE != hHandle) && (nullptr != hHandle);
 }
 
+// Deprecated and will be removed soon
 bool CheckNullAndLog(
     const void* lpcPtr,
     const std::string& szPtrName,

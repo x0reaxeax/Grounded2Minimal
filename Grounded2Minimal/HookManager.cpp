@@ -156,6 +156,8 @@ namespace HookManager {
                     "  * Name:      " + hook.szHookName + "\n"
                     "  * Hook ID:   " + std::to_string(hook.iUniqueId) + "\n"
                     "  * Hook Type: " + cszHookType + "\n" +
+                    "  * Orig Addr: " + CoreUtils::HexConvert(reinterpret_cast<uint64_t>(hook.OriginalFn)) + "\n" +
+                    "  * Hook Addr: " + CoreUtils::HexConvert(reinterpret_cast<uint64_t>(hook.HookFn)) + "\n" +
                     szFilterInfo
                 );
             }
@@ -231,6 +233,16 @@ namespace HookManager {
             "HookManager",
             "Hook installed on: '" + lpObject->GetName() + "' [UID: " + std::to_string(insRes.first->second.iUniqueId) + "]"
         );
+
+        LogMessage(
+            "HookManager",
+            "Installed ProcessEvent hook on '" + objFullName + "'"
+            + " (Original: " + CoreUtils::HexConvert(reinterpret_cast<uint64_t>(fnOriginal))
+            + ", Hook: " + CoreUtils::HexConvert(reinterpret_cast<uint64_t>(fnHook)) + ")"
+            + "[UID: " + std::to_string(insRes.first->second.iUniqueId) + "]",
+            true
+        );
+
         return true;
     }
 
@@ -253,7 +265,7 @@ namespace HookManager {
                 continue;
             }
 
-            hookInfo.VTable[SDK::Offsets::ProcessEventIdx] = reinterpret_cast<void*>(hookInfo.OriginalProcessEvent);
+            hookInfo.VTable[SDK::Offsets::ProcessEventIdx] = reinterpret_cast<void*>(hookInfo.OriginalFn);
             VirtualProtect(
                 &hookInfo.VTable[SDK::Offsets::ProcessEventIdx],
                 sizeof(void*),
@@ -286,7 +298,7 @@ namespace HookManager {
         std::lock_guard<std::mutex> lockGuard(s_HookMutex);
         for (const auto& [lpObj, hookInfo] : s_Hooks) {
             if (hookInfo.iUniqueId == iHookId) {
-                return hookInfo.OriginalProcessEvent;
+                return hookInfo.OriginalFn;
             }
         }
         return nullptr;
@@ -461,8 +473,18 @@ namespace HookManager {
 
         LogMessage(
             "NativeHooker",
-            "Successfully hooked native UFunction: '" + insRes.first->second.szHookName + "'"
+            "Successfully hooked native UFunction: '" + insRes.first->second.szHookName + "'" 
         );
+
+        LogMessage(
+            "NativeHooker",
+            "Installed native hook on '" + lpTargetFunc->GetFullName() + "'"
+            + " (Original: " + CoreUtils::HexConvert(reinterpret_cast<uint64_t>(lpOld))
+            + ", Hook: " + CoreUtils::HexConvert(reinterpret_cast<uint64_t>(fnHook)) + ")"
+            + "[UID: " + std::to_string(insRes.first->second.iUniqueId) + "]",
+            true
+        );
+
         return &insRes.first->second;
     }
 
@@ -500,6 +522,14 @@ namespace HookManager {
             "NativeHooker",
             "Restored hook on function '" + hookEntry.szHookName + "'"
         );
+
+        LogMessage(
+            "NativeHooker",
+            "Restored native UFunction: '" + hookEntry.szHookName + "'"
+            + "[RESTORED:" + CoreUtils::HexConvert(reinterpret_cast<uint64_t>(hookEntry.OriginalFn)) + "]",
+            true
+        );
+
         nh_Hooks.erase(it);
         return true;
     }

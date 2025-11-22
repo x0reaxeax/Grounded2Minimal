@@ -169,6 +169,7 @@
     <ClInclude Include="Interpreter.hpp" />
     <ClInclude Include="ItemSpawner.hpp" />
     <ClInclude Include="Logging.hpp" />
+    <ClInclude Include="PlayerCache.hpp" />
     <ClInclude Include="resource.h" />
     <ClInclude Include="SDK.hpp" />
     <ClInclude Include="SDK\Basic.hpp" />
@@ -191,6 +192,7 @@
     <ClCompile Include="Interpreter.cpp" />
     <ClCompile Include="ItemSpawner.cpp" />
     <ClCompile Include="Logging.cpp" />
+    <ClCompile Include="PlayerCache.cpp" />
     <ClCompile Include="SDK\Basic.cpp" />
     <ClCompile Include="SDK\BP_SurvivalGameInstance_functions.cpp" />
     <ClCompile Include="SDK\BP_SurvivalGameMode_functions.cpp" />

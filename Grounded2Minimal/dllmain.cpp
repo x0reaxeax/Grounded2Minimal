@@ -1,4 +1,5 @@
 #include "Grounded2Minimal.hpp"
+#include "PlayerCache.hpp"
 #include "CheatManager.hpp"
 #include "Interpreter.hpp"
 #include "ItemSpawner.hpp"
@@ -29,10 +30,6 @@ VersionInfo GroundedMinimalVersionInfo = { 0 };
 
 // Game options
 GameOptions g_GameOptions;
-
-/////////////////////////////////////////////////////////////
-// Cached data
-struct CachedData g_CachedData{};
 
 void HideConsole(
     void
@@ -152,7 +149,7 @@ PROCESSEVENTHOOK __fastcall _HookedSPCProcessEvent(
     }
 
     // Call the original ProcessEvent
-    lpHookData->OriginalProcessEvent(lpObject, lpFunction, lpParams);
+    lpHookData->OriginalFn(lpObject, lpFunction, lpParams);
 
     if (lpHookData->bDebugFilterEnabled.load()) {
         ProcessEventParams funcParams{
@@ -222,7 +219,7 @@ PROCESSEVENTHOOK __fastcall _HookedChatBoxProcessEvent(
 
 _RYUJI:
     // Call the original event handler
-    lpHookData->OriginalProcessEvent(lpObject, lpFunction, lpParams);
+    lpHookData->OriginalFn(lpObject, lpFunction, lpParams);
 
     // Launch async evaluation if we captured a message
     if (nullptr != lpMessageDataCopy) {
@@ -256,24 +253,44 @@ _RYUJI:
     }
 }
 
-PROCESSEVENTHOOK __fastcall _HookedBuildingGridHudInterface(
-    SDK::UObject *lpObject,
-    SDK::UFunction *lpFunction,
-    void *lpParams
+PROCESSEVENTHOOK __fastcall _HookedGameModeBaseProcessEvent(
+    SDK::UObject* lpObject,
+    SDK::UFunction* lpFunction,
+    void* lpParams
 ) {
     using namespace HookManager;
     ProcessEventHooker::HookData* lpHookData = ProcessEventHooker::GetHookByHookedFunction(
-        _HookedBuildingGridHudInterface
+        _HookedGameModeBaseProcessEvent
     );
     if (nullptr == lpHookData) {
-        throw std::runtime_error("BuildingGridHudInterface: Hook data not found");
+        throw std::runtime_error("GameModeBaseProcessEvent: Hook data not found");
+        return;
+    }
+    lpHookData->OriginalFn(lpObject, lpFunction, lpParams);
+    if (nullptr == lpObject || nullptr == lpFunction) {
         return;
     }
 
-    lpHookData->OriginalProcessEvent(lpObject, lpFunction, lpParams);
-
-    if (nullptr == lpObject || nullptr == lpFunction) {
-        return;
+    if (nullptr != lpFunction) {
+        if (lpFunction->GetName().contains("K2_PostLogin")) {
+            SDK::Params::GameModeBase_K2_PostLogin* lpFuncParams =
+                static_cast<SDK::Params::GameModeBase_K2_PostLogin*>(lpParams);
+            if (nullptr != lpFuncParams) {
+                SDK::APlayerController* lpNewPlayer = lpFuncParams->NewPlayer;
+                if (nullptr != lpNewPlayer) {
+                    PlayerCache::AttachCachedPlayerData(lpNewPlayer->PlayerState);
+                }
+            }
+        } else if (lpFunction->GetName().contains("K2_Logout")) {
+            SDK::Params::GameModeBase_K2_OnLogout* lpFuncParams =
+                static_cast<SDK::Params::GameModeBase_K2_OnLogout*>(lpParams);
+            if (nullptr != lpFuncParams) {
+                SDK::AController* lpExitingController = lpFuncParams->ExitingController;
+                if (nullptr != lpExitingController) {
+                    PlayerCache::RemoveCachedPlayer(lpExitingController->PlayerState);
+                }
+            }
+        }
     }
 
     if (lpHookData->bDebugFilterEnabled.load()) {
@@ -439,6 +456,20 @@ DWORD WINAPI ThreadEntry(
         LogMessage("Init", "Skipping SurvivalPlayerController and ChatBoxWidget ProcessEvent hooks - no host authority");
     }
 
+    // Idk if GameModeBase is doable for non-host clients
+    LogMessage("Init", "Initializing GameModeBase ProcessEvent hook...", true);
+    if (!HookManager::ProcessEventHooker::InstallHook(
+        SDK::AGameModeBase::StaticClass(),
+        _HookedGameModeBaseProcessEvent,
+        "GameModeBase_ProcessEvent"
+    )) {
+        LogError(
+            "Init",
+            "Failed to hook GameModeBase ProcessEvent"
+        );
+        goto _RYUJI;
+    }
+
     LogMessage("Init", "Initializing Building::UpdateCollisionStateChange native hook...", true);
 
     if (nullptr == HookManager::NativeHooker::HookNativeFunction(
@@ -463,6 +494,8 @@ DWORD WINAPI ThreadEntry(
         }
         LogMessage("Init", "CheatManager initialized successfully");
     }
+
+    // Cache initialization
 
     // GUI initialization
     LogMessage("Init", "Grounded2Minimal: Launching GUI thread...");

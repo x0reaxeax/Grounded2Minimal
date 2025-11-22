@@ -1,4 +1,5 @@
 #include "UnrealUtils.hpp"
+#include "PlayerCache.hpp"
 #include "CoreUtils.hpp"
 
 #include <iostream>
@@ -8,8 +9,8 @@
 
 namespace UnrealUtils {
     SDK::UWorld *GetWorld(bool bCached) {
-        if (bCached && g_CachedData.WorldInstance != nullptr) {
-            return g_CachedData.WorldInstance;
+        if (bCached && PlayerCache::g_CachedData.WorldInstance != nullptr) {
+            return PlayerCache::g_CachedData.WorldInstance;
         }
         int32_t iRetryCount = 0;
         const int32_t iMaxRetries = 20;
@@ -28,7 +29,7 @@ namespace UnrealUtils {
                 }
             }
         } while (nullptr == lpWorld);
-        g_CachedData.WorldInstance = lpWorld;
+        PlayerCache::g_CachedData.WorldInstance = lpWorld;
 
         return lpWorld;
     }
@@ -218,7 +219,7 @@ namespace UnrealUtils {
             return false;
         }
 
-        if (0 == iPlayerId) {
+        if (0 == iPlayerId || INVALID_PLAYER_ID == iPlayerId) {
             // Local player check
             SDK::ULocalPlayer *lpLocalPlayer = lpWorld->OwningGameInstance->LocalPlayers[0];
             if (nullptr == lpLocalPlayer) {
@@ -575,38 +576,48 @@ namespace UnrealUtils {
         }
     }
 
-    int32_t GetLocalPlayerId(bool bCached) {
-        if (bCached && -1 != g_CachedData.LocalPlayerId) {
-            return g_CachedData.LocalPlayerId;
+    int32_t GetLocalPlayerId(
+        bool bCached
+    ) {
+        if (bCached && INVALID_PLAYER_ID != PlayerCache::g_CachedData.LocalPlayerId) {
+            return PlayerCache::g_CachedData.LocalPlayerId;
         }
         SDK::UWorld *lpWorld = GetWorld();
         if (nullptr == lpWorld) {
-            LogError("Lookup", "UWorld is NULL");
-            return -1;
+            LogError("LocalPlayerIdLookup", "UWorld is NULL");
+            return INVALID_PLAYER_ID;
         }
 
-        SDK::ULocalPlayer *lpLocalPlayer = lpWorld->OwningGameInstance->LocalPlayers[0];
+        // WARN: This might fail on non-host clients, verify and check for altenatives if needed
+        SDK::UGameInstance *lpOwningGameInstance = lpWorld->OwningGameInstance;
+        if (nullptr == lpOwningGameInstance) {
+            LogError("LocalPlayerIdLookup", "OwningGameInstance is NULL");
+            return INVALID_PLAYER_ID;
+        }
+
+        SDK::ULocalPlayer *lpLocalPlayer = lpOwningGameInstance->LocalPlayers[0];
         if (nullptr == lpLocalPlayer) {
-            return -1;
+            LogError("LocalPlayerIdLookup", "LocalPlayer is NULL");
+            return INVALID_PLAYER_ID;
         }
 
         SDK::APlayerState *lpPlayerState = lpLocalPlayer->PlayerController->PlayerState;
         if (nullptr == lpPlayerState) {
-            LogError("Lookup", "PlayerState is NULL for local player");
-            return -1;
+            LogError("LocalPlayerIdLookup", "PlayerState is NULL for local player");
+            return INVALID_PLAYER_ID;
         }
 
         if (lpPlayerState->PlayerId < 200) {
             LogError(
-                "Lookup",
+                "LocalPlayerIdLookup",
                 "PlayerId is less than 200, this is likely a bot or non-local player: "
                 + std::to_string(lpPlayerState->PlayerId)
             );
-            return -1;
+            return INVALID_PLAYER_ID;
         }
 
         // Refresh the cached player ID if requested
-        g_CachedData.LocalPlayerId = lpPlayerState->PlayerId;
+        PlayerCache::g_CachedData.LocalPlayerId = lpPlayerState->PlayerId;
 
         return lpPlayerState->PlayerId;
     }
@@ -659,7 +670,7 @@ namespace UnrealUtils {
 
             return lpPlayerState->PlayerId;
         }
-        return -1;
+        return INVALID_PLAYER_ID;
     }
 
     SDK::UGameInstance *GetOwningGameInstance(void) {
@@ -714,6 +725,59 @@ namespace UnrealUtils {
         return nullptr;
     }
 
+    SDK::APlayerController *GetPlayerControllerById(
+        int32_t iPlayerId
+    ) {
+        if (INVALID_PLAYER_ID == iPlayerId) {
+            return GetLocalPlayerController();
+        }
+        
+        SDK::UWorld *lpWorld = GetWorld(true);
+        if (nullptr == lpWorld) {
+            LogError("PlayerController", "UWorld is NULL");
+            return nullptr;
+        }
+
+        SDK::AGameStateBase *lpGameStateBase = lpWorld->GameState;
+        if (nullptr == lpGameStateBase) {
+            LogError("PlayerInfo", "Unable to get GameStateBase");
+            return nullptr;
+        }
+
+        for (int32_t i = 0; i < lpGameStateBase->PlayerArray.Num(); i++) {
+            SDK::APlayerState *lpPlayerState = lpGameStateBase->PlayerArray[i];
+            if (nullptr == lpPlayerState) {
+                continue;
+            }
+
+            if (iPlayerId != lpPlayerState->PlayerId) {
+                continue;
+            }
+
+            SDK::APawn *lpPawn = lpPlayerState->PawnPrivate;
+            if (nullptr == lpPawn) {
+                LogError("PlayerController", "PawnPrivate is NULL for Player ID " + std::to_string(iPlayerId), true);
+                return nullptr;
+            }
+
+            SDK::AController *lpController = lpPawn->Controller;
+            if (nullptr == lpController) {
+                LogError("PlayerController", "Controller is NULL for Player ID " + std::to_string(iPlayerId), true);
+                return nullptr;
+            }
+
+            LogMessage(
+                "PlayerController",
+                "Found PlayerController for Player ID " + std::to_string(iPlayerId),
+                true
+            );
+
+            return static_cast<SDK::APlayerController*>(lpController);
+        }
+
+        return nullptr;
+    }
+
     SDK::ASurvivalPlayerController *GetLocalSurvivalPlayerController(void) {
         SDK::UWorld *lpWorld = GetWorld();
         if (nullptr == lpWorld) {
@@ -763,16 +827,37 @@ namespace UnrealUtils {
         return nullptr;
     }
 
-    SDK::UPartyComponent *FindLocalPlayerParty(void) {
+    SDK::UPartyComponent *FindLocalPlayerParty(
+        int32_t iTargetPlayerId,
+        bool bCached
+    ) {
+        if (bCached) {
+            PlayerCache::CachedPlayer *lpCachedPlayer = PlayerCache::GetCachedPlayerById(
+                iTargetPlayerId
+            );
+
+            if (
+                nullptr != lpCachedPlayer 
+                && 
+                nullptr != lpCachedPlayer->AssociatedPartyComponent
+            ) {
+                return lpCachedPlayer->AssociatedPartyComponent;
+            }
+        }
+
         SDK::UWorld *lpWorld = GetWorld(true);
         if (nullptr == lpWorld) {
             LogError("PartyParser", "Failed to get UWorld instance");
             return nullptr;
         }
 
-        int32_t iLocalPlayerId = UnrealUtils::GetLocalPlayerId();
+        if (INVALID_PLAYER_ID == iTargetPlayerId) {
+            iTargetPlayerId = UnrealUtils::GetLocalPlayerId(true);
+        }
 
-        for (int32_t i = 0; i < SDK::UPartyComponent::GObjects->Num(); i++) {
+
+        int32_t iTotalObjects = SDK::UPartyComponent::GObjects->Num();
+        for (int32_t i = 0; i < iTotalObjects; i++) {
             SDK::UObject *lpObj = lpWorld->GObjects->GetByIndex(i);
             if (nullptr == lpObj) {
                 continue;
@@ -783,7 +868,8 @@ namespace UnrealUtils {
 
             LogMessage(
                 "PartyParser",
-                "Evaluating possible UPartyComponent.."
+                "Evaluating possible UPartyComponent (" + std::to_string(i + 1) + "/" + std::to_string(iTotalObjects) + ")",
+                true
             );
 
             SDK::UPartyComponent *lpPartyComponent = static_cast<SDK::UPartyComponent*>(lpObj);
@@ -795,18 +881,18 @@ namespace UnrealUtils {
             LogMessage(
                 "PartyParser",
                 "Evaluating party of " + std::to_string(lpPartyComponent->PartyMembers.Num())
-                + " members"
-            );
-            LogMessage(
-                "PartyParser",
-                "Evaluating party of " + std::to_string(lpPartyComponent->PlayerIdentities.Num())
-                + " identities"
+                + " members (" + std::to_string(lpPartyComponent->PlayerIdentities.Num()) + " identities)",
+                true
             );
 
             for (int32_t j = 0; j < lpPartyComponent->PartyMembers.Num(); j++) {
                 SDK::ASurvivalPlayerCharacter *lpPartyMember = lpPartyComponent->PartyMembers[j];
                 if (nullptr == lpPartyMember) {
-                    LogError("PartyParser", "Party member is NULL at index " + std::to_string(j));
+                    LogError(
+                        "PartyParser", 
+                        "Party member is NULL at index " + std::to_string(j), 
+                        true
+                    );
                     continue;
                 }
 
@@ -814,17 +900,19 @@ namespace UnrealUtils {
                 if (nullptr == lpPlayerState) {
                     LogError(
                         "PartyParser",
-                        "PlayerState is NULL for party member at index " + std::to_string(j)
+                        "PlayerState is NULL for party member at index " + std::to_string(j),
+                        true
                     );
                     continue;
                 }
-                if (lpPlayerState->PlayerId == iLocalPlayerId) {
+                if (lpPlayerState->PlayerId == iTargetPlayerId) {
                     return lpPartyComponent; // Found the local player in the party
                 } else {
                     LogMessage(
                         "PartyParser",
                         "PlayerState ID " + std::to_string(lpPlayerState->PlayerId)
-                        + " does not match local player ID " + std::to_string(iLocalPlayerId)
+                        + " does not match local player ID " + std::to_string(iTargetPlayerId),
+                        true
                     );
                 }
             }
@@ -833,14 +921,84 @@ namespace UnrealUtils {
         return nullptr;
     }
 
-    SDK::ASurvivalPlayerState *GetLocalSurvivalPlayerState(void) {
+    SDK::ASurvivalPlayerCharacter *GetSurvivalPlayerCharacterById(
+        int32_t iTargetPlayerId,
+        bool bCached
+    ) {
+        if (bCached) {
+            PlayerCache::CachedPlayer *lpCachedPlayer = PlayerCache::GetCachedPlayerById(
+                iTargetPlayerId
+            );
+
+            if (
+                nullptr != lpCachedPlayer 
+                && 
+                nullptr != lpCachedPlayer->SurvivalPlayerCharacter
+            ) {
+                return lpCachedPlayer->SurvivalPlayerCharacter;
+            }
+        }
+
+        if (INVALID_PLAYER_ID == iTargetPlayerId) {
+            iTargetPlayerId = GetLocalPlayerId(true);
+        }
+
+        SDK::UPartyComponent *lpPartyComponent = FindLocalPlayerParty(
+            iTargetPlayerId, 
+            true
+        );
+        if (nullptr == lpPartyComponent) {
+            LogError(
+                "SPCharacter", 
+                "Failed to find local player's party"
+            );
+            return nullptr;
+        }
+
+        for (int32_t i = 0; i < lpPartyComponent->PartyMembers.Num(); i++) {
+            SDK::ASurvivalPlayerCharacter *lpPartyMember = lpPartyComponent->PartyMembers[i];
+            if (nullptr == lpPartyMember) {
+                LogError(
+                    "SPCharacter", 
+                    "Party member is NULL at index " + std::to_string(i),
+                    true
+                );
+                continue;
+            }
+            SDK::APlayerState *lpPlayerState = lpPartyMember->PlayerState;
+            if (nullptr == lpPlayerState) {
+                LogError(
+                    "SPCharacter",
+                    "PlayerState is NULL for party member at index " + std::to_string(i),
+                    true
+                );
+                continue;
+            }
+            if (iTargetPlayerId == lpPlayerState->PlayerId) {
+                return lpPartyMember;
+            }
+        }
+
+        LogError(
+            "SPCharacter", 
+            "Target player character not found in party",
+            true
+        );
+        return nullptr; // Target player character not found in party
+    }
+
+    SDK::ASurvivalPlayerState *GetSurvivalPlayerStateById(
+        int32_t iTargetPlayerId
+    ) {
+        if (INVALID_PLAYER_ID == iTargetPlayerId) {
+            iTargetPlayerId = GetLocalPlayerId(true);
+        }
+        
         SDK::UWorld *lpWorld = GetWorld(true);
         if (nullptr == lpWorld) {
             LogError("PartyParser", "Failed to get UWorld instance");
             return nullptr;
         }
-
-        int32_t iLocalPlayerId = UnrealUtils::GetLocalPlayerId();
 
         for (int32_t i = 0; i < lpWorld->GObjects->Num(); i++) {
             SDK::UObject *lpObj = lpWorld->GObjects->GetByIndex(i);
@@ -860,7 +1018,11 @@ namespace UnrealUtils {
             for (int32_t j = 0; j < lpPartyComponent->PartyMembers.Num(); j++) {
                 SDK::ASurvivalPlayerCharacter *lpPartyMember = lpPartyComponent->PartyMembers[j];
                 if (nullptr == lpPartyMember) {
-                    LogError("PartyParser", "Party member is NULL at index " + std::to_string(j));
+                    LogError(
+                        "PartyParser", 
+                        "Party member is NULL at index " + std::to_string(j),
+                        true
+                    );
                     continue;
                 }
 
@@ -868,17 +1030,41 @@ namespace UnrealUtils {
                 if (nullptr == lpPlayerState) {
                     LogError(
                         "PartyParser",
-                        "PlayerState is NULL for party member at index " + std::to_string(j)
+                        "PlayerState is NULL for party member at index " + std::to_string(j),
+                        true
                     );
                     continue;
                 }
-                if (lpPlayerState->PlayerId == iLocalPlayerId) {
+
+                if (iTargetPlayerId == lpPlayerState->PlayerId) {
                     return lpPartyMember->GetAssociatedPlayerState();
                 }
             }
         }
-        LogError("PartyParser", "Local player state not found in any party");
-        return nullptr; // Local player state not found in any party
+        LogError(
+            "PartyParser", 
+            "Target player state not found in any party",
+            true
+        );
+        return nullptr; // Target player state not found in any party
+    }
+
+    SDK::ASurvivalPlayerState *GetLocalSurvivalPlayerState(void) {
+        return GetSurvivalPlayerStateById(INVALID_PLAYER_ID);
+    }
+
+    SDK::AGameModeBase *GetSurvivalGameModeBase(void) {
+        SDK::UWorld *lpWorld = GetWorld(true);
+        if (nullptr == lpWorld) {
+            LogError("GameMode", "Failed to get UWorld instance");
+            return nullptr;
+        }
+        SDK::AGameModeBase *lpGameModeBase = lpWorld->AuthorityGameMode;
+        if (nullptr == lpGameModeBase) {
+            LogError("GameMode", "AuthorityGameMode is NULL");
+            return nullptr;
+        }
+        return lpGameModeBase;
     }
 
     void DumpSurvivalCheatManagerInstances(void) {

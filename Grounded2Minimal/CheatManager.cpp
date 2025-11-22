@@ -6,17 +6,221 @@
 #include "Command.hpp"
 
 namespace CheatManager {
+    // Static cheats can be used on any player, as they don't rely on a SurvivalCheatManager instance
     namespace StaticCheats {
-        bool SetMaxActiveMutations(
-            uint32_t uMaxMutations
+        int32_t MaxActiveMutations(
+            EStaticCheatOp eOperation,
+            int32_t iTargetPlayerId,
+            uint32_t uMaxMutations  // Ignored for Get
         ) {
-            SDK::ASurvivalPlayerState *lpSurvivalPlayerState = UnrealUtils::GetLocalSurvivalPlayerState();
-            if (nullptr == lpSurvivalPlayerState) {
-                LogError("CheatManager", "Failed to get local SurvivalPlayerState");
-                return false;
-            }
-            lpSurvivalPlayerState->PerkComponent->MaxEquippedPerks = uMaxMutations;
-            return true;
+            return HandleStaticCheatImpl<SDK::ASurvivalPlayerState, int32_t>(
+                eOperation,
+                iTargetPlayerId,
+                "MaxActiveMutations",
+                [](int32_t id) {
+                    return UnrealUtils::GetSurvivalPlayerStateById(id);
+                },
+                // Getter: stored value + 2 visible slots
+                [](SDK::ASurvivalPlayerState* ps) -> int32_t {
+                    return static_cast<int32_t>(ps->PerkComponent->MaxEquippedPerks + 2);
+                },
+                // Setter: we store (desired - 2)
+                [](SDK::ASurvivalPlayerState* ps, int32_t Desired) {
+                    if (Desired < 2) {
+                        Desired = 2; // don't underflow that bih
+                    }
+                    ps->PerkComponent->MaxEquippedPerks =
+                        static_cast<uint32_t>(Desired - 2);
+                },
+                static_cast<int32_t>(uMaxMutations),
+                -static_cast<int32_t>(EStaticCheatOp::_Debug)
+            );
+        }
+
+        int32_t MaxCozinessLevelAchieved(
+            EStaticCheatOp eOperation,
+            int32_t iTargetPlayerId,
+            uint32_t uMaxCozinessLevel
+        ) {
+            return HandleStaticCheatImpl<SDK::ASurvivalPlayerState, int32_t>(
+                eOperation,
+                iTargetPlayerId,
+                "MaxCozinessLevelAchieved",
+                [](int32_t id) {
+                    return UnrealUtils::GetSurvivalPlayerStateById(id);
+                },
+                [](SDK::ASurvivalPlayerState* ps) -> int32_t {
+                    return static_cast<int32_t>(ps->MaxCozinessLevelAchieved);
+                },
+                [](SDK::ASurvivalPlayerState* ps, int32_t value) {
+                    ps->MaxCozinessLevelAchieved = static_cast<uint32_t>(value);
+                },
+                static_cast<int32_t>(uMaxCozinessLevel),
+                -static_cast<int32_t>(EStaticCheatOp::_Debug)
+            );
+        }
+
+        float NearbyStorageRadius(
+            EStaticCheatOp eOperation,
+            int32_t iTargetPlayerId,
+            float fNewRadius
+        ) {
+            return HandleStaticCheatImpl<SDK::ASurvivalPlayerCharacter, float>(
+                eOperation,
+                iTargetPlayerId,
+                "NearbyStorageRadius",
+                [](int32_t id) {
+                    return UnrealUtils::GetSurvivalPlayerCharacterById(id);
+                },
+                [](SDK::ASurvivalPlayerCharacter* pc) -> float {
+                    return pc->ProximityInventoryComponent->StorageRadius;
+                },
+                [](SDK::ASurvivalPlayerCharacter* pc, float value) {
+                    pc->ProximityInventoryComponent->StorageRadius = value;
+                },
+                fNewRadius,
+                -1.0f
+            );
+        }
+
+        float ChillRateMultiplier(
+            EStaticCheatOp eOperation,
+            int32_t iTargetPlayerId,
+            float fNewMultiplier
+        ) {
+            return HandleStaticCheatImpl<SDK::ASurvivalPlayerCharacter, float>(
+                eOperation,
+                iTargetPlayerId,
+                "ChillRateMultiplier",
+                [](int32_t id) {
+                    return UnrealUtils::GetSurvivalPlayerCharacterById(id);
+                },
+                [](SDK::ASurvivalPlayerCharacter* pc) -> float {
+                    return pc->BodyTemperatureComponent->ChillRateMultiplier;
+                },
+                [](SDK::ASurvivalPlayerCharacter* pc, float value) {
+                    pc->BodyTemperatureComponent->ChillRateMultiplier = value;
+                },
+                fNewMultiplier,
+                -1.0f
+            );
+        }
+
+        float SizzleRateMultiplier(
+            EStaticCheatOp eOperation,
+            int32_t iTargetPlayerId,
+            float fNewMultiplier
+        ) {
+            return HandleStaticCheatImpl<SDK::ASurvivalPlayerCharacter, float>(
+                eOperation,
+                iTargetPlayerId,
+                "SizzleRateMultiplier",
+                [](int32_t id) {
+                    return UnrealUtils::GetSurvivalPlayerCharacterById(id);
+                },
+                [](SDK::ASurvivalPlayerCharacter* pc) -> float {
+                    return pc->BodyTemperatureComponent->SizzleRateMultiplier;
+                },
+                [](SDK::ASurvivalPlayerCharacter* pc, float value) {
+                    pc->BodyTemperatureComponent->SizzleRateMultiplier = value;
+                },
+                fNewMultiplier,
+                -1.0f
+            );
+        }
+
+        float PerfectBlockWindow(
+            EStaticCheatOp eOperation,
+            int32_t iTargetPlayerId,
+            float fNewWindow
+        ) {
+            return HandleStaticCheatImpl<SDK::ASurvivalPlayerCharacter, float>(
+                eOperation,
+                iTargetPlayerId,
+                "PerfectBlockWindow",
+                [](int32_t id) {
+                    return UnrealUtils::GetSurvivalPlayerCharacterById(id);
+                },
+                [](SDK::ASurvivalPlayerCharacter* pc) -> float {
+                    return pc->BlockComponent->PerfectBlockWindow;
+                },
+                [](SDK::ASurvivalPlayerCharacter* pc, float value) {
+                    pc->BlockComponent->PerfectBlockWindow = value;
+                },
+                fNewWindow,
+                -1.0f
+            );
+        }
+
+        float DodgeDistance(
+            EStaticCheatOp eOperation,
+            int32_t iTargetPlayerId,
+            float fNewDistance
+        ) {
+            return HandleStaticCheatImpl<SDK::ASurvivalPlayerCharacter, float>(
+                eOperation,
+                iTargetPlayerId,
+                "DodgeDistance",
+                [](int32_t id) {
+                    return UnrealUtils::GetSurvivalPlayerCharacterById(id);
+                },
+                [](SDK::ASurvivalPlayerCharacter* pc) -> float {
+                    return pc->DodgeComponent->DodgeDistance;
+                },
+                [](SDK::ASurvivalPlayerCharacter* pc, float value) {
+                    pc->DodgeComponent->DodgeDistance = value;
+                },
+                fNewDistance,
+                -1.0f
+            );
+        }
+
+        // Hunger
+        float CurrentFoodLevel(
+            EStaticCheatOp eOperation,
+            int32_t iTargetPlayerId,
+            float fNewFoodLevel
+        ) {
+            return HandleStaticCheatImpl<SDK::ASurvivalPlayerCharacter, float>(
+                eOperation,
+                iTargetPlayerId,
+                "CurrentFoodLevel",
+                [](int32_t id) {
+                    return UnrealUtils::GetSurvivalPlayerCharacterById(id);
+                },
+                [](SDK::ASurvivalPlayerCharacter* pc) -> float {
+                    return pc->SurvivalComponent->CurrentFood;
+                },
+                [](SDK::ASurvivalPlayerCharacter* pc, float value) {
+                    pc->SurvivalComponent->CurrentFood = value;
+                },
+                fNewFoodLevel,
+                -1.0f
+            );
+        }
+
+        // Thirst
+        float CurrentWaterLevel(
+            EStaticCheatOp eOperation,
+            int32_t iTargetPlayerId,
+            float fNewThirstLevel
+        ) {
+            return HandleStaticCheatImpl<SDK::ASurvivalPlayerCharacter, float>(
+                eOperation,
+                iTargetPlayerId,
+                "CurrentThirstLevel",
+                [](int32_t id) {
+                    return UnrealUtils::GetSurvivalPlayerCharacterById(id);
+                },
+                [](SDK::ASurvivalPlayerCharacter* pc) -> float {
+                    return pc->SurvivalComponent->CurrentWater;
+                },
+                [](SDK::ASurvivalPlayerCharacter* pc, float value) {
+                    pc->SurvivalComponent->CurrentWater = value;
+                },
+                fNewThirstLevel,
+                -1.0f
+            );
         }
     }
 
@@ -121,6 +325,7 @@ namespace CheatManager {
         }
     }
 
+    // Local Player's SurvivalCheatManager instance
     static SDK::USurvivalCheatManager *SurvivalCheatManager = nullptr;
 
     bool IsSurvivalCheatManagerInitialized(void) {
@@ -132,6 +337,16 @@ namespace CheatManager {
             );
             return false;
         }
+
+        if (nullptr == SurvivalCheatManager->Outer) {
+            LogError(
+                "CheatManager", 
+                "SurvivalCheatManager Outer is NULL", 
+                true
+            );
+            return false;
+        }
+
         return true;
     }
 
@@ -150,6 +365,8 @@ namespace CheatManager {
                     "Destroying SurvivalCheatManager instance: "
                     + CoreUtils::HexConvert(
                         reinterpret_cast<uintptr_t>(SurvivalCheatManager)
+                    ) + " for player id: " + std::to_string(
+                        lpPlayerController->PlayerState->PlayerId
                     ),
                     true
                 );
@@ -180,6 +397,12 @@ namespace CheatManager {
             LogMessage(
                 "CheatManager",
                 "Cleanup successful",
+                true
+            );
+        } else {
+            LogMessage(
+                "CheatManager",
+                "No SurvivalCheatManager instance to destroy",
                 true
             );
         }
@@ -288,25 +511,43 @@ namespace CheatManager {
         return true;
     }
 
-    // unused, but ManualInitialize() will accept target player ID in the future, so keeping it here
-    // goal will be to assign guest multiplayer players their own CheatManager instances
-    // its outdated af tho
     SDK::UCheatManager *GetPlayersCheatManager(
         int32_t iPlayerId
     ) {
-        if (iPlayerId <= 0) {
-            LogError("CheatManager", "Invalid player ID: " + std::to_string(iPlayerId));
-            return nullptr;
+        if (INVALID_PLAYER_ID == iPlayerId) {
+            iPlayerId = UnrealUtils::GetLocalPlayerId(true);
         }
 
-        SDK::UWorld *lpWorld = UnrealUtils::GetWorld();
-        if (nullptr == lpWorld) {
-            LogError("CheatManager", "Failed to get UWorld instance");
-            return nullptr;
-        }
+        SDK::APlayerController *lpPlayerController = 
+            UnrealUtils::GetPlayerControllerById(iPlayerId);
 
+        if (nullptr != lpPlayerController) {
+            return lpPlayerController->CheatManager;
+        }
         
         return nullptr;
+    }
+
+    SDK::USurvivalCheatManager *GetPlayersSurvivalCheatManager(
+        int32_t iPlayerId
+    ) {
+        SDK::UCheatManager *lpCheatManager = GetPlayersCheatManager(iPlayerId);
+        if (nullptr == lpCheatManager) {
+            LogError(
+                "CheatManager",
+                "Failed to get CheatManager for player id: " + std::to_string(iPlayerId)
+            );
+            return nullptr;
+        }
+        if (!lpCheatManager->IsA(SDK::USurvivalCheatManager::StaticClass())) {
+            LogError(
+                "CheatManager",
+                "CheatManager is not a SurvivalCheatManager for player id: "
+                + std::to_string(iPlayerId)
+            );
+            return nullptr;
+        }
+        return static_cast<SDK::USurvivalCheatManager*>(lpCheatManager);
     }
 
     void __gamethread CheatManagerEnableCheats(
@@ -342,7 +583,7 @@ namespace CheatManager {
         if (nullptr == SurvivalCheatManager) {
             LogError(
                 "CheatManager",
-                "SurvivalCheatManager is NULL, cannot execute cheat"
+                "Target SurvivalCheatManager is NULL, cannot execute cheat"
             );
             return;
         }
@@ -449,7 +690,7 @@ namespace CheatManager {
             }
 
             case CheatManagerFunctionId::UnlockOmniTool: {
-                SurvivalCheatManager->SetOmniToolTier(5);
+                SurvivalCheatManager->SetOmniToolTier(6);
                 break;
             }
             /**

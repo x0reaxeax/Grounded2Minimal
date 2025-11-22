@@ -2,12 +2,77 @@
 #define _GROUNDED2_MINIMAL_CHEAT_MANAGER_HPP
 
 #include "Grounded2Minimal.hpp"
+#include "UnrealUtils.hpp"
 
 namespace CheatManager {
     namespace StaticCheats {
-        bool SetMaxActiveMutations(
-            uint32_t uMaxMutations
-        );
+        // Get/Set enum
+        typedef enum EStaticCheatOp : uint8_t {
+            Get = 0,
+            Set = 1,
+            _Debug = 0xFF
+        } EStaticCheatOp;
+
+        template<
+            typename TObject,
+            typename TValue,
+            typename Resolver,
+            typename Getter,
+            typename Setter
+        >
+        static TValue HandleStaticCheatImpl(
+            EStaticCheatOp eOperation,
+            int32_t iTargetPlayerId,
+            const std::string &szCheatName,
+            Resolver&& fnResolveObject,
+            Getter&& fnGetValue,
+            Setter&& fnSetValue,
+            TValue NewValue,
+            TValue ErrorValue
+        ) {
+            TObject* lpObject = fnResolveObject(iTargetPlayerId);
+            if (!lpObject) {
+                LogError(
+                    "CheatManager",
+                    "Failed to resolve target object for '" + szCheatName + "'"
+                );
+                return ErrorValue;
+            }
+
+            switch (eOperation) {
+                case EStaticCheatOp::Set: {
+                    fnSetValue(lpObject, NewValue);
+                    TValue Current = fnGetValue(lpObject);
+                    LogMessage(
+                        "CheatManager",
+                        "Set '" + szCheatName + "' to '" + std::to_string(Current) + "'",
+                        true
+                    );
+                    return Current;
+                }
+                case EStaticCheatOp::Get: {
+                    TValue Current = fnGetValue(lpObject);
+                    LogMessage(
+                        "CheatManager",
+                        "Current '" + szCheatName + "' value: '" + std::to_string(Current) + "'",
+                        true
+                    );
+                    return Current;
+                }
+                default:
+                    return ErrorValue;
+            }
+        }
+
+        int32_t MaxActiveMutations(EStaticCheatOp eOperation, int32_t iTargetPlayerId, uint32_t uNewSetValue);
+        int32_t MaxCozinessLevelAchieved(EStaticCheatOp eOperation, int32_t iTargetPlayerId, uint32_t uNewSetValue);
+        float NearbyStorageRadius(EStaticCheatOp eOperation, int32_t iTargetPlayerId, float fNewSetValue);
+        float ChillRateMultiplier(EStaticCheatOp eOperation, int32_t iTargetPlayerId, float fNewSetValue);
+        float SizzleRateMultiplier(EStaticCheatOp eOperation, int32_t iTargetPlayerId, float fNewSetValue);
+        float PerfectBlockWindow(EStaticCheatOp eOperation, int32_t iTargetPlayerId, float fNewSetValue);
+        float DodgeDistance(EStaticCheatOp eOperation, int32_t iTargetPlayerId, float fNewSetValue);
+        float CurrentFoodLevel(EStaticCheatOp eOperation, int32_t iTargetPlayerId, float fNewSetValue);
+        float CurrentWaterLevel(EStaticCheatOp eOperation, int32_t iTargetPlayerId, float fNewSetValue);
     }
     
     namespace InvokedCheats {
@@ -46,6 +111,7 @@ namespace CheatManager {
         _Debug = 0xFFFFFFFF
     };
 
+    // TODO: Get rid of this
     extern bool CheatManagerEnabled;
     extern SDK::USurvivalCheatManager* SurvivalCheatManager;
 
@@ -60,6 +126,7 @@ namespace CheatManager {
                 uint64_t Param4;
             };
         };
+        int32_t TargetPlayerId = UnrealUtils::GetLocalPlayerId(true);
     };
 
 
@@ -81,6 +148,10 @@ namespace CheatManager {
     );
 
     SDK::UCheatManager *GetPlayersCheatManager(
+        int32_t iPlayerId
+    );
+
+    SDK::USurvivalCheatManager *GetPlayersSurvivalCheatManager(
         int32_t iPlayerId
     );
 

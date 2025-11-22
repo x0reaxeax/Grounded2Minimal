@@ -187,14 +187,6 @@ namespace Interpreter {
     }
 
     void HandleSetMaxActiveMutations(void) {
-        if (!g_G2MOptions.bIsClientHost) {
-            LogError(
-                "SetMaxActiveMutations",
-                "Cannot use CheatManager functions to set max active mutations without host authority"
-            );
-            return;
-        }
-
         uint32_t uMaxMutations = (uint32_t) ReadIntegerInput(
             "[SetMaxActiveMutations] Enter max active mutations: ",
             0
@@ -203,7 +195,17 @@ namespace Interpreter {
             LogError("SetMaxActiveMutations", "Max active mutations cannot be zero");
             return;
         }
-        if (!CheatManager::StaticCheats::SetMaxActiveMutations(uMaxMutations)) {
+
+        int32_t iTargetPlayerId = ReadIntegerInput(
+            "[SetMaxActiveMutations] Enter target player ID (empty for local): ",
+            UnrealUtils::GetLocalPlayerId(true)
+        );
+
+        if (!CheatManager::StaticCheats::MaxActiveMutations(
+            CheatManager::StaticCheats::EStaticCheatOp::Set,
+            iTargetPlayerId, 
+            uMaxMutations
+        )) {
             LogError("SetMaxActiveMutations", "Failed to set max active mutations");
             return;
         }
@@ -211,6 +213,35 @@ namespace Interpreter {
         LogMessage(
             "SetMaxActiveMutations",
             "Max active mutations set to " + std::to_string(uMaxMutations)
+        );
+    }
+
+    void HandleSetMaxCozinessLevelAchieved(void) {
+        uint32_t uMaxCozinessLevel = (uint32_t) ReadIntegerInput(
+            "[SetMaxCozinessLevelAchieved] Enter max coziness level achieved: ",
+            0
+        );
+        if (0 == uMaxCozinessLevel) {
+            LogError("SetMaxCozinessLevelAchieved", "Max coziness level cannot be zero");
+            return;
+        }
+
+        int32_t iTargetPlayerId = ReadIntegerInput(
+            "[SetMaxCozinessLevelAchieved] Enter target player ID (empty for local): ",
+            UnrealUtils::GetLocalPlayerId(true)
+        );
+
+        if (!CheatManager::StaticCheats::MaxCozinessLevelAchieved(
+            CheatManager::StaticCheats::EStaticCheatOp::Set,
+            iTargetPlayerId, 
+            uMaxCozinessLevel
+        )) {
+            LogError("SetMaxCozinessLevelAchieved", "Failed to set max coziness level achieved");
+            return;
+        }
+        LogMessage(
+            "SetMaxCozinessLevelAchieved",
+            "Max coziness level achieved set to " + std::to_string(uMaxCozinessLevel)
         );
     }
 
@@ -290,7 +321,7 @@ namespace Interpreter {
         {"Help", "Show available commands", PrintAvailableCommands },
         {"help", "Show available commands", PrintAvailableCommands },
         {"F_DataTableNeedle", "Search for DataTable", HandleDataTableSearch },
-        {"F_ItemDump", "Dump DataTable items", HandleItemDump },
+        {"F_EntryDump", "Dump DataTable entries", HandleItemDump },
         {"F_FindItemTable", "Find DataTable for item", HandleFindItemTable },
         {"F_FunctionDump", "Dump functions", HandleFunctionDump },
         {"F_ClassDump", "Dump classes by name", HandleClassDump },
@@ -372,7 +403,8 @@ namespace Interpreter {
             }
         }, 
         { "OPT_SetCollision", "Toggle SetCollision option", HandleSetCollision },
-        { "OPT_SetMaxActiveMutations", "Set max active mutations", HandleSetMaxActiveMutations  }
+        { "OPT_SetMaxActiveMutations", "Set max active mutations", HandleSetMaxActiveMutations  },
+        { "OPT_SetMaxCozinessLevelAchieved", "Set max coziness level achieved", HandleSetMaxCozinessLevelAchieved }
     };
 
     void PrintAvailableCommands(

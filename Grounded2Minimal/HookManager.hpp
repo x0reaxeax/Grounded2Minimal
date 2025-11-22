@@ -40,22 +40,23 @@ namespace HookManager {
             friend class ProcessEventHooker;
 
         public:
-            ProcessEvent_t      OriginalProcessEvent;                           // Original function pointer
-            std::string         szHookName;                                     // Friendly hook name
-            std::string         szDebugFilter;                                  // Debug filter needle (case-insensitive, substring match)
-            std::atomic<bool>   bDebugFilterEnabled{ false };                   // Debug filter enabled flag
-            int32_t             iUniqueId = CoreUtils::GenerateUniqueId();      // Unique hook ID
+            ProcessEvent_t      OriginalFn;                                     // Original ProcessEvent function pointer                   [safe to read]
+            HookedFn            HookFn;                                         // Pointer to the hook function                             [safe to read]
+            std::string         szHookName;                                     // Friendly hook name                                       [safe to read/write]
+            std::string         szDebugFilter;                                  // Debug filter needle (case-insensitive, substring match)  [safe to read/write]
+            std::atomic<bool>   bDebugFilterEnabled{ false };                   // Debug filter enabled flag                                [safe to read/write]
+            int32_t             iUniqueId = CoreUtils::GenerateUniqueId();      // Unique hook ID                                           [safe to read]
 
             HookData(
                 void** _VTable,
-                ProcessEvent_t _OriginalProcessEvent,
+                ProcessEvent_t _OriginalFn,
                 HookedFn _HookFn,
                 std::string _szObjName,
                 std::string _szHookName,
                 std::string _szDebugFilter
             )
                 : VTable(_VTable)
-                , OriginalProcessEvent(_OriginalProcessEvent)
+                , OriginalFn(_OriginalFn)
                 , HookFn(_HookFn)
                 , szObjName(std::move(_szObjName))
                 , szHookName(std::move(_szHookName))
@@ -64,7 +65,7 @@ namespace HookManager {
 
         private:
             void**              VTable;                                         // Pointer to the object's vtable
-            HookedFn            HookFn;                                         // Pointer to the hook function
+            //HookedFn            HookFn;                                         // Pointer to the hook function
             std::string         szObjName;                                      // Internal FullName of the hooked object
         };
 
@@ -102,6 +103,7 @@ namespace HookManager {
         struct HookEntry {
             friend class NativeHooker;
             NativeFunc_t       OriginalFn;                                     // Original function pointer [safe to read]
+            NativeFunc_t       HookFn;                                         // Pointer to hook function  [safe to read]
             std::string        szHookName;                                     // Friendly hook name        [safe to read/write]
             std::string        szDebugFilter;                                  // Debug filter needle       [safe to read/write]
             std::atomic<bool>  bDebugFilterEnabled{ false };                   // Debug filter enabled flag [safe to read/write]
@@ -126,7 +128,7 @@ namespace HookManager {
 
         private:
             SDK::UFunction*    FuncObj;                                        // Target native function object
-            NativeFunc_t       HookFn;                                         // Pointer to hook function
+            //NativeFunc_t       HookFn;                                         // Pointer to hook function
             std::string        szFnName;                                       // Internal FullName of target hooked function
         };
 
