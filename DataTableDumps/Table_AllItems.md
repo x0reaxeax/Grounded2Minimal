@@ -4,255 +4,261 @@
 | -----------------  | --------------- |
 | `StoneShale` | Pebblet |
 | `FiberRaw` | Plant Fiber |
-| `Twig` | |
-| `Web` | |
-| `Sap` | |
-| `POllen` | |
-| `DewDrop` | |
-| `DirtyDrop` | |
-| `JuiceDrop` | |
-| `SodaDrop` | |
-| `IceDrop` | |
+| `Twig` | Sprig |
+| `Web` | Web Fiber |
+| `Sap` | Sap |
+| `POllen` | Pollen |
+| `DewDrop` | Dew Drop |
+| `DirtyDrop` | Dirty Drop |
+| `JuiceDrop` | Juice Drop |
+| `SodaDrop` | Soda Drop |
+| `IceDrop` | Dew Drop (special) |
 | `log` | Weed Stem |
-| `GrassPlank` | |
-| `AcornTop` | |
-| `AcornShell` | |
-| `AntPart` | |
-| `AntHead` | |
-| `AntMandibles` | |
-| `AntEgg` | |
-| `AntEggBlack` | |
-| `AcidGland` | |
-| `FlowerPetal` | |
-| `Clay` | |
+| `GrassPlank` | Grass Plank |
+| `AcornTop` | Acorn Top |
+| `AcornShell` | Acorn Shell |
+| `AntPart` | Red Ant Part |
+| `AntHead` | Red Ant Head |
+| `AntMandibles` | Red Ant Mandibles |
+| `AntEgg` | Red Ant Egg |
+| `AntEggBlack` | Black Ant Egg |
+| `AcidGland` | Acid Gland |
+| `FlowerPetal` | Flower Petal |
+| `Clay` | Clay |
 | `FiberDry` | Dry Grass Chunk |
-| `ThistleNeedle` | |
-| `DandelionPuff` | |
-| `FuzzMite` | |
-| `FuzzGnat` | |
-| `CloverTop` | |
-| `StinkBugGasSack` | |
-| `StinkBugFeelers` | |
-| `LadybugShell` | |
-| `LadybugHead` | |
-| `WeevilNose` | |
-| `GumSteel` | |
-| `GrubHide` | |
-| `GrubGoop` | |
-| `BeeStinger` | |
-| `BeeFuzz` | |
-| `BombardierExpGland` | |
-| `BombardierPart` | |
-| `HedgeBerry` | |
-| `BerryRed` | |
-| `SpiderChunk` | |
-| `SpiderFang` | |
-| `SpiderVenom` | |
-| `SlimeMold` | |
-| `FireflyGlow` | |
-| `FireflyScale` | |
-| `MosquitoBeak` | |
-| `MosquitoBloodSack` | |
-| `LarvaSpike` | |
-| `KoiFishScale` | |
-| `bone` | |
-| `DivingBellSpiderChunk` | |
-| `WaterBoatmanFin` | |
-| `LilypadWax` | |
-| `EelgrassStrand` | |
-| `AphidLive` | |
-| `FeatherCrow` | |
-| `AntPartBlack` | |
-| `AntHeadBlack` | |
-| `AntMandiblesBlack` | |
-| `MushroomChunk` | |
-| `MushroomChunkToadstool` | |
-| `CharcoalChunk` | |
-| `PupaHide` | |
-| `BossSpiderChunk` | |
-| `BossSpiderFang` | |
-| `BossSpiderVenom` | |
-| `StoneSalt` | |
-| `AntlionPincer` | |
-| `AntlionPart` | |
-| `GunpowderClump` | |
-| `TermitePart` | |
-| `TermiteChompers` | |
-| `TermitePartKing` | |
-| `BugGloop` | |
-| `FuzzMiteDust` | |
-| `BlackOxHorn` | |
-| `BlackOxPart` | |
-| `Lint` | |
-| `Burr` | |
+| `ThistleNeedle` | Thistle Needle|
+| `DandelionPuff` | Dandelion Tuft |
+| `FuzzMite` | Mite Fuzz |
+| `FuzzGnat` | Gnat Fuzz |
+| `CloverTop` | Clover Leaf |
+| `StinkBugGasSack` | Stinkbug Gas Sack |
+| `StinkBugFeelers` | Stinkbug Part |
+| `LadybugShell` | Ladybug Part |
+| `LadybugHead` | Ladybug Head |
+| `WeevilNose` | Weevil Nose |
+| `GumSteel` | Gum Nugget |
+| `GrubHide` | Grub Hide |
+| `GrubGoop` | Grub Sludge |
+| `BeeStinger` | Bee Stinger |
+| `BeeFuzz` | Bee Fuzz |
+| `BombardierExpGland` | Boiling Gland |
+| `BombardierPart` | Bombardier Part |
+| `HedgeBerry` | Blueberry Chunk |
+| `BerryRed` | Lingonberry Chunk |
+| `SpiderChunk` | Orb Weaver Chunk |
+| `SpiderFang` | Orb Weaver Fang |
+| `SpiderVenom` | Spider Venom |
+| `SlimeMold` | Slime Mold Stalk |
+| `FireflyGlow` | Glow Goo |
+| `FireflyScale` | Iridescent Scale |
+| `MosquitoBeak` | Mosquito Beak |
+| `MosquitoBloodSack` | Mosquito Blood Sack |
+| `LarvaSpike` | Larva Spike |
+| `KoiFishScale` | Koi Fish Scale |
+| `bone` | Sunken Bone |
+| `DivingBellSpiderChunk` | Diving Bell Spider Chunk |
+| `WaterBoatmanFin` | Water Boatman Fin |
+| `LilypadWax` | Lilypad Wax |
+| `EelgrassStrand` | EelgrassStrand |
+| `AphidLive` | Aphid (haulable) ["Invalid 560 Game/Items"] |
+| `FeatherCrow` | Crow Feather Piece |
+| `AntPartBlack` | Black Ant Part |
+| `AntHeadBlack` | Black Ant Head |
+| `AntMandiblesBlack` | Black Ant Mandibles |
+| `MushroomChunk` | Mushroom Chunk |
+| `MushroomChunkToadstool` | Toadstool Chunk |
+| `CharcoalChunk` | EverCahr Coal Chunk |
+| `PupaHide` | Pupa Hide |
+| `BossSpiderChunk` | Broodmother Chunk |
+| `BossSpiderFang` | Broodmother Fang |
+| `BossSpiderVenom` | Broodmother Venom |
+| `StoneSalt` | Salt Shard |
+| `AntlionPincer` | Antlion Pincer |
+| `AntlionPart` | Antlion Part |
+| `GunpowderClump` | Gunpowder Clump |
+| `TermitePart` | Termite Part |
+| `TermiteChompers` | Termite Chompers |
+| `TermitePartKing` | Termite King Carapace |
+| `BugGloop` | Tough Gunk |
+| `FuzzMiteDust` | Dust Mite Fuzz |
+| `BlackOxHorn` | Black Ox Horn |
+| `BlackOxPart` | Black Ox Part |
+| `Lint` | Lint |
+| `Burr` | Spiky Bur |
 | `CrystalShell` | Twinkling Shell |
-| `WoodSplinter` | |
-| `RolyPolyShell` | |
-| `RolyPolyPart` | |
-| `StinkbugPartGreenShield` | |
-| `StinkBugGasSackSuper` | |
-| `SpiderVenomSuper` | |
-| `SpiderFangBlackWidow` | |
-| `Rust` | |
-| `Toenail` | |
-| `PIneconePiece` | |
-| `Ladybirdshell` | |
-| `AntEggFire` | |
-| `AntPartFire` | |
-| `AntHeadFire` | |
-| `AntMandiblesFire` | |
-| `MiteTickFang` | |
-| `BossMantisHead` | |
-| `BossMantisChunk` | |
-| `BossMantisClaw` | |
-| `MothScale` | |
-| `MothFuzz` | |
-| `GrassSeed` | |
-| `PondMoss` | |
-| `MosquitoBeakTiger` | |
-| `ORCChip` | |
-| `WaspLeg` | |
-| `WaspPart` | |
-| `BossWaspQueenHead` | |
-| `BossWaspQueenChunk` | |
-| `BossWaspQueenWing` | |
-| `WaspPaper` | |
-| `SpiderWolfChunk` | |
-| `SpiderWolfFang` | |
-| `MiteLawnFang` | |
-| `PineNeedle` | |
-| `ScorpionNorthernClaw` | |
-| `ScorpionNorthernChunk` | |
-| `ScorpionNorthernStinger` | |
-| `ScorpionVenom` | |
-| `MantisGreenHead` | |
-| `MantisGreenChunk` | |
-| `MantisGreenClaw` | |
-| `ButterflyBlueScale` | |
-| `ButterflyBlueChunk` | |
-| `ButterflyBlueWing` | |
-| `DummyResource` | |
-| `SnailShell` | |
-| `SnailEyeStalk` | |
-| `SnailSlime` | |
-| `CockroachPart` | |
-| `CockroachHead` | |
-| `UnstableGoo` | |
-| `LaserBeam` | |
-| `CaterpillarGoop` | |
-| `CaterpillarHide` | |
-| `MilkweedTuft` | |
-| `MilkweedFiber` | |
+| `WoodSplinter` | Wooden Splinter |
+| `RolyPolyShell` | Roly Poly Shell |
+| `RolyPolyPart` | Roly Poly Part |
+| `StinkbugPartGreenShield` | Green Shield Bug Parts |
+| `StinkBugGasSackSuper` | Super Stink Sack |
+| `SpiderVenomSuper` | Super Spider Venom |
+| `SpiderFangBlackWidow` | Black Widow Fang |
+| `Rust` | Rust |
+| `Toenail` | Toenail |
+| `PIneconePiece` | Pinecone Piece |
+| `Ladybirdshell` | Ladybird Shell |
+| `AntEggFire` | Fire Ant Egg |
+| `AntPartFire` | Fire Ant Part |
+| `AntHeadFire` | Fire Ant Head |
+| `AntMandiblesFire` | Fire Ant Mandibles |
+| `MiteTickFang` | Tick Fang |
+| `BossMantisHead` | Orchid Mantis Head |
+| `BossMantisChunk` | Orchid Mantis Chunk |
+| `BossMantisClaw` | Orchid Mantis Claw |
+| `MothScale` | Moth Scale |
+| `MothFuzz` | Moth Fuzz |
+| `GrassSeed` | Grass Seeds |
+| `PondMoss` | Pond Moss |
+| `MosquitoBeakTiger` | Tiger Mosquito Beak |
+| `ORCChip` | O.R.C. Receiver |
+| `WaspLeg` | Wasp Leg |
+| `WaspPart` | Wasp Shell |
+| `BossWaspQueenHead` | Wasp Queen Head |
+| `BossWaspQueenChunk` | Wasp Queen Chunk |
+| `BossWaspQueenWing` | Wasp Queen Wing |
+| `WaspPaper` | Wasp Paper |
+| `SpiderWolfChunk` | Wolf Spider Chunk |
+| `SpiderWolfFang` | Wolf Spider Fang |
+| `MiteLawnFang` | Mite Fang |
+| `PineNeedle` | Pine Needle |
+| `ScorpionNorthernClaw` | Northern Scorpion Pincer |
+| `ScorpionNorthernChunk` | Northern Scorpion Chunk |
+| `ScorpionNorthernStinger` | Northern Scorpion Stinger |
+| `ScorpionVenom` | Scorpion Venom |
+| `MantisGreenHead` | Praying Mantis Head |
+| `MantisGreenChunk` | Praying Mantis Chunk |
+| `MantisGreenClaw` | Praying Mantis Claw |
+| `ButterflyBlueScale` | Blue Butterfly Scales |
+| `ButterflyBlueChunk` | Blue Butterfly Chunk |
+| `ButterflyBlueWing` | Blue Butterfly Wing |
+| `DummyResource` | "????" (it's literally called that lmao) |
+| `SnailShell` | Garden Snail Fragment |
+| `SnailEyeStalk` | Garden Snail Eyestalk |
+| `SnailSlime` | Garden Snail Slime |
+| `CockroachPart` | Roach Chunk |
+| `CockroachHead` | Roach Head |
+| `UnstableGoo` | Unstable Goo |
+| `LaserBeam` | Hyper Beam |
+| `CaterpillarGoop` | Caterpillar Goop |
+| `CaterpillarHide` | Spine Nub |
+| `MilkweedTuft` | Milkweed Tuft |
+| `MilkweedFiber` | Milkweed Chunk |
 | `Fabric` | Blueberry Leather |
-| `LeatherBerryRed` | |
+| `LeatherBerryRed` | Lingonberry Leather |
 | `FiberWoven` | Crude Rope |
 | `Rubber` | Bug Rubber |
-| `WebWoven` | |
-| `MushroomBrick` | |
-| `MushroomSlurry` | |
-| `PlantSlurry` | |
-| `NectarSlurry` | |
-| `IngotSalt` | |
-| `IngotMint` | |
-| `IngotQuartzite` | |
-| `IngotSpicy` | |
-| `IngotSour` | |
-| `LeatherPupa` | |
-| `LintWoven` | |
-| `JewelSpicy` | |
-| `JewelMint` | |
-| `JewelQuartzite` | |
-| `JewelSalt` | |
-| `JewelSour` | |
-| `RepairGlue` | |
-| `UpgradeWeapon1` | |
-| `UpgradeWeapon2` | |
-| `UpgradeWeapon3` | |
-| `UpgradeArmor1` | |
-| `UpgradeArmor2` | |
-| `UpgradeArmor3` | |
-| `UpgradeArmorPlate1` | |
-| `UpgradeArmorPlate2` | |
-| `UpgradeArmorPlate3` | |
-| `UpgradeWeaponWhetstone1` | |
-| `UpgradeWeaponWhetstone2` | |
-| `UpgradeWeaponWhetstone3` | |
-| `CharcoalAsh` | |
-| `AshCement` | |
-| `Mushroom` | |
-| `Algae` | |
-| `MuscleSprout` | |
-| `GranolaBar` | |
-| `Nectar` | |
-| `GranolaAcorn` | |
-| `Honeydew` | |
-| `FoodHotDog` | |
-| `FoodHotDogPristine` | |
+| `WebWoven` | Silk Rope |
+| `MushroomBrick` | Mushroom Brick |
+| `MushroomSlurry` | Mushroom Slurry |
+| `PlantSlurry` | Plant Slurry |
+| `NectarSlurry` | Spoiled Meat Slurry |
+| `IngotSalt` | Salt Glob |
+| `IngotMint` | Mint Glob |
+| `IngotQuartzite` | Mighty Glob |
+| `IngotSpicy` | Spicy Glob |
+| `IngotSour` | Sour Glob |
+| `LeatherPupa` | Pupa Leather |
+| `LintWoven` | Lint Rope |
+| `JewelSpicy` | Spicy Jewel |
+| `JewelMint` | Mint Jewel |
+| `JewelQuartzite` | Mighty Jewel |
+| `JewelSalt` | Salty Jewel |
+| `JewelSour` | Sour Jewel |
+| `RepairGlue` | Repair Glue |
+| `UpgradeWeapon1` | Brittle Quartzite Shard |
+| `UpgradeWeapon2` | Sturdy Quartzite Shard |
+| `UpgradeWeapon3` | Supreme Quartzite Shard |
+| `UpgradeArmor1` | Brittle Marble Shard |
+| `UpgradeArmor2` | Sturdy Marble Shard |
+| `UpgradeArmor3` | Supreme Marble Shard |
+| `UpgradeArmorPlate1` | Brittle Plating |
+| `UpgradeArmorPlate2` | Sturdy Plating |
+| `UpgradeArmorPlate3` | Supreme Plating |
+| `UpgradeWeaponWhetstone1` | Brittle Whetstone |
+| `UpgradeWeaponWhetstone2` | Sturdy Whetstone |
+| `UpgradeWeaponWhetstone3` | Supreme Whetstone |
+| `CharcoalAsh` | Charcoal Ash |
+| `AshCement` | Ash Cement |
+| `TarantulaChunk` | Tarantula Chunk |
+| `TarantulaFang` | Tarantula Fang |
+| `TarantulaVenom` | Tarantula Venom |
+| `TarantulaTalon` | Tarantula Talon |
+| `PretzelChunk` | Pretzel Chunk |
+| `CornHogChunks` | Corn Hog Chunk |
+| `Mushroom` | Mushroom |
+| `Algae` | Algae |
+| `MuscleSprout` | "Invalid 751 game/items" (unimplemented Muscle Sprout) |
+| `GranolaBar` | Grumble's Granola Bar |
+| `Nectar` | Nectar |
+| `GranolaAcorn` | Invalid 126 game/items (unimplemented Granola Bar) |
+| `Honeydew` | Aphid Honeydew |
+| `FoodHotDog` | Billy Hog Bite |
+| `FoodHotDogPristine` | Fresh Billy Hog Bite |
 | `FoodCandyCorn` | Candy Cornlet |
-| `FoodCookieSandwich` | |
-| `FoodCookieSandwichPristine` | |
-| `FoodApple` | |
-| `FoodApplePristine` | |
+| `FoodCookieSandwich` | Cookie Sandwich Bits |
+| `FoodCookieSandwichPristine` | Fresh Cookie Sandwich Bits |
+| `FoodApple` | Apple Bits |
+| `FoodApplePristine` | Fresh Apple Bits |
 | `FoodMint` | Mint Shard |
-| `SpoiledMeat` | |
-| `AphidMeat` | |
-| `CookedAphidMeat` | |
-| `DriedAphidMeat` | |
-| `GnatMeat` | |
-| `CookedGnatMeat` | |
-| `DriedGnatMeat` | |
-| `WeevilMeat` | |
-| `CookedWeevilMeat` | |
-| `DriedWeevilMeat` | |
-| `GrubMeat` | |
-| `CookedGrubMeat` | |
-| `DriedGrubMeat` | |
-| `TadpoleMeat` | |
-| `CookedTadpoleMeat` | |
-| `DriedTadpoleMeat` | |
-| `WaterFleaChunk` | |
-| `CookedWaterFleaMeat` | |
-| `DriedWaterFleaMeat` | |
-| `SnailMeat` | |
-| `CookedSnailMeat` | |
-| `DriedSnailMeat` | |
-| `CaterpillarMeat` | |
-| `CookedCaterpillarMeat` | |
-| `DriedCaterpillarMeat` | |
-| `SmokeScreen` | |
-| `FoodCandySpicy` | |
-| `FoodCandySour` | |
-| `FoodRotten` | |
-| `FoodDonut` | |
-| `FoodDonutPristine` | |
-| `FoodCandyPopRock` | |
-| `AcornBits` | |
-| `FoodChocolate` | |
-| `FoodChocolateLips` | |
-| `FoodChocolateCoin` | |
-| `BandageTier1` | |
-| `BandageTier2` | |
-| `BandageTier3` | |
-| `IceShard` | |
-| `HeadMite` | |
-| `HeadEyepatch` | |
-| `GasMask` | |
-| `HeadAnt` | |
-| `ChestAnt` | |
-| `LegsAnt` | |
-| `HeadAcorn` | |
-| `ChestAcorn` | |
-| `LegsAcorn` | |
-| `HeadGrub` | |
-| `ChestGrub` | |
-| `LegsGrub` | |
-| `LegsAphid` | |
-| `HeadLadybug` | |
-| `ChestLadybug` | |
-| `LegsLadybug` | |
-| `HeadBee` | |
-| `ChestBee` | |
-| `LegsBee` | |
+| `SpoiledMeat` | Spoiled Meat |
+| `AphidMeat` | Raw Aphid Meat |
+| `CookedAphidMeat` | Aphid Roast |
+| `DriedAphidMeat` | Aphid Jerky |
+| `GnatMeat` | Raw Gnat Meat |
+| `CookedGnatMeat` | Gnat Roast |
+| `DriedGnatMeat` | Gnat Jerky |
+| `WeevilMeat` | Raw Weevil Meat |
+| `CookedWeevilMeat` | Weevil Roast |
+| `DriedWeevilMeat` | Weevil Jerky |
+| `GrubMeat` | Raw Grub Meat |
+| `CookedGrubMeat` | Grub Roast |
+| `DriedGrubMeat` | Grub Jerky |
+| `TadpoleMeat` | Raw Tadpole Meat |
+| `CookedTadpoleMeat` | Tadpole Roast |
+| `DriedTadpoleMeat` | Tadpole Jerky |
+| `WaterFleaChunk` | Water Flea Meat |
+| `CookedWaterFleaMeat` | Water Flea Roast |
+| `DriedWaterFleaMeat` | Water Flea Jerky |
+| `SnailMeat` | Raw Snail Meat |
+| `CookedSnailMeat` | Snail Roast |
+| `DriedSnailMeat` | Snail Jerky |
+| `CaterpillarMeat` | Raw Caterpillar Meat |
+| `CookedCaterpillarMeat` | Caterpillar Roast |
+| `DriedCaterpillarMeat` | Caterpillar Jerky |
+| `SmokeScreen` | Shinobi Sneeze |
+| `FoodCandySpicy` | Spicy Shard |
+| `FoodCandySour` | Sour Lump |
+| `FoodRotten` | Rotten Food |
+| `FoodDonut` | Donut Chunk |
+| `FoodDonutPristine` | Fresh Donut Chunk |
+| `FoodCandyPopRock` | Grilled Science |
+| `AcornBits` | Acorn Bits|
+| `FoodChocolate` | Chocolate Chunk |
+| `FoodChocolateLips` | Invalid 1958 game/items |
+| `FoodChocolateCoin` | Invalid 1959 game/items |
+| `BandageTier1` | Fiber Bandage |
+| `BandageTier2` | Blueberry Bandage |
+| `BandageTier3` | Lingonberry Bandage |
+| `IceShard` | Ice Splinter |
+| `HeadMite` | Mitey Muffs |
+| `HeadEyepatch` | Eyepatch |
+| `GasMask` | Gas Mask |
+| `HeadAnt` | Red Ant Helmet |
+| `ChestAnt` | Red Ant Arm Guards |
+| `LegsAnt` | Red Ant Knee Guards |
+| `HeadAcorn` | Acorn Face Mask |
+| `ChestAcorn` | Acorn Plate |
+| `LegsAcorn` | Acorn Greaves |
+| `HeadGrub` | Grub Goggles |
+| `ChestGrub` | Grub Vest |
+| `LegsGrub` | Grub Leggings |
+| `LegsAphid` | Aphid Slippers |
+| `HeadLadybug` | Ladybug Faceplate |
+| `ChestLadybug` | Ladybug Chestplate |
+| `LegsLadybug` | Ladybug Shin Guards |
+| `HeadBee` | Bee Face Mask |
+| `ChestBee` | Bee Shoulder Pads |
+| `LegsBee` | Bee Shin Guards |
 | `HeadSpider` | |
 | `ChestSpider` | |
 | `LegsSpider` | |
