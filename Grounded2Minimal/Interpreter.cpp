@@ -21,10 +21,11 @@ namespace Interpreter {
         UnrealUtils::FindDataTableByName(szTableName);
     }
 
+    // It's called ItemDump cuz legacy reasons, but it actually works for any DataTable entries
     static void HandleItemDump(void) {
         std::string szTableName;
         if (!ReadInterpreterInput(
-            "[DataTableItemDump] Enter DataTable name to dump items: ",
+            "[DataTableItemDump] Enter DataTable name to dump entries: ",
             szTableName
         )) {
             LogError(
@@ -69,7 +70,7 @@ namespace Interpreter {
         UnrealUtils::DumpFunctions(szFunctionName);
     }
 
-    void HandleClassDump(void) {
+    static void HandleClassDump(void) {
         std::string szClassName;
         if (!ReadInterpreterInput(
             "[ClassDump] Enter class name needle to search: ",
@@ -85,7 +86,7 @@ namespace Interpreter {
         UnrealUtils::DumpClasses(nullptr, szClassName);
     }
 
-    void HandleGetAuthority(void) {
+    static void HandleGetAuthority(void) {
         if (UnrealUtils::IsPlayerHostAuthority()) {
             LogMessage(
                 "Authority", 
@@ -99,7 +100,7 @@ namespace Interpreter {
         }
     }
 
-    void HandleSpawnItem(void) {
+    static void HandleSpawnItem(void) {
         if (!g_G2MOptions.bIsClientHost) {
             LogError(
                 "ItemSpawner",
@@ -138,7 +139,7 @@ namespace Interpreter {
         Command::SubmitTypedCommand(Command::CommandId::CmdIdSpawnItem, lpParams);
     }
 
-    void HandleSummon(void) {
+    static void HandleSummon(void) {
         if (!g_G2MOptions.bIsClientHost) {
             LogError(
                 "Summon",
@@ -166,7 +167,7 @@ namespace Interpreter {
         );
     }
 
-    void HandleBuildAnywhere(void) {
+    static void HandleBuildAnywhere(void) {
         g_GameOptions.BuildAnywhere.fetch_xor(1, std::memory_order_acq_rel);
         LogMessage(
             "GameOptions",
@@ -177,7 +178,7 @@ namespace Interpreter {
         );
     }
 
-    void HandleSetCollision(void) {
+    static void HandleSetCollision(void) {
         bool bNewCollision = (bool) ReadIntegerInput(
             "[SetCollision] Collision [0/1]: ",
             1
@@ -186,66 +187,297 @@ namespace Interpreter {
         CheatManager::InvokedCheats::SetPlayerCollision(bNewCollision);
     }
 
-    void HandleSetMaxActiveMutations(void) {
-        uint32_t uMaxMutations = (uint32_t) ReadIntegerInput(
-            "[SetMaxActiveMutations] Enter max active mutations: ",
-            0
-        );
-        if (0 == uMaxMutations) {
-            LogError("SetMaxActiveMutations", "Max active mutations cannot be zero");
-            return;
+#pragma warning (push)
+#pragma warning (disable: 26813) // bitwise op on enum
+    static void HandleMaxActiveMutations(
+        CheatManager::StaticCheats::EStaticCheatOp eOperation
+    ) {
+        using StaticOp = CheatManager::StaticCheats::EStaticCheatOp;
+
+        const bool bIsSet = (eOperation == StaticOp::Set);
+        std::string szOperationStr = bIsSet ? "set" : "get";
+
+        int32_t iMaxMutations = 0;
+
+        if (bIsSet) {
+            iMaxMutations = ReadIntegerInput(
+                "[MaxActiveMutations] Enter max active mutations: ",
+                -1
+            );
+
+            if (iMaxMutations < 0) {
+                LogError(
+                    "MaxActiveMutations",
+                    "Invalid max active mutations, must be non-negative"
+                );
+                return;
+            }
+
+            LogMessage(
+                "MaxActiveMutations",
+                "Setting max active mutations to " + std::to_string(iMaxMutations)
+            );
         }
 
         int32_t iTargetPlayerId = ReadIntegerInput(
-            "[SetMaxActiveMutations] Enter target player ID (empty for local): ",
+            "[MaxActiveMutations] Enter target player ID (empty for local): ",
             UnrealUtils::GetLocalPlayerId(true)
         );
 
-        if (!CheatManager::StaticCheats::MaxActiveMutations(
-            CheatManager::StaticCheats::EStaticCheatOp::Set,
-            iTargetPlayerId, 
-            uMaxMutations
-        )) {
-            LogError("SetMaxActiveMutations", "Failed to set max active mutations");
+        int32_t iResult = CheatManager::StaticCheats::MaxActiveMutations(
+            eOperation,
+            iTargetPlayerId,
+            iMaxMutations   // ignored for Get
+        );
+
+        if (iResult < 0) {
+            LogError(
+                "MaxActiveMutations",
+                "Failed to " + szOperationStr + " max active mutations"
+            );
+            return;
+        }
+
+        if (bIsSet) {
+            LogMessage(
+                "MaxActiveMutations",
+                "Max active mutations successfully set to " + std::to_string(iResult) +
+                " for player ID " + std::to_string(iTargetPlayerId)
+            );
+        } else {
+            LogMessage(
+                "MaxActiveMutations",
+                "Current max active mutations for player ID " +
+                std::to_string(iTargetPlayerId) + ": " +
+                std::to_string(iResult)
+            );
+        }
+    }
+
+    static void HandleMaxCozinessLevelAchieved(
+        CheatManager::StaticCheats::EStaticCheatOp eOperation
+    ) {
+        using StaticOp = CheatManager::StaticCheats::EStaticCheatOp;
+
+        const bool bIsSet = (eOperation == StaticOp::Set);
+        std::string szOperationStr = bIsSet ? "set" : "get";
+
+        int32_t iCozinessLevel = 0;
+
+        if (bIsSet) {
+            iCozinessLevel = ReadIntegerInput(
+                "[MaxCozinessLevelAchieved] Enter max coziness level: ",
+                -1
+            );
+            if (iCozinessLevel < 0) {
+                LogError(
+                    "MaxCozinessLevelAchieved",
+                    "Invalid max coziness level, must be non-negative"
+                );
+                return;
+            }
+            LogMessage(
+                "MaxCozinessLevelAchieved",
+                "Setting max coziness level to " + std::to_string(iCozinessLevel)
+            );
+        }
+
+        int32_t iTargetPlayerId = ReadIntegerInput(
+            "[MaxCozinessLevelAchieved] Enter target player ID (empty for local): ",
+            UnrealUtils::GetLocalPlayerId(true)
+        );
+
+        int32_t iResult = CheatManager::StaticCheats::MaxCozinessLevelAchieved(
+            eOperation,
+            iTargetPlayerId,
+            iCozinessLevel   // ignored for Get
+        );
+
+        if (iResult < 0) {
+            LogError(
+                "MaxCozinessLevelAchieved",
+                "Failed to " + szOperationStr + " max coziness level"
+            );
+            return;
+        }
+
+        if (bIsSet) {
+            LogMessage(
+                "MaxCozinessLevelAchieved",
+                "Max coziness level successfully set to " + std::to_string(iResult) +
+                " for player ID " + std::to_string(iTargetPlayerId)
+            );
+        } else {
+            LogMessage(
+                "MaxCozinessLevelAchieved",
+                "Current max coziness level for player ID " +
+                std::to_string(iTargetPlayerId) + ": " +
+                std::to_string(iResult)
+            );
+        }
+    }
+
+    static void HandleStaminaRegenRate(
+        CheatManager::StaticCheats::EStaticCheatOp eOperation
+    ) {
+        using StaticOp = CheatManager::StaticCheats::EStaticCheatOp;
+
+        const bool bIsSet = (eOperation == StaticOp::Set);
+        std::string szOperationStr = bIsSet ? "set" : "get";
+
+        float fRegenRate = 0.0f;
+        if (bIsSet) {
+            fRegenRate = ReadFloatInput(
+                "[StaminaRegenRate] Enter new stamina regen rate: ",
+                -1.0f
+            );
+            if (fRegenRate < 0.0f) {
+                LogError(
+                    "StaminaRegenRate",
+                    "Invalid stamina regen rate, must be non-negative"
+                );
+                return;
+            }
+            LogMessage(
+                "StaminaRegenRate",
+                "Setting stamina regen rate to " + std::to_string(fRegenRate)
+            );
+        }
+        int32_t iTargetPlayerId = ReadIntegerInput(
+            "[StaminaRegenRate] Enter target player ID (empty for local): ",
+            UnrealUtils::GetLocalPlayerId(true)
+        );
+        float fResult = CheatManager::StaticCheats::StaminaRegenRate(
+            eOperation,
+            iTargetPlayerId,
+            fRegenRate   // ignored for Get
+        );
+        if (fResult < 0.0f) {
+            LogError(
+                "StaminaRegenRate",
+                "Failed to " + szOperationStr + " stamina regen rate"
+            );
+            return;
+        }
+        if (bIsSet) {
+            LogMessage(
+                "StaminaRegenRate",
+                "Stamina regen rate successfully set to " + std::to_string(fResult) +
+                " for player ID " + std::to_string(iTargetPlayerId)
+            );
+        } else {
+            LogMessage(
+                "StaminaRegenRate",
+                "Current stamina regen rate for player ID " +
+                std::to_string(iTargetPlayerId) + ": " +
+                std::to_string(fResult)
+            );
+        }
+    }
+
+    static void HandleStaminaRegenDelay(
+        CheatManager::StaticCheats::EStaticCheatOp eOperation
+    ) {
+        using StaticOp = CheatManager::StaticCheats::EStaticCheatOp;
+        const bool bIsSet = (eOperation == StaticOp::Set);
+        std::string szOperationStr = bIsSet ? "set" : "get";
+        float fRegenDelay = 0.0f;
+        if (bIsSet) {
+            fRegenDelay = ReadFloatInput(
+                "[StaminaRegenDelay] Enter new stamina regen delay: ",
+                -1.0f
+            );
+            if (fRegenDelay < 0.0f) {
+                LogError(
+                    "StaminaRegenDelay",
+                    "Invalid stamina regen delay, must be non-negative"
+                );
+                return;
+            }
+            LogMessage(
+                "StaminaRegenDelay",
+                "Setting stamina regen delay to " + std::to_string(fRegenDelay)
+            );
+        }
+        int32_t iTargetPlayerId = ReadIntegerInput(
+            "[StaminaRegenDelay] Enter target player ID (empty for local): ",
+            UnrealUtils::GetLocalPlayerId(true)
+        );
+        float fResult = CheatManager::StaticCheats::StaminaRegenDelay(
+            eOperation,
+            iTargetPlayerId,
+            fRegenDelay   // ignored for Get
+        );
+        if (fResult < 0.0f) {
+            LogError(
+                "StaminaRegenDelay",
+                "Failed to " + szOperationStr + " stamina regen delay"
+            );
+            return;
+        }
+        if (bIsSet) {
+            LogMessage(
+                "StaminaRegenDelay",
+                "Stamina regen delay successfully set to " + std::to_string(fResult) +
+                " for player ID " + std::to_string(iTargetPlayerId)
+            );
+        } else {
+            LogMessage(
+                "StaminaRegenDelay",
+                "Current stamina regen delay for player ID " +
+                std::to_string(iTargetPlayerId) + ": " +
+                std::to_string(fResult)
+            );
+        }
+    }
+
+#pragma warning (pop) // C26813
+
+    static void HandleCullItemByIndex(void) {
+        int32_t iItemIndex = ReadIntegerInput(
+            "[Culling] Enter item index to cull: ",
+            -1
+        );
+        if (iItemIndex < 0) {
+            LogError(
+                "Culling", 
+                "Invalid item index, must be non-negative"
+            );
             return;
         }
 
         LogMessage(
-            "SetMaxActiveMutations",
-            "Max active mutations set to " + std::to_string(uMaxMutations)
+            "Culling", 
+            "Culling item ID " + std::to_string(iItemIndex) + "..."
         );
+
+        CheatManager::Culling::CullItemByItemIndex(iItemIndex);
     }
 
-    void HandleSetMaxCozinessLevelAchieved(void) {
-        uint32_t uMaxCozinessLevel = (uint32_t) ReadIntegerInput(
-            "[SetMaxCozinessLevelAchieved] Enter max coziness level achieved: ",
-            0
-        );
-        if (0 == uMaxCozinessLevel) {
-            LogError("SetMaxCozinessLevelAchieved", "Max coziness level cannot be zero");
-            return;
-        }
-
-        int32_t iTargetPlayerId = ReadIntegerInput(
-            "[SetMaxCozinessLevelAchieved] Enter target player ID (empty for local): ",
-            UnrealUtils::GetLocalPlayerId(true)
-        );
-
-        if (!CheatManager::StaticCheats::MaxCozinessLevelAchieved(
-            CheatManager::StaticCheats::EStaticCheatOp::Set,
-            iTargetPlayerId, 
-            uMaxCozinessLevel
+    static void HandleCullItemType(void) {
+        std::string szItemTypeName;
+        if (!ReadInterpreterInput(
+            "[Culling] Enter item type name to cull all: ",
+            szItemTypeName
         )) {
-            LogError("SetMaxCozinessLevelAchieved", "Failed to set max coziness level achieved");
+            LogError(
+                "Culling", 
+                "Invalid input, please provide an item type name"
+            );
             return;
         }
         LogMessage(
-            "SetMaxCozinessLevelAchieved",
-            "Max coziness level achieved set to " + std::to_string(uMaxCozinessLevel)
+            "Culling", 
+            "Culling all items of type '" + szItemTypeName + "'..."
+        );
+        CheatManager::Culling::CullAllItemInstances(
+            szItemTypeName,
+            false
         );
     }
 
-    void HandleSetDebugFilter(void) {
+
+    static void HandleSetDebugFilter(void) {
         int32_t iHookId = ReadIntegerInput(
             "[DebugFilter] Enter hook ID to apply filter to (empty for all): ",
             HookManager::UniqueHookIdSpecial::AllHooks
@@ -318,17 +550,19 @@ namespace Interpreter {
     void PrintAvailableCommands(void);
 
     ConsoleCommand g_Commands[] = {
-        {"Help", "Show available commands", PrintAvailableCommands },
-        {"help", "Show available commands", PrintAvailableCommands },
-        {"F_DataTableNeedle", "Search for DataTable", HandleDataTableSearch },
-        {"F_EntryDump", "Dump DataTable entries", HandleItemDump },
-        {"F_FindItemTable", "Find DataTable for item", HandleFindItemTable },
-        {"F_FunctionDump", "Dump functions", HandleFunctionDump },
-        {"F_ClassDump", "Dump classes by name", HandleClassDump },
-        {"H_GetAuthority", "Check host authority", HandleGetAuthority },
-        {"I_SpawnItem", "Spawn item", HandleSpawnItem },
-        {"I_ItemSpawn", "Spawn item", HandleSpawnItem },
-        {"S_SummonClass", "Summon an internal class", HandleSummon },
+        { "Help", "Show available commands", PrintAvailableCommands },
+        { "help", "Show available commands", PrintAvailableCommands },
+        { "C_CullItemInstance", "Cull item by instance ID", HandleCullItemByIndex},
+        { "C_CullItemType", "Cullall items of set type", HandleCullItemType },
+        { "F_DataTableNeedle", "Search for DataTable", HandleDataTableSearch },
+        { "F_EntryDump", "Dump DataTable entries", HandleItemDump },
+        { "F_FindItemTable", "Find DataTable for item", HandleFindItemTable },
+        { "F_FunctionDump", "Dump functions", HandleFunctionDump },
+        { "F_ClassDump", "Dump classes by name", HandleClassDump },
+        { "H_GetAuthority", "Check host authority", HandleGetAuthority },
+        { "I_SpawnItem", "Spawn item", HandleSpawnItem },
+        { "I_ItemSpawn", "Spawn item", HandleSpawnItem },
+        { "S_SummonClass", "Summon an internal class", HandleSummon },
         {
             "P_ShowPlayers", "Show connected players", []() { 
                 UnrealUtils::DumpConnectedPlayers(); 
@@ -402,9 +636,27 @@ namespace Interpreter {
                 }
             }
         }, 
-        { "OPT_SetCollision", "Toggle SetCollision option", HandleSetCollision },
-        { "OPT_SetMaxActiveMutations", "Set max active mutations", HandleSetMaxActiveMutations  },
-        { "OPT_SetMaxCozinessLevelAchieved", "Set max coziness level achieved", HandleSetMaxCozinessLevelAchieved }
+        //{ "OPT_SetCollision", "Toggle SetCollision option", HandleSetCollision }, // removed cuz dont know what the fuck it does xd
+        { "OPT_GetMaxActiveMutations", "Get max active mutations", []() {
+            HandleMaxActiveMutations(
+                CheatManager::StaticCheats::EStaticCheatOp::Get
+            );
+        }},
+        { "OPT_SetMaxActiveMutations", "Set max active mutations", []() {
+            HandleMaxActiveMutations(
+                CheatManager::StaticCheats::EStaticCheatOp::Set
+            );
+        }},
+        { "OPT_GetMaxCozinessLevelAchieved", "Get max coziness level achieved", []() {
+            HandleMaxCozinessLevelAchieved(
+                CheatManager::StaticCheats::EStaticCheatOp::Get
+            );
+        }},
+        { "OPT_SetMaxCozinessLevelAchieved", "Set max coziness level achieved", []() {
+            HandleMaxCozinessLevelAchieved(
+                CheatManager::StaticCheats::EStaticCheatOp::Set
+            );
+        }}
     };
 
     void PrintAvailableCommands(
@@ -539,6 +791,10 @@ namespace Interpreter {
             return iDefaultValue;
         }
 
+        if (szInput.empty()) {
+            return iDefaultValue;
+        }
+
         try {
             return std::stoi(szInput);
         } catch (const std::exception& e) {
@@ -548,6 +804,32 @@ namespace Interpreter {
                 true
             );
             return iDefaultValue;
+        }
+    }
+
+    float ReadFloatInput(
+        const std::string& szPrompt,
+        float fDefaultValue
+    ) {
+        std::string szInput;
+        if (!ReadInterpreterInput(szPrompt, szInput)) {
+            LogError("Input", "No input provided", true);
+            return fDefaultValue;
+        }
+
+        if (szInput.empty()) {
+            return fDefaultValue;
+        }
+
+        try {
+            return std::stof(szInput);
+        } catch (const std::exception& e) {
+            LogError(
+                "Input", 
+                "Invalid float format (" + std::string(e.what()) + ")",
+                true
+            );
+            return fDefaultValue;
         }
     }
 }

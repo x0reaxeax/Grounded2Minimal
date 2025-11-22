@@ -138,16 +138,16 @@ namespace CoreUtils {
             g_wszWideStringConvertBuffer,
             ARRAYSIZE(g_wszWideStringConvertBuffer)
         )) {
-            return L"";
+            g_wszWideStringConvertBuffer[0] = L'0';
         }
 
         return g_wszWideStringConvertBuffer;
     }
-
+    
     LPCWSTR InlineStringToWideChar(
         std::string szString
     ) {
-        ZeroMemory(
+        SecureZeroMemory(
             g_wszWideStringConvertBuffer, 
             sizeof(g_wszWideStringConvertBuffer)
         );
@@ -159,8 +159,9 @@ namespace CoreUtils {
             g_wszWideStringConvertBuffer,
             ARRAYSIZE(g_wszWideStringConvertBuffer)
         )) {
-            return L"";
+            g_wszWideStringConvertBuffer[0] = L'0';
         }
+
         return g_wszWideStringConvertBuffer;
     }
 

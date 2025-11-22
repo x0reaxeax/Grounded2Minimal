@@ -62,7 +62,7 @@
 #define IDC_STATIC_VERSION                      604
 #define IDC_STATIC_GITHUB                       605
 
-#define GUI_WINDOW_HEIGHT         880
+#define GUI_WINDOW_HEIGHT         800
 #define GUI_WINDOW_WIDTH          800
 
 namespace WinGUI {
@@ -664,6 +664,10 @@ namespace WinGUI {
                     )
                 );
 
+                if (!isdigit(wszCurrentMutationCount[0])) {
+                    wszCurrentMutationCount = L"4";
+                }
+
                 g_hEditMutationsCount = CreateWindowEx(
                     WS_EX_CLIENTEDGE, L"EDIT", wszCurrentMutationCount,
                     WS_CHILD | WS_VISIBLE | WS_BORDER | WS_TABSTOP | ES_NUMBER,
@@ -685,6 +689,10 @@ namespace WinGUI {
                         )
                     )
                 );
+
+                if (!isdigit(wszCurrentCozinessLevel[0])) {
+                    wszCurrentCozinessLevel = L"0";
+                }
 
                 g_hEditCozinessLevel = CreateWindowEx(
                     WS_EX_CLIENTEDGE, L"EDIT", wszCurrentCozinessLevel,

@@ -8,64 +8,14 @@ namespace CheatManager {
     namespace StaticCheats {
         // Get/Set enum
         typedef enum EStaticCheatOp : uint8_t {
-            Get = 0,
-            Set = 1,
+            Invalid = 0,
+            Get = 1,
+            Set = 2,
             _Debug = 0xFF
         } EStaticCheatOp;
 
-        template<
-            typename TObject,
-            typename TValue,
-            typename Resolver,
-            typename Getter,
-            typename Setter
-        >
-        static TValue HandleStaticCheatImpl(
-            EStaticCheatOp eOperation,
-            int32_t iTargetPlayerId,
-            const std::string &szCheatName,
-            Resolver&& fnResolveObject,
-            Getter&& fnGetValue,
-            Setter&& fnSetValue,
-            TValue NewValue,
-            TValue ErrorValue
-        ) {
-            TObject* lpObject = fnResolveObject(iTargetPlayerId);
-            if (!lpObject) {
-                LogError(
-                    "CheatManager",
-                    "Failed to resolve target object for '" + szCheatName + "'"
-                );
-                return ErrorValue;
-            }
-
-            switch (eOperation) {
-                case EStaticCheatOp::Set: {
-                    fnSetValue(lpObject, NewValue);
-                    TValue Current = fnGetValue(lpObject);
-                    LogMessage(
-                        "CheatManager",
-                        "Set '" + szCheatName + "' to '" + std::to_string(Current) + "'",
-                        true
-                    );
-                    return Current;
-                }
-                case EStaticCheatOp::Get: {
-                    TValue Current = fnGetValue(lpObject);
-                    LogMessage(
-                        "CheatManager",
-                        "Current '" + szCheatName + "' value: '" + std::to_string(Current) + "'",
-                        true
-                    );
-                    return Current;
-                }
-                default:
-                    return ErrorValue;
-            }
-        }
-
-        int32_t MaxActiveMutations(EStaticCheatOp eOperation, int32_t iTargetPlayerId, uint32_t uNewSetValue);
-        int32_t MaxCozinessLevelAchieved(EStaticCheatOp eOperation, int32_t iTargetPlayerId, uint32_t uNewSetValue);
+        int32_t MaxActiveMutations(EStaticCheatOp eOperation, int32_t iTargetPlayerId, int32_t iNewSetValue);
+        int32_t MaxCozinessLevelAchieved(EStaticCheatOp eOperation, int32_t iTargetPlayerId, int32_t iNewSetValue);
         float NearbyStorageRadius(EStaticCheatOp eOperation, int32_t iTargetPlayerId, float fNewSetValue);
         float ChillRateMultiplier(EStaticCheatOp eOperation, int32_t iTargetPlayerId, float fNewSetValue);
         float SizzleRateMultiplier(EStaticCheatOp eOperation, int32_t iTargetPlayerId, float fNewSetValue);
@@ -73,6 +23,8 @@ namespace CheatManager {
         float DodgeDistance(EStaticCheatOp eOperation, int32_t iTargetPlayerId, float fNewSetValue);
         float CurrentFoodLevel(EStaticCheatOp eOperation, int32_t iTargetPlayerId, float fNewSetValue);
         float CurrentWaterLevel(EStaticCheatOp eOperation, int32_t iTargetPlayerId, float fNewSetValue);
+        float StaminaRegenRate(EStaticCheatOp eOperation, int32_t iTargetPlayerId, float fNewRegenRate);
+        float StaminaRegenDelay(EStaticCheatOp eOperation, int32_t iTargetPlayerId, float fNewRegenDelay);
     }
     
     namespace InvokedCheats {
@@ -90,6 +42,25 @@ namespace CheatManager {
 
         void SummonClass(
             const std::string& szClassName
+        );
+    }
+
+    namespace Culling {
+        struct BufferParamsCullItemInstance {
+            SDK::ASpawnedItem *lpItemInstance;
+        };
+
+        void __gamethread CullItemInstance(
+            SDK::ASpawnedItem *lpItemToCull
+        );
+
+        void CullItemByItemIndex(
+            int32_t iItemIndex
+        );
+
+        void CullAllItemInstances(
+            std::string &szTargetItemTypeName,
+            bool bSilent = false
         );
     }
 

@@ -284,7 +284,7 @@ namespace HookManager {
         HookTable::ListActiveHooks(
             s_Hooks,
             s_HookMutex,
-            "HookManager",
+            "ProcessEventHooker",
             "ProcessEvent",
             [](const HookData& r) -> std::string {
                 return r.szObjName;

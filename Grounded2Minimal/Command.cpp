@@ -106,11 +106,19 @@ namespace Command {
             }
 
             case CommandId::CmdIdCullItemInstance: {
-                LogMessage("ProcessEvent", "Command: Cull Item");
+                // no output for this one to cut spam and save performance
+                //LogMessage("ProcessEvent", "Command: Cull Item");
                 
-                LogMessage(
-                    "ProcessEvent",
-                    "Cull Item - Unimplemented"
+                CheatManager::Culling::BufferParamsCullItemInstance *lpParams =
+                    static_cast<CheatManager::Culling::BufferParamsCullItemInstance*>(localBuffer.Params);
+
+                if (nullptr == lpParams->lpItemInstance) {
+                    //LogError("ProcessEvent", "CmdIdCullItemInstance: ItemInstance is null");
+                    break;
+                }
+
+                CheatManager::Culling::CullItemInstance(
+                    lpParams->lpItemInstance
                 );
 
                 break;
