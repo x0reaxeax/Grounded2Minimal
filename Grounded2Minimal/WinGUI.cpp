@@ -671,7 +671,7 @@ namespace WinGUI {
                 g_hEditMutationsCount = CreateWindowEx(
                     WS_EX_CLIENTEDGE, L"EDIT", wszCurrentMutationCount,
                     WS_CHILD | WS_VISIBLE | WS_BORDER | WS_TABSTOP | ES_NUMBER,
-                    400, 380 + 200 + iHeightOffset, 45, 30,
+                    400, 380 + 200 + iHeightOffset, 40, 30,
                     g_hMainWnd,
                     (HMENU) IDC_MUTATIONS_COUNT,
                     wcWindowClass.hInstance,
@@ -697,166 +697,14 @@ namespace WinGUI {
                 g_hEditCozinessLevel = CreateWindowEx(
                     WS_EX_CLIENTEDGE, L"EDIT", wszCurrentCozinessLevel,
                     WS_CHILD | WS_VISIBLE | WS_BORDER | WS_TABSTOP | ES_NUMBER,
-                    400, 380 + 200 + iHeightOffset, 45, 30,
+                    400, 380 + 200 + iHeightOffset, 40, 30,
                     g_hMainWnd,
                     (HMENU) IDC_COZINESS_LEVEL,
                     wcWindowClass.hInstance,
                     NULL
                 );
 
-                iHeightOffset += 40;
-
-                //LPCWSTR wszCurrentNearbyStorageRadius = CoreUtils::InlineStringToWideChar(
-                //    std::to_string(
-                //        CheatManager::StaticCheats::NearbyStorageRadius(
-                //            CheatManager::StaticCheats::EStaticCheatOp::Get,
-                //            iCurrentPlayerId,
-                //            0
-                //        )
-                //    )
-                //);
-
-                //g_hEditNearbyStorageRadius = CreateWindowEx(
-                //    WS_EX_CLIENTEDGE, L"EDIT", wszCurrentNearbyStorageRadius,
-                //    WS_CHILD | WS_VISIBLE | WS_BORDER | WS_TABSTOP | ES_NUMBER,
-                //    400, 380 + 200 + iHeightOffset, 45, 30,
-                //    g_hMainWnd,
-                //    (HMENU) IDC_NEARBY_STORAGE_RADIUS,
-                //    wcWindowClass.hInstance,
-                //    NULL
-                //);
-
                 //iHeightOffset += 40;
-
-                //LPCWSTR wszCurrentChillRateMult = CoreUtils::InlineStringToWideChar(
-                //    std::to_string(
-                //        CheatManager::StaticCheats::ChillRateMultiplier(
-                //            CheatManager::StaticCheats::EStaticCheatOp::Get,
-                //            iCurrentPlayerId,
-                //            0
-                //        )
-                //    )
-                //);
-
-                //g_hEditChillRateMultiplier = CreateWindowEx(
-                //    WS_EX_CLIENTEDGE, L"EDIT", wszCurrentChillRateMult,
-                //    WS_CHILD | WS_VISIBLE | WS_BORDER | WS_TABSTOP,
-                //    400, 380 + 200 + iHeightOffset, 45, 30,
-                //    g_hMainWnd,
-                //    (HMENU) IDC_CHILL_RATE_MULT,
-                //    wcWindowClass.hInstance,
-                //    NULL
-                //);
-
-                //iHeightOffset += 40;
-
-                //LPCWSTR wszCurrentSizzleRateMult = CoreUtils::InlineStringToWideChar(
-                //    std::to_string(
-                //        CheatManager::StaticCheats::SizzleRateMultiplier(
-                //            CheatManager::StaticCheats::EStaticCheatOp::Get,
-                //            iCurrentPlayerId,
-                //            0
-                //        )
-                //    )
-                //);
-
-                //g_hEditSizzleRateMultiplier = CreateWindowEx(
-                //    WS_EX_CLIENTEDGE, L"EDIT", wszCurrentSizzleRateMult,
-                //    WS_CHILD | WS_VISIBLE | WS_BORDER | WS_TABSTOP,
-                //    400, 380 + 200 + iHeightOffset, 45, 30,
-                //    g_hMainWnd,
-                //    (HMENU) IDC_SIZZLE_RATE_MULT,
-                //    wcWindowClass.hInstance,
-                //    NULL
-                //);
-
-                //iHeightOffset += 40;
-
-                //LPCWSTR wszCurrentPerfectBlockWindow = CoreUtils::InlineStringToWideChar(
-                //    std::to_string(
-                //        CheatManager::StaticCheats::PerfectBlockWindow(
-                //            CheatManager::StaticCheats::EStaticCheatOp::Get,
-                //            iCurrentPlayerId,
-                //            0
-                //        )
-                //    )
-                //);
-
-                //g_hEditPerfectBlockWindow = CreateWindowEx(
-                //    WS_EX_CLIENTEDGE, L"EDIT", wszCurrentPerfectBlockWindow,
-                //    WS_CHILD | WS_VISIBLE | WS_BORDER | WS_TABSTOP,
-                //    400, 380 + 200 + iHeightOffset, 45, 30,
-                //    g_hMainWnd,
-                //    (HMENU) IDC_PERFECT_BLOCK_WINDOW,
-                //    wcWindowClass.hInstance,
-                //    NULL
-                //);
-
-                //iHeightOffset += 40;
-
-                //LPCWSTR wszCurrentDodgeDistance = CoreUtils::InlineStringToWideChar(
-                //    std::to_string(
-                //        CheatManager::StaticCheats::DodgeDistance(
-                //            CheatManager::StaticCheats::EStaticCheatOp::Get,
-                //            iCurrentPlayerId,
-                //            0
-                //        )
-                //    )
-                //);
-
-                //g_hEditDodgeDistance = CreateWindowEx(
-                //    WS_EX_CLIENTEDGE, L"EDIT", wszCurrentDodgeDistance,
-                //    WS_CHILD | WS_VISIBLE | WS_BORDER | WS_TABSTOP,
-                //    400, 380 + 200 + iHeightOffset, 45, 30,
-                //    g_hMainWnd,
-                //    (HMENU) IDC_DODGE_DISTANCE,
-                //    wcWindowClass.hInstance,
-                //    NULL
-                //);
-
-                //iHeightOffset += 40;
-
-                //LPCWSTR wszCurrentFoodLevel = CoreUtils::InlineStringToWideChar(
-                //    std::to_string(
-                //        CheatManager::StaticCheats::CurrentFoodLevel(
-                //            CheatManager::StaticCheats::EStaticCheatOp::Get,
-                //            iCurrentPlayerId,
-                //            0
-                //        )
-                //    )
-                //);
-
-                //g_hEditCurrentFoodLevel = CreateWindowEx(
-                //    WS_EX_CLIENTEDGE, L"EDIT", wszCurrentFoodLevel,
-                //    WS_CHILD | WS_VISIBLE | WS_BORDER | WS_TABSTOP,
-                //    400, 380 + 200 + iHeightOffset, 45, 30,
-                //    g_hMainWnd,
-                //    (HMENU) IDC_CURRENT_FOOD_LEVEL,
-                //    wcWindowClass.hInstance,
-                //    NULL
-                //);
-
-                //iHeightOffset += 40;
-
-                //LPCWSTR wszCurrentWaterLevel = CoreUtils::InlineStringToWideChar(
-                //    std::to_string(
-                //        CheatManager::StaticCheats::CurrentWaterLevel(
-                //            CheatManager::StaticCheats::EStaticCheatOp::Get,
-                //            iCurrentPlayerId,
-                //            0
-                //        )
-                //    )
-                //);
-
-                //g_hEditCurrentWaterLevel = CreateWindowEx(
-                //    WS_EX_CLIENTEDGE, L"EDIT", wszCurrentWaterLevel,
-                //    WS_CHILD | WS_VISIBLE | WS_BORDER | WS_TABSTOP,
-                //    400, 380 + 200 + iHeightOffset, 45, 30,
-                //    g_hMainWnd,
-                //    (HMENU) IDC_CURRENT_WATER_LEVEL,
-                //    wcWindowClass.hInstance,
-                //    NULL
-                //);
             }
 
             {
@@ -882,82 +730,7 @@ namespace WinGUI {
                     NULL
                 );
 
-                /*iHeightOffset += 40;
-                HWND hButtonSetNearbyStorageRadius = CreateWindowEx(
-                    0, L"BUTTON", L"Set Nearby Storage Radius",
-                    WS_CHILD | WS_VISIBLE,
-                    440, 380 + 200 + iHeightOffset, 200, 30,
-                    g_hMainWnd,
-                    (HMENU) IDC_BUTTON_SET_NEARBY_STORAGE_RADIUS,
-                    wcWindowClass.hInstance,
-                    NULL
-                );
-
-                iHeightOffset += 40;
-                HWND hButtonSetChillRateMult = CreateWindowEx(
-                    0, L"BUTTON", L"Set Chill Rate Multiplier",
-                    WS_CHILD | WS_VISIBLE,
-                    440, 380 + 200 + iHeightOffset, 200, 30,
-                    g_hMainWnd,
-                    (HMENU) IDC_BUTTON_SET_CHILL_RATE_MULT,
-                    wcWindowClass.hInstance,
-                    NULL
-                );
-
-                iHeightOffset += 40;
-                HWND hButtonSetSizzleRateMult = CreateWindowEx(
-                    0, L"BUTTON", L"Set Sizzle Rate Multiplier",
-                    WS_CHILD | WS_VISIBLE,
-                    440, 380 + 200 + iHeightOffset, 200, 30,
-                    g_hMainWnd,
-                    (HMENU) IDC_BUTTON_SET_SIZZLE_RATE_MULT,
-                    wcWindowClass.hInstance,
-                    NULL
-                );
-
-                iHeightOffset += 40;
-                HWND hButtonSetPerfectBlockWindow = CreateWindowEx(
-                    0, L"BUTTON", L"Set Perfect Block Window",
-                    WS_CHILD | WS_VISIBLE,
-                    440, 380 + 200 + iHeightOffset, 200, 30,
-                    g_hMainWnd,
-                    (HMENU) IDC_BUTTON_SET_PERFECT_BLOCK_WINDOW,
-                    wcWindowClass.hInstance,
-                    NULL
-                );
-
-                iHeightOffset += 40;
-                HWND hButtonSetDodgeDistance = CreateWindowEx(
-                    0, L"BUTTON", L"Set Dodge Distance",
-                    WS_CHILD | WS_VISIBLE,
-                    440, 380 + 200 + iHeightOffset, 200, 30,
-                    g_hMainWnd,
-                    (HMENU) IDC_BUTTON_SET_DODGE_DISTANCE,
-                    wcWindowClass.hInstance,
-                    NULL
-                );
-
-                iHeightOffset += 40;
-                HWND hButtonSetCurrentFoodLevel = CreateWindowEx(
-                    0, L"BUTTON", L"Set Current Food Level",
-                    WS_CHILD | WS_VISIBLE,
-                    440, 380 + 200 + iHeightOffset, 200, 30,
-                    g_hMainWnd,
-                    (HMENU) IDC_BUTTON_SET_CURRENT_FOOD_LEVEL,
-                    wcWindowClass.hInstance,
-                    NULL
-                );
-
-                iHeightOffset += 40;
-                HWND hButtonSetCurrentWaterLevel = CreateWindowEx(
-                    0, L"BUTTON", L"Set Current Water Level",
-                    WS_CHILD | WS_VISIBLE,
-                    440, 380 + 200 + iHeightOffset, 200, 30,
-                    g_hMainWnd,
-                    (HMENU) IDC_BUTTON_SET_CURRENT_WATER_LEVEL,
-                    wcWindowClass.hInstance,
-                    NULL
-                );*/
+                //iHeightOffset += 40;
             }
 
             // Create version info static text
@@ -1692,6 +1465,8 @@ namespace WinGUI {
                     hEditControl == g_hEditClassSearch
                     ||
                     hEditControl == g_hEditMutationsCount
+                    ||
+                    hEditControl == g_hEditCozinessLevel
                 ) {
                     // Use solid background for edit controls to prevent text overlap
                     SetTextColor(hDeviceContext, RGB(230, 230, 230));
