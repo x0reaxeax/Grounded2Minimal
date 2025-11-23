@@ -84,20 +84,28 @@ The debug console can be used to execute the following commands:
 | Command              | Description               |
 | -------------------- | ------------------------- |
 | `Help`               | Displays all available commands |
+| `C_CullItemInstance` | Cull item by instance ID |
+| `C_CullItemType`     | Cull all items of set type |
 | `H_GetAuthority`     | Checks if you're the host |
-| `X_DebugToggle`      | Toggles debug output (very spammy and performance heavy) |
-| `X_GlobalCheatMode`  | Toggles Global Cheat Mode |
-| `X_InitCheatManager` | Initializes CheatManager |
-| `P_ShowPlayers`      | Lists connected players |
 | `F_ClassDump`        | Finds all classes containing a given string needle |
 | `F_DataTableNeedle`  | Finds all data tables containing a given string needle |
 | `F_FindItemTable`    | Finds all data tables containing a given item name |
 | `F_FunctionDump`     | Finds all functions containing a given string needle |
-| `F_ItemDump`         | Finds all items within a given data table name |
+| `F_EntryDump`        | Finds all entries within a given data table name |
 | `I_SpawnItem`        | Spawns a selected item into a selected player's inventory |
+| `P_ShowPlayers`      | Lists connected players |
 | `S_SummonClass`      | Summons a selected class |
 | `OPT_BuildAnywhere`  | Enables 'Build Anywhere' mode |
+| `OPT_GetMaxActiveMutations` | Get max active mutations |
+| `OPT_SetMaxActiveMutations` | Set max active mutations |
+| `OPT_GetMaxCozinessLevelAchieved` | Get max coziness level achieved |
+| `OPT_SetMaxCozinessLevelAchieved` | Set max coziness level achieved |
 | `<Item Name Needle>` | Searches for spawned items around the player by a given name needle (empty input displays all) |
+| `X_HookInfo` | Show details on installed hooks |
+| `X_DebugToggle`      | Toggles debug output (very spammy and performance heavy) |
+| `X_GlobalCheatMode`  | Toggles Global Cheat Mode |
+| `X_InitCheatManager` | Initializes CheatManager |
+| `X_ToggleDebugPlayerReport` | Toggle automatic debug player report |
 | `exit` or `quit`     | Unloads game hooks and exits the tool |
 
 ## Building
@@ -139,6 +147,7 @@ File Index:
 * `CheatManager.cpp/hpp` - CheatManager functions.
 * `ItemSpawner.cpp/hpp` - Item Spawner implementation.
 * `UnrealUtils.cpp/hpp` - Misc Unreal Engine helper utilities.
+* `PlayerCache.cpp/hpp` - Caching system.
 * `WinGUI.cpp/hpp` - The GUI "implementation" lol.
 * `Interpreter.cpp/hpp` - Command line interpreter implementation.
 * `Logging.cpp/hpp` - Logging utilities.
