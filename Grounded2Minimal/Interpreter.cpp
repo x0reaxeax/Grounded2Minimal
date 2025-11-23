@@ -476,7 +476,6 @@ namespace Interpreter {
         );
     }
 
-
     static void HandleSetDebugFilter(void) {
         int32_t iHookId = ReadIntegerInput(
             "[DebugFilter] Enter hook ID to apply filter to (empty for all): ",

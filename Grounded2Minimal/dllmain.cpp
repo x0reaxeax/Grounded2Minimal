@@ -123,7 +123,7 @@ void ProcessDebugFilter(
 
 ///// ProcessEvent hooks
 // BP_SurvivalPlayerCharacter
-PROCESSEVENTHOOK __fastcall _HookedSPCProcessEvent(
+PROCESSEVENTHOOK _HookedSPCProcessEvent(
     SDK::UObject *lpObject,
     SDK::UFunction *lpFunction,
     void *lpParams
@@ -162,7 +162,7 @@ PROCESSEVENTHOOK __fastcall _HookedSPCProcessEvent(
     // Do NOT process here anymore to avoid re-entrancy while commands run
 }
 
-PROCESSEVENTHOOK __fastcall _HookedChatBoxProcessEvent(
+PROCESSEVENTHOOK _HookedChatBoxProcessEvent(
     SDK::UObject* lpObject,
     SDK::UFunction* lpFunction,
     LPVOID lpParams
@@ -253,7 +253,7 @@ _RYUJI:
     }
 }
 
-PROCESSEVENTHOOK __fastcall _HookedGameModeBaseProcessEvent(
+PROCESSEVENTHOOK _HookedGameModeBaseProcessEvent(
     SDK::UObject* lpObject,
     SDK::UFunction* lpFunction,
     void* lpParams
@@ -278,6 +278,11 @@ PROCESSEVENTHOOK __fastcall _HookedGameModeBaseProcessEvent(
             if (nullptr != lpFuncParams) {
                 SDK::APlayerController* lpNewPlayer = lpFuncParams->NewPlayer;
                 if (nullptr != lpNewPlayer) {
+                    LogMessage(
+                        "K2_PostLogin",
+                        "Updating player cache..",
+                        true
+                    );
                     PlayerCache::AttachCachedPlayerData(lpNewPlayer->PlayerState);
                 }
             }
@@ -287,6 +292,11 @@ PROCESSEVENTHOOK __fastcall _HookedGameModeBaseProcessEvent(
             if (nullptr != lpFuncParams) {
                 SDK::AController* lpExitingController = lpFuncParams->ExitingController;
                 if (nullptr != lpExitingController) {
+                    LogMessage(
+                        "K2_Logout",
+                        "Updating player cache..",
+                        true
+                    );
                     PlayerCache::RemoveCachedPlayer(lpExitingController->PlayerState);
                 }
             }
@@ -304,7 +314,7 @@ PROCESSEVENTHOOK __fastcall _HookedGameModeBaseProcessEvent(
 }
 
 ///// Native function hooks
-NATIVEHOOK __stdcall _HookedUpdateCollisionStateChange(
+NATIVEHOOK _HookedUpdateCollisionStateChange(
     SDK::UObject* lpObj,
     void* lpFFrame,
     void* lpResult

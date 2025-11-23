@@ -182,7 +182,19 @@ namespace HookManager {
         }
 
         if (s_HookedVTables.contains(lpVTable)) {
-            LogMessage(
+            // show dupe hook info
+            for (const auto& [obj, hookInfo] : s_Hooks) {
+                if (hookInfo.VTable == lpVTable) {
+                    LogMessage(
+                        "HookManager",
+                        "Hook request for '" + cszHookName + "' matches already installed hook with UID: " + std::to_string(hookInfo.iUniqueId) +
+                        " (" + hookInfo.szHookName + ", Obj: " + hookInfo.szObjName + ")"
+                    );
+                    break;
+                }
+            }
+
+            LogError(
                 "HookManager",
                 "VTable already hooked, skipping duplicate hook"
             );
@@ -419,7 +431,7 @@ namespace HookManager {
         if (!NativeHooker::IsNative(lpTargetFunc)) {
             LogError(
                 "NativeHooker",
-                "Target function is not native ('" + lpTargetFunc->GetFullName() + "')"
+                "Target function is not native ('" + lpTargetFunc->GetFullName() + "') [Flags: " + CoreUtils::HexConvert(static_cast<uint64_t>(lpTargetFunc->FunctionFlags)) + "]"
             );
             return nullptr;
         }
@@ -436,10 +448,21 @@ namespace HookManager {
 
         auto it = nh_Hooks.find(lpTargetFunc);
         if (it != nh_Hooks.end()) {
+            const HookEntry& existingEntry = it->second;
+
             LogMessage(
                 "NativeHooker",
                 "Skipping already hooked function: '" + cszFuncNameNeedle + "'"
             );
+
+            LogMessage(
+                "NativeHooker",
+                " -> Already hooked by UID: " + std::to_string(existingEntry.iUniqueId) +
+                "  | Name:       " + existingEntry.szHookName +
+                "  | OriginalFn: " + CoreUtils::HexConvert(reinterpret_cast<uint64_t>(existingEntry.OriginalFn)) +
+                "  | HookFn:     " + CoreUtils::HexConvert(reinterpret_cast<uint64_t>(existingEntry.HookFn))
+            );
+
             return &it->second;
         }
 

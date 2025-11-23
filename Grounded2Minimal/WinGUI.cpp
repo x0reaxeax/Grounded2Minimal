@@ -1739,14 +1739,21 @@ namespace WinGUI {
         );
 
         LogMessage("WinGUI", "Populating item list, please wait...");
+        
         DisableGlobalOutput();
+        DisableFileLogging();
         UnrealUtils::DumpAllDataTablesAndItems(&g_vDataTables, "Item");
+        EnableFileLogging();
         EnableGlobalOutput();
         
         LogMessage("WinGUI", "Populating class list, please wait...");
+        
         DisableGlobalOutput();
+        DisableFileLogging();
         UnrealUtils::DumpClasses(&g_vAllClassNames, "BP_");
+        EnableFileLogging();
         EnableGlobalOutput();
+        
         LogMessage(
             "WinGUI", 
             "Initialized " + std::to_string(g_vDataTables.size()) + " DataTables"

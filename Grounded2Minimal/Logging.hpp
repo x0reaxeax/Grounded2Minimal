@@ -8,10 +8,14 @@ extern std::atomic<bool> GlobalOutputEnabled;
 
 #define CheckGlobalOutputEnabled() (GlobalOutputEnabled.load())
 
+bool IsGlobalOutputEnabled(void);
 void EnableGlobalOutput(void);
 void DisableGlobalOutput(void);
 
-bool IsGlobalOutputEnabled(void);
+bool IsFileLoggingEnabled(void);
+void EnableFileLogging(void);
+void DisableFileLogging(void);
+
 bool IsDebugOutputEnabled(void);
 void EnableDebugOutput(void);
 void DisableDebugOutput(void);

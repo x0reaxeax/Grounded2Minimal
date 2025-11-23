@@ -39,6 +39,7 @@ struct GameOptions {
     std::atomic<ubool> BuildAnywhere{ false };
     std::atomic<ubool> GodMode{ false };
     std::atomic<ubool> InfiniteStamina{ false };
+    SDK::ABuilding *lpCurrentlyAdjustedBuilding = nullptr;
 };
 
 struct G2MOptions {
@@ -48,6 +49,7 @@ struct G2MOptions {
     std::atomic<bool> bIsGamePaused{ false };           // Game paused state
     bool bIsClientHost{ false };                        // Client is host flag
     GLOBALHANDLE hLogFile = nullptr;                    // Log file handle
+    std::atomic<ubool> bSuperSecretDebugFlag{ false };  // Experimental debug flag for internal testing
 };
 
 struct ProcessEventParams {

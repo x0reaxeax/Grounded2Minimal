@@ -1,6 +1,7 @@
 #include "Logging.hpp"
 
 std::atomic<bool> GlobalOutputEnabled{ true };
+std::atomic<bool> GlobalFileLoggingEnabled{ true };
 std::atomic<bool> g_bDebug = { false };
 
 const char *G2M_LOG_PATH = "Grounded2MinimalLog.txt";
@@ -20,6 +21,18 @@ void EnableGlobalOutput(void) {
 
 void DisableGlobalOutput(void) {
     GlobalOutputEnabled.store(false);
+}
+
+bool IsFileLoggingEnabled(void) {
+    return GlobalFileLoggingEnabled.load();
+}
+
+void EnableFileLogging(void) {
+    GlobalFileLoggingEnabled.store(true);
+}
+
+void DisableFileLogging(void) {
+    GlobalFileLoggingEnabled.store(false);
 }
 
 bool IsDebugOutputEnabled(void) {
@@ -60,17 +73,19 @@ void LogChar(
     const char cChar,
     bool bOnlyDebug
 ) {
-    if (IsHandleValid(g_hLogFile)) {
-        DWORD dwBytesWritten = 0;
-        WriteFile(
-            g_hLogFile,
-            &cChar,
-            sizeof(cChar),
-            &dwBytesWritten,
-            nullptr
-        );
-        // flush the file buffers to ensure immediate write
-        FlushFileBuffers(g_hLogFile);
+    if (IsFileLoggingEnabled()) {
+        if (IsHandleValid(g_hLogFile)) {
+            DWORD dwBytesWritten = 0;
+            WriteFile(
+                g_hLogFile,
+                &cChar,
+                sizeof(cChar),
+                &dwBytesWritten,
+                nullptr
+            );
+            // flush the file buffers to ensure immediate write
+            FlushFileBuffers(g_hLogFile);
+        }
     }
 
     if (!IsGlobalOutputEnabled() && !IsDebugOutputEnabled()) {
@@ -90,17 +105,19 @@ void LogMessage(
     bool bOnlyDebug
 ) {
     std::string szLogMessage = "[" + szPrefix + "] " + szMessage + "\r\n";
-    if (IsHandleValid(g_hLogFile)) {
-        DWORD dwBytesWritten = 0;
-        WriteFile(
-            g_hLogFile,
-            szLogMessage.c_str(),
-            static_cast<DWORD>(szLogMessage.length()),
-            &dwBytesWritten,
-            nullptr
-        );
-        // flush the file buffers to ensure immediate write
-        FlushFileBuffers(g_hLogFile);
+    if (IsFileLoggingEnabled()) {
+        if (IsHandleValid(g_hLogFile)) {
+            DWORD dwBytesWritten = 0;
+            WriteFile(
+                g_hLogFile,
+                szLogMessage.c_str(),
+                static_cast<DWORD>(szLogMessage.length()),
+                &dwBytesWritten,
+                nullptr
+            );
+            // flush the file buffers to ensure immediate write
+            FlushFileBuffers(g_hLogFile);
+        }
     }
 
     if (!IsGlobalOutputEnabled() && !IsDebugOutputEnabled()) {
@@ -119,18 +136,20 @@ void LogMessage(
     const std::wstring& wszMessage,
     bool bOnlyDebug
 ) {
-    std::wstring wszLogMessage = L"[" + wszPrefix + L"] " + wszMessage + L"\r\n";
-    if (IsHandleValid(g_hLogFile)) {
-        DWORD dwBytesWritten = 0;
-        WriteFile(
-            g_hLogFile,
-            wszLogMessage.c_str(),
-            static_cast<DWORD>(wszLogMessage.length() * sizeof(wchar_t)),
-            &dwBytesWritten,
-            nullptr
-        );
-        // flush the file buffers to ensure immediate write
-        FlushFileBuffers(g_hLogFile);
+    std::wstring wszLogMessage = L"[" + wszPrefix + L"] " + wszMessage + L"\r\n";   
+    if (IsFileLoggingEnabled()) {
+        if (IsHandleValid(g_hLogFile)) {
+            DWORD dwBytesWritten = 0;
+            WriteFile(
+                g_hLogFile,
+                wszLogMessage.c_str(),
+                static_cast<DWORD>(wszLogMessage.length() * sizeof(wchar_t)),
+                &dwBytesWritten,
+                nullptr
+            );
+            // flush the file buffers to ensure immediate write
+            FlushFileBuffers(g_hLogFile);
+        }
     }
 
     if (!IsGlobalOutputEnabled() && !IsDebugOutputEnabled()) {
@@ -150,18 +169,20 @@ void LogError(
     bool bOnlyDebug
 ) {
     std::string szErrorMessage = "[" + szPrefix + "] ERROR: " + szMessage + "\r\n";
-    if (IsHandleValid(g_hLogFile)) {
-        DWORD dwBytesWritten = 0;
-        WriteFile(
-            g_hLogFile,
-            szErrorMessage.c_str(),
-            static_cast<DWORD>(szErrorMessage.length()),
-            &dwBytesWritten,
-            nullptr
-        );
+    if (IsFileLoggingEnabled()) {
+        if (IsHandleValid(g_hLogFile)) {
+            DWORD dwBytesWritten = 0;
+            WriteFile(
+                g_hLogFile,
+                szErrorMessage.c_str(),
+                static_cast<DWORD>(szErrorMessage.length()),
+                &dwBytesWritten,
+                nullptr
+            );
 
-        // flush the file buffers to ensure immediate write
-        FlushFileBuffers(g_hLogFile);
+            // flush the file buffers to ensure immediate write
+            FlushFileBuffers(g_hLogFile);
+        }
     }
 
     if (!IsGlobalOutputEnabled() && !IsDebugOutputEnabled()) {

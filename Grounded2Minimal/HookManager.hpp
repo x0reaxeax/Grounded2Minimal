@@ -17,8 +17,8 @@
 #include <atomic>
 
 
-#define NATIVEHOOK          void
-#define PROCESSEVENTHOOK    void
+#define NATIVEHOOK          void __stdcall
+#define PROCESSEVENTHOOK    void __fastcall
 
 namespace HookManager {
     enum UniqueHookIdSpecial : int32_t {
@@ -163,6 +163,10 @@ namespace HookManager {
             constexpr uint32_t FUNC_Native = 0x00000400;
             return lpcTargetFunc && (lpcTargetFunc->FunctionFlags & FUNC_Native);
         };
+
+        static inline uint32_t ReadFlags(const SDK::UFunction* lpcTargetFunc) {
+            return lpcTargetFunc ? lpcTargetFunc->FunctionFlags : 0;
+        }
 
         static bool SwapExecFunctionPtr(
             SDK::UFunction* lpFunc,

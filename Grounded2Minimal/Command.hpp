@@ -22,6 +22,12 @@ namespace Command {
             SDK::ASurvivalPlayerState* lpPlayerState = nullptr;
             bool bNewCollisionState;
         };
+
+        struct ManualAdjustment {
+            SDK::ABuilding *lpBuilding = nullptr;
+            SDK::FVector AdjustmentVector{ 0.0f, 0.0f, 0.0f };
+            SDK::FVector CurrentLocation{ 0.0f, 0.0f, 0.0f };
+        };
     }
     
     enum class Status : uint32_t { // woah, you can do this in cpp?? jk, i hate this fucking language
@@ -40,6 +46,7 @@ namespace Command {
         CmdIdEnableCheats,
         CmdIdUnlockAchievement,
         CmdIdSetCollision,
+        CmdIdManualBuildingAdjustment,
         CmdIdMax
     };
 
