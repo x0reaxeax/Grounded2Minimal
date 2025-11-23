@@ -3,6 +3,7 @@
 
 #include "Grounded2Minimal.hpp"
 #include "CheatManager.hpp"
+#include "PlayerCache.hpp"
 #include "UnrealUtils.hpp"
 #include "ItemSpawner.hpp"
 #include "CoreUtils.hpp"
@@ -22,26 +23,47 @@
 #define GITHUB_REPO_URL L"https://github.com/x0reaxeax/Grounded2Minimal"
 
 // Control IDs
-#define IDC_CHECK_SHOW_CONSOLE    100
-#define IDC_CHECK_GLOBAL_CHEAT    101
-#define IDC_TOGGLE_BUILD_ANYWHERE 102
-#define IDC_LIST_PLAYERS          200
-#define IDC_LIST_DATA_TABLES      201
-#define IDC_LIST_ITEM_NAMES       202
-#define IDC_LIST_CLASS_NAMES      203
-#define IDC_BUTTON_SPAWN          300
-#define IDC_BUTTON_CULL           301
-#define IDC_BUTTON_SUMMON         302
-#define _IDC_BUTTON_CHEAT_ID_BASE 303
-#define IDC_EDIT_ITEM_COUNT       400
-#define IDC_STATIC_ITEM_COUNT     401
-#define IDC_TIMER_PLAYER_UPDATE   500
-#define IDC_EDIT_ITEM_SEARCH      600
-#define IDC_STATIC_ITEM_SEARCH    601
-#define IDC_EDIT_CLASS_SEARCH     602
-#define IDC_STATIC_CLASS_SEARCH   603
-#define IDC_STATIC_VERSION        604
-#define IDC_STATIC_GITHUB         605
+#define IDC_CHECK_SHOW_CONSOLE                  100
+#define IDC_CHECK_GLOBAL_CHEAT                  101
+#define IDC_TOGGLE_BUILD_ANYWHERE               102
+#define IDC_LIST_PLAYERS                        200
+#define IDC_LIST_DATA_TABLES                    201
+#define IDC_LIST_ITEM_NAMES                     202
+#define IDC_LIST_CLASS_NAMES                    203
+#define IDC_BUTTON_SPAWN                        300
+#define IDC_BUTTON_CULL                         301
+#define IDC_BUTTON_SUMMON                       302
+#define IDC_BUTTON_SET_MUTATIONS                303
+#define IDC_BUTTON_SET_COZINESS                 304
+#define IDC_BUTTON_SET_NEARBY_STORAGE_RADIUS    305
+#define IDC_BUTTON_SET_CHILL_RATE_MULT          306
+#define IDC_BUTTON_SET_SIZZLE_RATE_MULT         307
+#define IDC_BUTTON_SET_PERFECT_BLOCK_WINDOW     308
+#define IDC_BUTTON_SET_DODGE_DISTANCE           309
+#define IDC_BUTTON_SET_CURRENT_FOOD_LEVEL       310
+#define IDC_BUTTON_SET_CURRENT_WATER_LEVEL      311
+#define _IDC_BUTTON_CHEAT_ID_BASE               312
+#define IDC_EDIT_ITEM_COUNT                     400
+#define IDC_STATIC_ITEM_COUNT                   401
+#define IDC_MUTATIONS_COUNT                     402
+#define IDC_COZINESS_LEVEL                      403
+#define IDC_NEARBY_STORAGE_RADIUS               404
+#define IDC_CHILL_RATE_MULT                     405
+#define IDC_SIZZLE_RATE_MULT                    406
+#define IDC_PERFECT_BLOCK_WINDOW                407
+#define IDC_DODGE_DISTANCE                      408
+#define IDC_CURRENT_FOOD_LEVEL                  409
+#define IDC_CURRENT_WATER_LEVEL                 410
+#define IDC_TIMER_PLAYER_UPDATE                 500
+#define IDC_EDIT_ITEM_SEARCH                    600
+#define IDC_STATIC_ITEM_SEARCH                  601
+#define IDC_EDIT_CLASS_SEARCH                   602
+#define IDC_STATIC_CLASS_SEARCH                 603
+#define IDC_STATIC_VERSION                      604
+#define IDC_STATIC_GITHUB                       605
+
+#define GUI_WINDOW_HEIGHT         800
+#define GUI_WINDOW_WIDTH          800
 
 namespace WinGUI {
     struct CheatButtonDefinition {
@@ -54,6 +76,8 @@ namespace WinGUI {
 
     ///////////////////////////////////////////////////////
     /// Globals
+
+    static int32_t GetSelectedPlayerId(void);
 
     // Tool version information
     wchar_t g_szVersionString[64] = { 0 };
@@ -226,6 +250,15 @@ namespace WinGUI {
     static HWND g_hListClassNames = nullptr;
     static HWND g_hEditItemCount = nullptr;
     static HWND g_hEditItemSearch = nullptr;
+    static HWND g_hEditMutationsCount = nullptr;
+    static HWND g_hEditCozinessLevel = nullptr;
+    static HWND g_hEditNearbyStorageRadius = nullptr;
+    static HWND g_hEditChillRateMultiplier = nullptr;
+    static HWND g_hEditSizzleRateMultiplier = nullptr;
+    static HWND g_hEditPerfectBlockWindow = nullptr;
+    static HWND g_hEditDodgeDistance = nullptr;
+    static HWND g_hEditCurrentFoodLevel = nullptr;
+    static HWND g_hEditCurrentWaterLevel = nullptr;
     static HWND g_hStaticItemSearch = nullptr;
     static HWND g_hEditClassSearch = nullptr;
     static HWND g_hStaticClassSearch = nullptr;
@@ -360,14 +393,18 @@ namespace WinGUI {
 
             ///////////////////////////////////////////////////////
             /// Create main window
+            if (nullptr == SetThreadDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2)) {
+                LogError("WinGUI", "Failed to set DPI awareness context");
+                // We continue tho
+            }
 
             g_hMainWnd = CreateWindowEx(
                 0,
                 wcWindowClass.lpszClassName,
                 L"Grounded 2 Debug GUI",
-                WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU,
+                WS_OVERLAPPEDWINDOW | WS_CAPTION | WS_SYSMENU,
                 CW_USEDEFAULT, CW_USEDEFAULT,
-                800, 750,
+                GUI_WINDOW_WIDTH, GUI_WINDOW_HEIGHT,
                 NULL, NULL, wcWindowClass.hInstance, NULL
             );
 
@@ -400,11 +437,12 @@ namespace WinGUI {
                 DWORD dwStyle = (g_CheatButtons[i].PushLike) ? 
                     (WS_CHILD | WS_VISIBLE | BS_PUSHLIKE | BS_AUTOCHECKBOX | WS_TABSTOP) :
                     (WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON | WS_TABSTOP);
-
+                
                 g_CheatButtons[i].ButtonHandle = CreateWindowExW(
                     0, L"BUTTON", g_CheatButtons[i].ButtonText,
                     dwStyle,
                     x, y, BUTTON_WIDTH, BUTTON_HEIGHT,
+#pragma warning(suppress : 4312) // Disable warning for casting to HMENU
                     g_hMainWnd, (HMENU) g_CheatButtons[i].ButtonId, wcWindowClass.hInstance, NULL
                 );
 
@@ -426,7 +464,7 @@ namespace WinGUI {
                 CheckDlgButton(
                     g_hMainWnd,
                     IDC_CHECK_SHOW_CONSOLE,
-                    ShowDebugConsole ? BST_CHECKED : BST_UNCHECKED
+                    g_G2MOptions.bShowDebugConsole.load() ? BST_CHECKED : BST_UNCHECKED
                 );
             }
 
@@ -608,11 +646,98 @@ namespace WinGUI {
                 NULL
             );
 
+            {
+                // Shit might not be initialized yet
+                int32_t iHeightOffset = 40;
+                int32_t iCurrentPlayerId = GetSelectedPlayerId();
+                if (INVALID_PLAYER_ID == iCurrentPlayerId) {
+                    iCurrentPlayerId = UnrealUtils::GetLocalPlayerId(true);
+                }
+
+                LPCWSTR wszCurrentMutationCount = CoreUtils::InlineStringToWideChar(
+                    std::to_string(
+                        CheatManager::StaticCheats::MaxActiveMutations(
+                            CheatManager::StaticCheats::EStaticCheatOp::Get,
+                            iCurrentPlayerId,
+                            0
+                        )
+                    )
+                );
+
+                if (!isdigit(wszCurrentMutationCount[0])) {
+                    wszCurrentMutationCount = L"4";
+                }
+
+                g_hEditMutationsCount = CreateWindowEx(
+                    WS_EX_CLIENTEDGE, L"EDIT", wszCurrentMutationCount,
+                    WS_CHILD | WS_VISIBLE | WS_BORDER | WS_TABSTOP | ES_NUMBER,
+                    400, 380 + 200 + iHeightOffset, 40, 30,
+                    g_hMainWnd,
+                    (HMENU) IDC_MUTATIONS_COUNT,
+                    wcWindowClass.hInstance,
+                    NULL
+                );
+
+                iHeightOffset += 40;
+
+                LPCWSTR wszCurrentCozinessLevel = CoreUtils::InlineStringToWideChar(
+                    std::to_string(
+                        CheatManager::StaticCheats::MaxCozinessLevelAchieved(
+                            CheatManager::StaticCheats::EStaticCheatOp::Get,
+                            iCurrentPlayerId,
+                            0
+                        )
+                    )
+                );
+
+                if (!isdigit(wszCurrentCozinessLevel[0])) {
+                    wszCurrentCozinessLevel = L"0";
+                }
+
+                g_hEditCozinessLevel = CreateWindowEx(
+                    WS_EX_CLIENTEDGE, L"EDIT", wszCurrentCozinessLevel,
+                    WS_CHILD | WS_VISIBLE | WS_BORDER | WS_TABSTOP | ES_NUMBER,
+                    400, 380 + 200 + iHeightOffset, 40, 30,
+                    g_hMainWnd,
+                    (HMENU) IDC_COZINESS_LEVEL,
+                    wcWindowClass.hInstance,
+                    NULL
+                );
+
+                //iHeightOffset += 40;
+            }
+
+            {
+                int32_t iHeightOffset = 40;
+                HWND hButtonSetMutations = CreateWindowEx(
+                    0, L"BUTTON", L"Set Max Active Mutations",
+                    WS_CHILD | WS_VISIBLE,
+                    440, 380 + 200 + iHeightOffset, 200, 30,
+                    g_hMainWnd,
+                    (HMENU) IDC_BUTTON_SET_MUTATIONS,
+                    wcWindowClass.hInstance,
+                    NULL
+                );
+                iHeightOffset += 40;
+
+                HWND hButtonSetCoziness = CreateWindowEx(
+                    0, L"BUTTON", L"Set Max Coziness Level",
+                    WS_CHILD | WS_VISIBLE,
+                    440, 380 + 200 + iHeightOffset, 200, 30,
+                    g_hMainWnd,
+                    (HMENU) IDC_BUTTON_SET_COZINESS,
+                    wcWindowClass.hInstance,
+                    NULL
+                );
+
+                //iHeightOffset += 40;
+            }
+
             // Create version info static text
             g_hStaticVersion = CreateWindowEx(
                 0, L"STATIC", g_szVersionString,
                 WS_CHILD | WS_VISIBLE,
-                10, 660, 300, 20,
+                10, GUI_WINDOW_HEIGHT - 80, 300, 20,
                 g_hMainWnd,
                 (HMENU) IDC_STATIC_VERSION,
                 wcWindowClass.hInstance, 
@@ -672,6 +797,28 @@ namespace WinGUI {
         }
 
         return iItemCount;
+    }
+
+    // Helper function for mutation count
+    static int32_t GetMutationCountFromEdit(void) {
+        if (nullptr == g_hEditMutationsCount) {
+            return 8;
+        }
+
+        wchar_t szBuffer[16] = { 0 };
+        GetWindowText(g_hEditMutationsCount, szBuffer, ARRAYSIZE(szBuffer));
+
+        int32_t iMutationCount = 8;
+        try {
+            iMutationCount = std::stoi(szBuffer);
+            if (iMutationCount < 0 || iMutationCount > 99) {
+                iMutationCount = 8;
+            }
+        } catch (...) {
+            iMutationCount = 8;
+        }
+
+        return iMutationCount;
     }
 
     // Helper function to get search term from edit control
@@ -843,9 +990,7 @@ namespace WinGUI {
         
         // Get fresh player data, so fresh omg
         std::vector<SDK::APlayerState*> vNewPlayers;
-        DisableGlobalOutput();
-        UnrealUtils::DumpConnectedPlayers(&vNewPlayers);
-        EnableGlobalOutput();
+        UnrealUtils::DumpConnectedPlayers(&vNewPlayers, (bool) g_G2MOptions.bHideAutoPlayerDbgInfo.load());
 
         if (vNewPlayers.empty()) {
             LogMessage(
@@ -858,13 +1003,13 @@ namespace WinGUI {
 
         // Check if the player list actually changed lol
         bool bPlayersChanged = false;
-        if (vNewPlayers.size() != g_vPlayers.size()) {
+        if (vNewPlayers.size() != PlayerCache::g_CachedData.Players.size()) {
             bPlayersChanged = true;
         } else {
             // Compare player IDs to see if the list changed
             for (size_t i = 0; i < vNewPlayers.size(); ++i) {
-                if (nullptr == vNewPlayers[i] || nullptr == g_vPlayers[i] ||
-                    vNewPlayers[i]->PlayerId != g_vPlayers[i]->PlayerId) {
+                if (nullptr == vNewPlayers[i] || nullptr == PlayerCache::g_CachedData.Players[i] ||
+                    vNewPlayers[i]->PlayerId != PlayerCache::g_CachedData.Players[i]->PlayerId) {
                     bPlayersChanged = true;
                     break;
                 }
@@ -876,7 +1021,7 @@ namespace WinGUI {
         }
         
         // Preserve current selection before clearing
-        int32_t iSelectedPlayerId = -1;
+        int32_t iSelectedPlayerId = INVALID_PLAYER_ID;
         int iCurrentSelection = ListView_GetNextItem(g_hListPlayers, -1, LVNI_SELECTED);
         if (iCurrentSelection >= 0) {
             LVITEM lvGetItem = {};
@@ -888,13 +1033,14 @@ namespace WinGUI {
         }
 
         // Update the global player list
-        g_vPlayers = vNewPlayers;
+        //PlayerCache::g_CachedData.Players = vNewPlayers;
+        PlayerCache::BuildPlayerCache(&vNewPlayers);
         
         // Clear and repepopopulate the ListView
         ClearPlayerTable();
         
         int iNewSelectionIndex = -1; // Track where to restore selection
-        for (const auto& lpPlayerState : g_vPlayers) {
+        for (const auto& lpPlayerState : PlayerCache::g_CachedData.Players) {
             if (nullptr == lpPlayerState) {
                 continue;
             }
@@ -922,7 +1068,7 @@ namespace WinGUI {
             
             // Check if this is the previously selected player
             if (
-                -1 != iSelectedPlayerId 
+                INVALID_PLAYER_ID != iSelectedPlayerId
                 && 
                 iPlayerId == iSelectedPlayerId
             ) {
@@ -952,18 +1098,40 @@ namespace WinGUI {
         }
     }
 
+    // Helper to get the currently selected player's ID from the GUI table.
+    // Returns INVALID_PLAYER_ID if nothing selected or something goes brrrr.
+    static int32_t GetSelectedPlayerId(void) {
+        if (nullptr == g_hListPlayers) {
+            return INVALID_PLAYER_ID;
+        }
+
+        // Get index of the selected row
+        int iPlayerIndex = ListView_GetNextItem(g_hListPlayers, -1, LVNI_SELECTED);
+        if (iPlayerIndex < 0) {
+            return INVALID_PLAYER_ID;
+        }
+
+        LVITEM lvGetItem = {};
+        lvGetItem.iItem = iPlayerIndex;
+        lvGetItem.mask = LVIF_PARAM;
+
+        if (!ListView_GetItem(g_hListPlayers, &lvGetItem)) {
+            return INVALID_PLAYER_ID;
+        }
+
+        return static_cast<int32_t>(lvGetItem.lParam);
+    }
+
     static void ProcessToggleAction(
         CheatManager::CheatManagerFunctionId fdwFunctionId = CheatManager::CheatManagerFunctionId::None
     ) {
         switch (fdwFunctionId) {
             case CheatManager::CheatManagerFunctionId::ToggleGod: {
-                bool bCurrentState = g_GameOptions.GodMode.load();
-                g_GameOptions.GodMode.store(!bCurrentState);
+                g_GameOptions.GodMode.fetch_xor(1, std::memory_order_acq_rel);
                 break;
             }
             case CheatManager::CheatManagerFunctionId::ToggleStamina: {
-                bool bCurrentState = g_GameOptions.InfiniteStamina.load();
-                g_GameOptions.InfiniteStamina.store(!bCurrentState);
+                g_GameOptions.InfiniteStamina.fetch_xor(1, std::memory_order_acq_rel);
                 break;
             }
             default:
@@ -1113,11 +1281,13 @@ namespace WinGUI {
                     }
 
                     case IDC_CHECK_SHOW_CONSOLE: {
-                        ShowDebugConsole = (BST_CHECKED == IsDlgButtonChecked(
-                            hWnd, 
-                            IDC_CHECK_SHOW_CONSOLE
-                        ));
-                        if (ShowDebugConsole) {
+                        g_G2MOptions.bShowDebugConsole.store(
+                            (BST_CHECKED == IsDlgButtonChecked(
+                                hWnd, 
+                                IDC_CHECK_SHOW_CONSOLE
+                            ))
+                        );
+                        if (g_G2MOptions.bShowDebugConsole.load()) {
                             ShowConsole();
                         } else {
                             HideConsole();
@@ -1126,14 +1296,16 @@ namespace WinGUI {
                     }
 
                     case IDC_CHECK_GLOBAL_CHEAT: {
-                        ItemSpawner::GlobalCheatMode = (BST_CHECKED == IsDlgButtonChecked(
-                            hWnd, 
-                            IDC_CHECK_GLOBAL_CHEAT
-                        ));
+                        ItemSpawner::GlobalCheatMode.store(
+                            (BST_CHECKED == IsDlgButtonChecked(
+                                hWnd, 
+                                IDC_CHECK_GLOBAL_CHEAT
+                            ))
+                        );
                         LogMessage(
                             "WinGUI", 
                             "Global Cheat Mode " + std::string(
-                                ItemSpawner::GlobalCheatMode 
+                                ItemSpawner::GlobalCheatMode.load()
                                 ? "enabled" 
                                 : "disabled"
                             ),
@@ -1231,6 +1403,28 @@ namespace WinGUI {
                         }
                         break;
                     }
+
+                    case IDC_BUTTON_SET_MUTATIONS: {
+                        int32_t iMutationCount = GetMutationCountFromEdit();
+                        int32_t iTargetPlayerId = GetSelectedPlayerId();
+                        CheatManager::StaticCheats::MaxActiveMutations(
+                            CheatManager::StaticCheats::EStaticCheatOp::Set,
+                            iTargetPlayerId,
+                            iMutationCount
+                        );
+                        break;
+                    }
+
+                    case IDC_BUTTON_SET_COZINESS: {
+                        int32_t iCozinessLevel = GetMutationCountFromEdit();
+                        int32_t iTargetPlayerId = GetSelectedPlayerId();
+                        CheatManager::StaticCheats::MaxCozinessLevelAchieved(
+                            CheatManager::StaticCheats::EStaticCheatOp::Set,
+                            iTargetPlayerId,
+                            iCozinessLevel
+                        );
+                        break;
+                    }
                 }
                 break;
             }
@@ -1269,6 +1463,10 @@ namespace WinGUI {
                     hEditControl == g_hEditItemSearch
                     ||
                     hEditControl == g_hEditClassSearch
+                    ||
+                    hEditControl == g_hEditMutationsCount
+                    ||
+                    hEditControl == g_hEditCozinessLevel
                 ) {
                     // Use solid background for edit controls to prevent text overlap
                     SetTextColor(hDeviceContext, RGB(230, 230, 230));
@@ -1316,14 +1514,21 @@ namespace WinGUI {
         );
 
         LogMessage("WinGUI", "Populating item list, please wait...");
+        
         DisableGlobalOutput();
+        DisableFileLogging();
         UnrealUtils::DumpAllDataTablesAndItems(&g_vDataTables, "Item");
+        EnableFileLogging();
         EnableGlobalOutput();
         
         LogMessage("WinGUI", "Populating class list, please wait...");
+        
         DisableGlobalOutput();
+        DisableFileLogging();
         UnrealUtils::DumpClasses(&g_vAllClassNames, "BP_");
+        EnableFileLogging();
         EnableGlobalOutput();
+        
         LogMessage(
             "WinGUI", 
             "Initialized " + std::to_string(g_vDataTables.size()) + " DataTables"
@@ -1458,7 +1663,7 @@ namespace WinGUI {
             LogMessage("WinGUI", "Populating player list...");
             PopulatePlayerList();
             std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-        } while (g_vPlayers.empty());
+        } while (PlayerCache::g_CachedData.Players.empty());
 
         // Populate DataTable list (TODO: wrap this one too)
         ClearDataTableList();

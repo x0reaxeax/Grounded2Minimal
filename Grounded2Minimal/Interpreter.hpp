@@ -29,6 +29,11 @@ namespace Interpreter {
         const std::string& szPrompt,
         int32_t iDefaultValue = -1
     );
+
+    float ReadFloatInput(
+        const std::string& szPrompt,
+        float fDefaultValue = -1.0f
+    );
 }
 
 

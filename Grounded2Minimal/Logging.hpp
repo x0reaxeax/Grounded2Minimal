@@ -8,10 +8,14 @@ extern std::atomic<bool> GlobalOutputEnabled;
 
 #define CheckGlobalOutputEnabled() (GlobalOutputEnabled.load())
 
+bool IsGlobalOutputEnabled(void);
 void EnableGlobalOutput(void);
 void DisableGlobalOutput(void);
 
-bool IsGlobalOutputEnabled(void);
+bool IsFileLoggingEnabled(void);
+void EnableFileLogging(void);
+void DisableFileLogging(void);
+
 bool IsDebugOutputEnabled(void);
 void EnableDebugOutput(void);
 void DisableDebugOutput(void);
@@ -44,5 +48,7 @@ void LogError(
     const std::string& szMessage,
     bool bOnlyDebug = false
 );
+
+HANDLE *InitalizeLogFile(void);
 
 #endif // _GROUNDED2_MINIMAL_LOGGING_HPP

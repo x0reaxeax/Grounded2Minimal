@@ -23,9 +23,19 @@ namespace CoreUtils {
         std::wstring &szWideString
     );
 
+    LPCWSTR InlineMultiByteToWideChar(
+        LPCSTR szMultiByteString
+    );
+
+    LPCWSTR InlineStringToWideChar(
+        std::string szString
+    );
+
     bool GetVersionFromResource(
         VersionInfo& versionInfo
     );
+
+    int32_t GenerateUniqueId(void);
 } // namespace CoreUtils
 
 #endif // _GROUNDED_MINIMAL_CORE_UTILS_HPP

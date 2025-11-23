@@ -50,7 +50,8 @@ namespace UnrealUtils {
     );
 
     void DumpConnectedPlayers(
-        std::vector<SDK::APlayerState*> *vlpPlayerStatesOut = nullptr
+        std::vector<SDK::APlayerState*> *vlpPlayerStatesOut = nullptr,
+        bool bHideOutput = false
     );
 
     bool IsPlayerHostAuthority(
@@ -98,7 +99,11 @@ namespace UnrealUtils {
 
     int32_t GetLocalPlayerId(bool bCached = false);
 
-    SDK::APlayerState *GetLocalPlayerState(void);
+    SDK::ASurvivalPlayerState *GetSurvivalPlayerStateById(
+        int32_t iTargetPlayerId
+    );
+
+    SDK::AGameModeBase *GetSurvivalGameModeBase(void);
 
     int32_t GetPlayerIdByName(
         const std::string& szPlayerName
@@ -113,9 +118,21 @@ namespace UnrealUtils {
 
     SDK::APlayerController *GetLocalPlayerController(void);
 
+    SDK::APlayerController *GetPlayerControllerById(
+        int32_t iPlayerId
+    );
+
     SDK::ASurvivalPlayerController *GetLocalSurvivalPlayerController(void);
 
-    SDK::UPartyComponent *FindLocalPlayerParty(void);
+    SDK::UPartyComponent *FindLocalPlayerParty(
+        int32_t iTargetPlayerId = INVALID_PLAYER_ID,
+        bool bCached = false
+    );
+
+    SDK::ASurvivalPlayerCharacter *GetSurvivalPlayerCharacterById(
+        int32_t iTargetPlayerId,
+        bool bCached = false
+    );
 
     SDK::ASurvivalPlayerState *GetLocalSurvivalPlayerState(void);
 

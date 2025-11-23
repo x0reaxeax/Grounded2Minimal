@@ -8,6 +8,7 @@
 
 namespace CoreUtils {
     static std::string g_szHexConvertBuffer;
+    static wchar_t g_wszWideStringConvertBuffer[512] = { 0 };
 
     std::string HexConvert(
         const uint64_t uValue
@@ -121,6 +122,49 @@ namespace CoreUtils {
         return true;
     }
 
+    LPCWSTR InlineMultiByteToWideChar(
+        LPCSTR szMultiByteString
+    ) {
+        ZeroMemory(
+            g_wszWideStringConvertBuffer, 
+            sizeof(g_wszWideStringConvertBuffer)
+        );
+
+        if (0 == MultiByteToWideChar(
+            CP_UTF8,
+            0,
+            szMultiByteString,
+            -1,
+            g_wszWideStringConvertBuffer,
+            ARRAYSIZE(g_wszWideStringConvertBuffer)
+        )) {
+            g_wszWideStringConvertBuffer[0] = L'0';
+        }
+
+        return g_wszWideStringConvertBuffer;
+    }
+    
+    LPCWSTR InlineStringToWideChar(
+        std::string szString
+    ) {
+        SecureZeroMemory(
+            g_wszWideStringConvertBuffer, 
+            sizeof(g_wszWideStringConvertBuffer)
+        );
+        if (0 == MultiByteToWideChar(
+            CP_UTF8,
+            0,
+            szString.c_str(),
+            -1,
+            g_wszWideStringConvertBuffer,
+            ARRAYSIZE(g_wszWideStringConvertBuffer)
+        )) {
+            g_wszWideStringConvertBuffer[0] = L'0';
+        }
+
+        return g_wszWideStringConvertBuffer;
+    }
+
     bool GetVersionFromResource(
         VersionInfo& versionInfo
     ) {
@@ -162,5 +206,10 @@ namespace CoreUtils {
         }
 
         return false;
+    }
+
+    int32_t GenerateUniqueId(void) {
+        static std::atomic<int32_t> s_iCurrentId{ 0 };
+        return ++s_iCurrentId;
     }
 }
