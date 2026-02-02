@@ -373,3 +373,4 @@ FodyWeavers.xsd
 # Version archives
 *.7z
 *.zip
+/Grounded2Minimal/Assertions.inl
