@@ -42,7 +42,8 @@
 #define IDC_BUTTON_SET_DODGE_DISTANCE           309
 #define IDC_BUTTON_SET_CURRENT_FOOD_LEVEL       310
 #define IDC_BUTTON_SET_CURRENT_WATER_LEVEL      311
-#define _IDC_BUTTON_CHEAT_ID_BASE               312
+#define IDC_BUTTON_BUILD_ALL_STRUCTURES         312
+#define _IDC_BUTTON_CHEAT_ID_BASE               313
 #define IDC_EDIT_ITEM_COUNT                     400
 #define IDC_STATIC_ITEM_COUNT                   401
 #define IDC_MUTATIONS_COUNT                     402
@@ -252,6 +253,7 @@ namespace WinGUI {
     static HWND g_hEditItemSearch = nullptr;
     static HWND g_hEditMutationsCount = nullptr;
     static HWND g_hEditCozinessLevel = nullptr;
+    static HWND g_hBuildAllStructures = nullptr;
     static HWND g_hEditNearbyStorageRadius = nullptr;
     static HWND g_hEditChillRateMultiplier = nullptr;
     static HWND g_hEditSizzleRateMultiplier = nullptr;
@@ -730,7 +732,17 @@ namespace WinGUI {
                     NULL
                 );
 
-                //iHeightOffset += 40;
+                iHeightOffset += 40;
+
+                g_hBuildAllStructures = CreateWindowEx(
+                    0, L"BUTTON", L"Build All Structures",
+                    WS_CHILD | WS_VISIBLE,
+                    400, 380 + 200 + iHeightOffset, 240, 30,
+                    g_hMainWnd,
+                    (HMENU) IDC_BUTTON_BUILD_ALL_STRUCTURES,
+                    wcWindowClass.hInstance,
+                    NULL
+                );
             }
 
             // Create version info static text
@@ -1423,6 +1435,24 @@ namespace WinGUI {
                             iTargetPlayerId,
                             iCozinessLevel
                         );
+                        break;
+                    }
+
+                    case IDC_BUTTON_BUILD_ALL_STRUCTURES: {
+                        CheatManager::BufferParamsExecuteCheat *lpParams = new CheatManager::BufferParamsExecuteCheat{
+                            .FunctionId = CheatManager::CheatManagerFunctionId::BuildAllBuildings
+                        };
+
+                        DisableGlobalOutput();
+
+                        Command::SubmitTypedCommand(
+                            Command::CommandId::CmdIdCheatManagerExecute,
+                            lpParams
+                        );
+
+                        Command::WaitForCommandBufferReady();
+                        EnableGlobalOutput();
+
                         break;
                     }
                 }

@@ -476,6 +476,25 @@ namespace Interpreter {
         );
     }
 
+    static void HandleBuildAllStructures(void) {
+        if (!g_G2MOptions.bIsClientHost) {
+            LogError(
+                "BuildAllStructures",
+                "Cannot build structures without host authority"
+            );
+            return;
+        }
+
+        CheatManager::BufferParamsExecuteCheat *lpParams = new CheatManager::BufferParamsExecuteCheat{
+            .FunctionId = CheatManager::CheatManagerFunctionId::BuildAllBuildings
+        };
+
+        Command::SubmitTypedCommand(
+            Command::CommandId::CmdIdCheatManagerExecute,
+            lpParams
+        );
+    }
+
     static void HandleSetDebugFilter(void) {
         int32_t iHookId = ReadIntegerInput(
             "[DebugFilter] Enter hook ID to apply filter to (empty for all): ",
@@ -562,6 +581,7 @@ namespace Interpreter {
         { "I_SpawnItem", "Spawn item", HandleSpawnItem },
         { "I_ItemSpawn", "Spawn item", HandleSpawnItem },
         { "S_SummonClass", "Summon an internal class", HandleSummon },
+        { "S_BuildAll", "Build all structures for player", HandleBuildAllStructures },
         {
             "P_ShowPlayers", "Show connected players", []() { 
                 UnrealUtils::DumpConnectedPlayers(); 

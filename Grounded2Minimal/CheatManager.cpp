@@ -381,6 +381,18 @@ namespace CheatManager {
                 scParams
             );
         }
+
+        void ServerBuildAllStructures(void) {
+            return; // Implemented through CheatManager
+            /*Command::Params::BuildAll *lpParams = new Command::Params::BuildAll {
+                .lpCharacter = UnrealUtils::GetLocalSurvivalPlayerCharacter()
+            };
+
+            Command::SubmitTypedCommand(
+                Command::CommandId::CmdIdBuildAll,
+                lpParams
+            );*/
+        }
     }
 
     namespace Summon {
@@ -937,6 +949,12 @@ namespace CheatManager {
                 SurvivalCheatManager->SetOmniToolTier(6);
                 break;
             }
+
+            case CheatManagerFunctionId::BuildAllBuildings: {
+                SurvivalCheatManager->BuildAllBuildings();
+                break;
+            }
+
             /**
               * TODO:
               *  - CompleteQuest

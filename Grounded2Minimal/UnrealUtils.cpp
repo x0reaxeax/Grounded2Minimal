@@ -35,13 +35,25 @@ namespace UnrealUtils {
     }
 
     SDK::APawn* GetLocalPawn(void) {
-        SDK::UWorld *lpWorld = GetWorld();
-        if (CheckNullAndLog(lpWorld, "UWorld", "Misc")) {
+        SDK::UGameInstance *lpGameInstance = GetOwningGameInstance();
+        if (nullptr == lpGameInstance) {
+            LogError("GetLocalPawn", "OwningGameInstance is NULL");
             return nullptr;
         }
 
-        SDK::ULocalPlayer *lpLocalPlayer = lpWorld->OwningGameInstance->LocalPlayers[0];
-        if (CheckNullAndLog(lpLocalPlayer, "LocalPlayer", "Misc")) {
+        if (0 == lpGameInstance->LocalPlayers.Num()) {
+            LogError("GetLocalPawn", "No LocalPlayers found in GameInstance");
+            return nullptr;
+        }
+        int32_t iLocalId = GetLocalPlayerId();
+        if (INVALID_PLAYER_ID == iLocalId) {
+            LogError("GetLocalPawn", "Invalid local player ID");
+            return nullptr;
+        }
+
+        SDK::ULocalPlayer *lpLocalPlayer = lpGameInstance->LocalPlayers[0];
+        if (nullptr == lpLocalPlayer) {
+            LogError("GetLocalPawn", "LocalPlayer is NULL");
             return nullptr;
         }
 
@@ -51,7 +63,7 @@ namespace UnrealUtils {
     SDK::ABP_SurvivalPlayerCharacter_C* GetLocalSurvivalPlayerCharacter(void) {
         SDK::APawn *lpPawn = GetLocalPawn();
         if (nullptr == lpPawn) {
-            LogError("Misc", "Pawn is NULL");
+            LogError("GetLocalSurvivalPlayerCharacter", "Pawn is NULL");
             return nullptr;
         }
 
@@ -611,6 +623,15 @@ namespace UnrealUtils {
             LogError(
                 "LocalPlayerIdLookup",
                 "PlayerId is less than 200, this is likely a bot or non-local player: "
+                + std::to_string(lpPlayerState->PlayerId)
+            );
+            return INVALID_PLAYER_ID;
+        }
+
+        if (lpPlayerState->PlayerId > 2000) {
+            LogError(
+                "LocalPlayerIdLookup",
+                "PlayerId is greater than 2000, this is likely invalid: "
                 + std::to_string(lpPlayerState->PlayerId)
             );
             return INVALID_PLAYER_ID;

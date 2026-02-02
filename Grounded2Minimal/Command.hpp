@@ -28,6 +28,10 @@ namespace Command {
             SDK::FVector AdjustmentVector{ 0.0f, 0.0f, 0.0f };
             SDK::FVector CurrentLocation{ 0.0f, 0.0f, 0.0f };
         };
+
+        struct BuildAll {
+            SDK::ASurvivalPlayerCharacter* lpCharacter = nullptr;
+        };
     }
     
     enum class Status : uint32_t { // woah, you can do this in cpp?? jk, i hate this fucking language

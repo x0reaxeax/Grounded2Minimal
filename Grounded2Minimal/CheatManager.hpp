@@ -31,6 +31,8 @@ namespace CheatManager {
         void SetPlayerCollision(
             bool bNewCollisionState
         );
+
+        void ServerBuildAllStructures(void);
     }
 
     namespace Summon {
@@ -78,6 +80,7 @@ namespace CheatManager {
         ToggleGod,
         ToggleStamina,
         UnlockOmniTool,
+        BuildAllBuildings,
         Max,
         _Debug = 0xFFFFFFFF
     };
