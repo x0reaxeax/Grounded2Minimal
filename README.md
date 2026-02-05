@@ -95,6 +95,7 @@ The debug console can be used to execute the following commands:
 | `I_SpawnItem`        | Spawns a selected item into a selected player's inventory |
 | `P_ShowPlayers`      | Lists connected players |
 | `S_SummonClass`      | Summons a selected class |
+| `S_BuildAll`         | Finishes all building blueprints |
 | `OPT_BuildAnywhere`  | Enables 'Build Anywhere' mode |
 | `OPT_GetMaxActiveMutations` | Get max active mutations |
 | `OPT_SetMaxActiveMutations` | Set max active mutations |
@@ -106,7 +107,25 @@ The debug console can be used to execute the following commands:
 | `X_GlobalCheatMode`  | Toggles Global Cheat Mode |
 | `X_InitCheatManager` | Initializes CheatManager |
 | `X_ToggleDebugPlayerReport` | Toggle automatic debug player report |
+| `X_ReloadBinds` | Reloads key binds from configuration file |
 | `exit` or `quit`     | Unloads game hooks and exits the tool |
+
+## Keybinds
+As of right now, there are only 2 keybinds:
+| Key   | Description               |
+| ----- | ------------------------- |
+| `F1`  | Completes all building blueprints (`BuildAll`) |
+| `F3`  | Enabled/Disables "Build Anywhere" |
+
+The trigger keys can be modified by editing `G2MinimalConfig.ini`, which will be created inside the directory where the game executable is located, after the tool has been loaded at least once.
+The file is structured as follows:
+```
+BuildAll=0x70
+BuildAnywhere=0x72
+```
+The hexadecimal numbers represent **Virtual Key Codes** which can be found here - [Microsoft Learn - Virtual Key Codes](https://learn.microsoft.com/en-us/windows/win32/inputdev/virtual-key-codes).
+To change a specific key bind, simply change the original value to a desired hexadecimal value.
+To reload keybinds while the tool/game is running, use the `X_ReloadBinds` console command.
 
 ## Building
 To build the project, you need to have a valid SDK dump generated via [Dumper-7](https://github.com/Encryqed/Dumper-7).  
