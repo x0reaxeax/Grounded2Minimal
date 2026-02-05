@@ -60,6 +60,34 @@ namespace UnrealUtils {
         return lpLocalPlayer->PlayerController->Pawn;
     }
 
+    SDK::UEngine *GetEngine(void) {
+        SDK::UEngine *lpEngine = SDK::UEngine::GetEngine();
+        if (nullptr == lpEngine) {
+            LogError("GetEngine", "UEngine instance is NULL");
+            return nullptr;
+        }
+        return lpEngine;
+    }
+
+    SDK::UUserInterfaceStatics *GetUserInterfaceStatics(void) {
+        SDK::UUserInterfaceStatics *lpUIStatics = SDK::UUserInterfaceStatics::GetDefaultObj();
+        if (nullptr == lpUIStatics) {
+            LogError("GetUserInterfaceStatics", "UUserInterfaceStatics default object is NULL");
+            return nullptr;
+        }
+        return lpUIStatics;
+    }
+
+    SDK::AGameUI *GetGameUI(void) {
+        SDK::UEngine *lpEngine = GetEngine();
+        if (nullptr == lpEngine) {
+            LogError("GetGameUI", "Unable to get UEngine");
+            return nullptr;
+        }
+
+        return SDK::UUserInterfaceStatics::GetGameUI(lpEngine->GameViewport);
+    }
+
     SDK::ABP_SurvivalPlayerCharacter_C* GetLocalSurvivalPlayerCharacter(void) {
         SDK::APawn *lpPawn = GetLocalPawn();
         if (nullptr == lpPawn) {

@@ -8,9 +8,13 @@ namespace CoreUtils {
         const uint64_t uValue
     );
 
+    bool IsStringWildcard(
+        const std::string& cszString
+    );
+
     bool StringContainsCaseInsensitive(
-        const std::string& szHaystack,
-        const std::string& szNeedle
+        const std::string& cszHaystack,
+        const std::string& cszNeedle
     );
 
     bool WideStringToUtf8(
@@ -33,6 +37,14 @@ namespace CoreUtils {
 
     bool GetVersionFromResource(
         VersionInfo& versionInfo
+    );
+
+    bool GetCurrentWorkingDirectory(
+        std::string& szOutDirectory
+    );
+
+    bool FileExists(
+        LPCSTR cszFilePath
     );
 
     int32_t GenerateUniqueId(void);

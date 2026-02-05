@@ -5,7 +5,365 @@
 #include "HookManager.hpp"
 #include "Command.hpp"
 
+#include <functional>
+#include <vector>
+#include <cctype>
+#include <algorithm>
+
 namespace Interpreter {
+    namespace KeyBinds {
+
+        static struct _KeyBindThread {
+            HANDLE KeyBindThreadHandle = nullptr;
+            DWORD ThreadId = 0;
+            std::atomic<uint8_t> bRunning = false;
+        } KeyBindThread{};
+
+        using HandlerFn = void(*)();
+
+        enum class Trigger : uint8_t {
+            OnKeyDown,
+            OnKeyUp,
+            WhileDown
+        };
+
+        enum ModMask : uint8_t {
+            ModNone = 0,
+            ModCtrl = 1 << 0,
+            ModAlt = 1 << 1,
+            ModShift = 1 << 2
+        };
+
+        inline uint8_t operator|(ModMask a, ModMask b) {
+            return (uint8_t) a | (uint8_t) b;
+        }
+
+        namespace Functions {
+            static void HandleBuildAll(void) {
+                CheatManager::BufferParamsExecuteCheat* lpParams = new CheatManager::BufferParamsExecuteCheat{
+                    .FunctionId = CheatManager::CheatManagerFunctionId::BuildAllBuildings
+                };
+
+                Command::SubmitTypedCommand(
+                    Command::CommandId::CmdIdCheatManagerExecute,
+                    lpParams
+                );
+
+                if (IsDebugOutputEnabled()) {
+                    LogMessage("KeyBind", "Build All Structures command executed", true);
+                }
+            }
+
+            static void HandleBuildAnywhere(void) {
+                g_GameOptions.BuildAnywhere.fetch_xor(1, std::memory_order_acq_rel);
+
+                const bool bNow = g_GameOptions.BuildAnywhere.load(std::memory_order_acquire);
+                LPCWSTR cwszMessage = bNow ? L"BuildAnywhere enabled" : L"BuildAnywhere disabled";
+
+                SDK::FString fszMessage = SDK::FString(cwszMessage);
+                UnrealUtils::GetGameUI()->PostGenericMessage(fszMessage, nullptr);
+
+                if (IsDebugOutputEnabled()) {
+                    LogMessage(
+                        L"KeyBind",
+                        cwszMessage,
+                        true
+                    );
+                }
+            }
+        }
+
+        struct KeyBind {
+            DWORD keyCode = 0;
+            uint8_t mod = ModNone;
+            Trigger trigger = Trigger::OnKeyDown;
+            HandlerFn handler = nullptr;
+
+            // runtime state
+            bool wasDown = false;
+        };
+
+        LPCSTR KeyBindConfigFile = "G2MinimalConfig.ini";
+        static std::vector<KeyBind> g_vKeyBinds;
+
+        // Name -> handler table
+        static constexpr struct {
+            const char* Name;
+            HandlerFn   Handler;
+            uint8_t     DefaultMods;
+            Trigger     DefaultTrigger;
+        } kBindings[] = {
+            {"BuildAll",      Functions::HandleBuildAll,      ModNone, Trigger::OnKeyDown},
+            {"BuildAnywhere", Functions::HandleBuildAnywhere, ModNone, Trigger::OnKeyDown},
+        };
+
+        static HandlerFn HandlerFromName(
+            const std::string& szName, 
+            uint8_t* pOutMods = nullptr, 
+            Trigger* pOutTrig = nullptr
+        ) {
+            for (const auto& e : kBindings) {
+                if (szName == e.Name) {
+                    if (nullptr != pOutMods) {
+                        *pOutMods = e.DefaultMods;
+                    }
+                    if (nullptr != pOutTrig) {
+                        *pOutTrig = e.DefaultTrigger;
+                    }
+                    return e.Handler;
+                }
+            }
+            return nullptr;
+        }
+
+        bool IsKeyDown(DWORD dwKeyCode) {
+            if (g_hConsole == GetForegroundWindow()) {
+                return false;
+            }
+            return (GetAsyncKeyState((int) dwKeyCode) & 0x8000) != 0;
+        }
+
+        static uint8_t ReadModsOnce(void) {
+            uint8_t m = ModNone;
+            if (IsKeyDown(VK_CONTROL)) { m |= ModCtrl; }
+            if (IsKeyDown(VK_MENU)) { m |= ModAlt; }
+            if (IsKeyDown(VK_SHIFT)) { m |= ModShift; }
+            return m;
+        }
+
+        static bool ModsMatch(uint8_t ucRequired, uint8_t ucCurrent) {
+            return (ucCurrent & ucRequired) == ucRequired;
+        }
+
+        static bool AddBind(
+            DWORD dwKeyCode, 
+            uint8_t ucMods, 
+            Trigger trigger, 
+            HandlerFn fnHandler
+        ) {
+            if (!fnHandler || dwKeyCode == 0) {
+                LogError("AddBind", "Invalid request");
+                return false;
+            }
+
+            KeyBind bind;
+            bind.keyCode = dwKeyCode;
+            bind.mod = ucMods;
+            bind.trigger = trigger;
+            bind.handler = fnHandler;
+            bind.wasDown = false;
+
+            g_vKeyBinds.emplace_back(bind);
+            return true;
+        }
+
+        void Tick(void) {
+            if (g_G2MOptions.bRunning.load() == false) {
+                return;
+            }
+
+            const uint8_t modsNow = ReadModsOnce();
+
+            for (auto& bind : g_vKeyBinds) {
+                if (!bind.handler || bind.keyCode == 0) {
+                    continue;
+                }
+
+                if (!ModsMatch(bind.mod, modsNow)) {
+                    bind.wasDown = false;
+                    continue;
+                }
+
+                const bool bIsDown = IsKeyDown(bind.keyCode);
+
+                switch (bind.trigger) {
+                    case Trigger::OnKeyDown:
+                        if (bIsDown && !bind.wasDown) bind.handler();
+                        break;
+                    case Trigger::OnKeyUp:
+                        if (!bIsDown && bind.wasDown) bind.handler();
+                        break;
+                    case Trigger::WhileDown:
+                        if (bIsDown) bind.handler();
+                        break;
+                }
+
+                bind.wasDown = bIsDown;
+            }
+        }
+
+        DWORD WINAPI KeyBindThreadProc(LPVOID lpParam) {
+            UNREFERENCED_PARAMETER(lpParam);
+            while (KeyBindThread.bRunning.load(std::memory_order_relaxed)) {
+                Tick();
+                Sleep(25);
+            }
+            return EXIT_SUCCESS;
+        }
+
+        bool CreateDefaultConfig(void) {
+            // one bind per line: Name=0xVK
+            LPCSTR cszDefaultConfig =
+                "BuildAll=0x70\n"
+                "BuildAnywhere=0x72\n";
+
+            FILE* fpConfig = nullptr;
+            if (EXIT_SUCCESS != fopen_s(&fpConfig, KeyBindConfigFile, "w")) {
+                LogError(
+                    "KeyBinds", 
+                    "Failed to open key bind config file for writing: " + std::string(KeyBindConfigFile)
+                );
+                return false;
+            }
+
+            if (fprintf(fpConfig, "%s", cszDefaultConfig) < 0) {
+                LogError(
+                    "KeyBinds", 
+                    "Failed to write default config to file: " + std::string(KeyBindConfigFile)
+                );
+                fclose(fpConfig);
+                return false;
+            }
+
+            fclose(fpConfig);
+            return true;
+        }
+
+        static bool ParseLineKeyValue(
+            const std::string& szLine, 
+            std::string& pszOutKey, 
+            std::string& pszoutVal
+        ) {
+            const size_t eq = szLine.find('=');
+            if (eq == std::string::npos || eq == 0 || eq + 1 >= szLine.size()) {
+                return false;
+            }
+            pszOutKey = szLine.substr(0, eq);
+            pszoutVal = szLine.substr(eq + 1);
+            return true;
+        }
+
+        bool ReloadKeyBinds(void) {
+            g_vKeyBinds.clear();
+
+            FILE* fpConfig = nullptr;
+            if (EXIT_SUCCESS != fopen_s(&fpConfig, KeyBindConfigFile, "r")) {
+                LogError(
+                    "KeyBinds", 
+                    "Failed to open key bind config file: " + std::string(KeyBindConfigFile)
+                );
+                return false;
+            }
+
+            char szLineBuffer[256];
+            while (fgets(szLineBuffer, sizeof(szLineBuffer), fpConfig)) {
+                std::string line(szLineBuffer);
+
+                // strip whitespace
+                line.erase(std::remove_if(line.begin(), line.end(), ::isspace), line.end());
+                if (line.empty()) {
+                    continue;
+                }
+
+                // allow comments
+                if (line[0] == '#' || line.starts_with("//")) {
+                    continue;
+                }
+
+                std::string key, val;
+                if (!ParseLineKeyValue(line, key, val)) {
+                    continue;
+                }
+
+                uint8_t defaultMods = ModNone;
+                Trigger defaultTrig = Trigger::OnKeyDown;
+
+                HandlerFn handler = HandlerFromName(key, &defaultMods, &defaultTrig);
+                if (!handler) {
+                    if (IsDebugOutputEnabled()) {
+                        LogMessage("KeyBinds", "Unknown key bind name in config: " + key, true);
+                    }
+                    continue;
+                }
+
+                DWORD dwVkCode = 0;
+                try {
+                    // accept both "0x70" and "70"
+                    dwVkCode = std::stoul(val, nullptr, 16);
+                } catch (const std::exception& e) {
+                    LogError("KeyBinds", "Error parsing key code for " + key + ": " + e.what());
+                    continue;
+                }
+
+                if (AddBind(dwVkCode, defaultMods, defaultTrig, handler)) {
+                    CHAR szBuf[64] = { 0 };
+                    snprintf(szBuf, sizeof(szBuf), "0x%02lX", (DWORD) dwVkCode);
+
+                    LogMessage(
+                        "KeyBinds",
+                        "Loaded key bind: " + key + " = " + std::string(szBuf),
+                        true
+                    );
+                }
+            }
+
+            fclose(fpConfig);
+            return true;
+        }
+
+        bool Initialize(void) {
+            if (!CoreUtils::FileExists(KeyBindConfigFile)) {
+                LogMessage(
+                    "KeyBinds", 
+                    "Key bind config file not found, creating default config"
+                );
+                if (!CreateDefaultConfig()) {
+                    LogError("KeyBinds", "Failed to create default key bind config file");
+                    return false;
+                }
+            }
+
+            LogMessage("KeyBinds", "Loading key bind config from file");
+            if (!ReloadKeyBinds()) {
+                LogError("KeyBinds", "Failed to load key bind config");
+                return false;
+            }
+
+            KeyBindThread.bRunning.store(true, std::memory_order_relaxed);
+            KeyBindThread.KeyBindThreadHandle = CreateThread(
+                nullptr,
+                0,
+                KeyBindThreadProc,
+                nullptr,
+                0,
+                &KeyBindThread.ThreadId
+            );
+
+            if (nullptr == KeyBindThread.KeyBindThreadHandle) {
+                KeyBindThread.bRunning.store(false, std::memory_order_relaxed);
+                LogError("KeyBinds", "Failed to create key bind thread");
+                return false;
+            }
+
+            return true;
+        }
+
+        void Shutdown(void) {
+            KeyBindThread.bRunning.store(false, std::memory_order_relaxed);
+            if (nullptr != KeyBindThread.KeyBindThreadHandle) {
+                constexpr DWORD dwWaitMs = 5000;
+                const DWORD dwWaitRes = WaitForSingleObject(KeyBindThread.KeyBindThreadHandle, dwWaitMs);
+                if (WAIT_OBJECT_0 != dwWaitRes) {
+                    LogError("KeyBinds", "Key bind thread did not exit within timeout");
+                    // intentionally continue to avoid deadlocking tool unload
+                }
+
+                CloseHandle(KeyBindThread.KeyBindThreadHandle);
+                KeyBindThread.KeyBindThreadHandle = nullptr;
+            }
+        }
+    } // namespace KeyBinds
+
 
     static void HandleDataTableSearch(void) {
         std::string szTableName;
@@ -504,7 +862,7 @@ namespace Interpreter {
         if (iHookId < 0) {
             LogError(
                 "DebugFilter", 
-                "Invalid hook ID, must be -1 (all) or a valid hook ID"
+                "Invalid hook ID, must be 0 (all) or a valid hook ID"
             );
             return;
         }
@@ -530,6 +888,20 @@ namespace Interpreter {
             szInputDebugFilter == "\n"
         ) {
             szInputDebugFilter.clear();
+        }
+
+        if (HookManager::UniqueHookIdSpecial::AllHooks == iHookId) {
+            HookManager::ProcessEventHooker::SetHookDebugFilterAll(szInputDebugFilter);
+            HookManager::NativeHooker::SetHookDebugFilterAll(szInputDebugFilter);
+            if (szInputDebugFilter.empty()) {
+                LogMessage("DebugFilter", "Cleared global debug filter");
+            } else {
+                LogMessage(
+                    "DebugFilter",
+                    "Global debug filter needle set to '" + szInputDebugFilter + "'"
+                );
+            }
+            return;
         }
 
         HookManager::HookType eHookType = HookManager::GetHookTypeById(iHookId);
@@ -598,6 +970,13 @@ namespace Interpreter {
             }
         },
         { "X_DebugFilter", "Set debug function filter", HandleSetDebugFilter },
+        { "X_ReloadBinds", "Reload key binds from config file", []() {
+            if (KeyBinds::ReloadKeyBinds()) {
+                LogMessage("KeyBinds", "Key binds reloaded successfully");
+            } else {
+                LogError("KeyBinds", "Failed to reload key binds");
+            }
+        }},
         {
             "X_HookInfo", "Show installed hooks", []() {
                 LogMessage("HookInfo", "Listing ProcessEvent hooks..");

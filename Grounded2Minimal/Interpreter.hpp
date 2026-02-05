@@ -5,6 +5,11 @@
 #include "Grounded2Minimal.hpp"
 
 namespace Interpreter {
+    namespace KeyBinds {
+        bool Initialize(void);
+        void Shutdown(void);
+        void Tick(void);
+    }
 
     struct ConsoleCommand {
         std::string szCommand;

@@ -90,7 +90,7 @@ void ProcessDebugFilter(
 
 void ProcessDebugFilter(
     HookManager::NativeHooker::HookEntry* lpHookData,
-    ProcessEventParams* lpParams
+    NativeProcessEventParams* lpParams
 ) {
     if (nullptr == lpHookData) {
         return;
@@ -101,18 +101,17 @@ void ProcessDebugFilter(
     if (nullptr == lpParams) {
         return;
     }
-    if (nullptr == lpParams->lpObject || nullptr == lpParams->lpFunction) {
+    if (nullptr == lpParams->lpObject) {
         return;
     }
-    if (CoreUtils::StringContainsCaseInsensitive(
-        lpParams->lpFunction->GetFullName(),
-        lpHookData->szDebugFilter
-    )) {
-        LogMessage(
-            lpHookData->szHookName,
-            "Function: " + lpParams->lpFunction->GetName() + " ['" + lpParams->lpFunction->GetFullName() + "']",
-            true
-        );
+    if (
+        CoreUtils::IsStringWildcard(lpHookData->szDebugFilter) 
+        ||
+        CoreUtils::StringContainsCaseInsensitive(
+            lpParams->lpObject->GetFullName(),
+            lpHookData->szDebugFilter
+        )
+    ) {
         LogMessage(
             lpHookData->szHookName,
             "Object: " + lpParams->lpObject->GetName() + " ['" + lpParams->lpObject->GetFullName() + "']",
@@ -129,23 +128,37 @@ PROCESSEVENTHOOK _HookedSPCProcessEvent(
     void *lpParams
 ) {
     using namespace HookManager;
+
+    ProcessEventHooker::InFlightGuard inFlight;
+
+    if (ProcessEventHooker::IsRestoring()) {
+        return;
+    }
+
     ProcessEventHooker::HookData* lpHookData = ProcessEventHooker::GetHookByHookedFunction(
         _HookedSPCProcessEvent
     );
     if (nullptr == lpHookData) {
         // catastrophic cataclysmic shit
-        throw std::runtime_error("SPCProcessEvent: Hook data not found");
+        //throw std::runtime_error("SPCProcessEvent: Hook data not found");
         return;
     }
     // Re-entrancy guard for command processing on the same thread
     static thread_local bool s_InProcessCommands = false;
 
-    // Process pending commands before calling the original, to avoid
-    // nested ProcessEvent re-entry while the flag is still set.
-    if (!s_InProcessCommands && Command::CommandBufferCookedForExecution.load()) {
-        s_InProcessCommands = true;
-        Command::ProcessCommands();
-        s_InProcessCommands = false;
+    // Check for Engine.PlayerController:ClientRestart
+    if (lpFunction->GetName().contains("ClientRestart")) {
+        // Invalidate player cache on client restart, as the player state will be recreated
+        // as of right now, this is completely useless, cuz all hooks will still be present
+        PlayerCache::InvalidateCache();
+    } else { // Discard request cuz it might hold invalid pointers
+        // Process pending commands before calling the original, to avoid
+        // nested ProcessEvent re-entry while the flag is still set.
+        if (!s_InProcessCommands && Command::CommandBufferCookedForExecution.load()) {
+            s_InProcessCommands = true;
+            Command::ProcessCommands();
+            s_InProcessCommands = false;
+        }
     }
 
     // Call the original ProcessEvent
@@ -168,12 +181,19 @@ PROCESSEVENTHOOK _HookedChatBoxProcessEvent(
     LPVOID lpParams
 ) {
     using namespace HookManager;
+
+    HookManager::ProcessEventHooker::InFlightGuard inFlight;
+
+    if (ProcessEventHooker::IsRestoring()) {
+        return;
+    }
+
     ProcessEventHooker::HookData* lpHookData = ProcessEventHooker::GetHookByHookedFunction(
         _HookedChatBoxProcessEvent
     );
     if (nullptr == lpHookData) {
         // catastrophic cataclysmic shit
-        throw std::runtime_error("ChatBoxProcessEvent: Hook data not found");
+        //throw std::runtime_error("ChatBoxProcessEvent: Hook data not found");
         return;
     }
     SDK::FChatBoxMessage* lpMessage = nullptr;
@@ -259,11 +279,18 @@ PROCESSEVENTHOOK _HookedGameModeBaseProcessEvent(
     void* lpParams
 ) {
     using namespace HookManager;
+    
+    HookManager::ProcessEventHooker::InFlightGuard inFlight;
+
+    if (ProcessEventHooker::IsRestoring()) {
+        return;
+    }
+
     ProcessEventHooker::HookData* lpHookData = ProcessEventHooker::GetHookByHookedFunction(
         _HookedGameModeBaseProcessEvent
     );
     if (nullptr == lpHookData) {
-        throw std::runtime_error("GameModeBaseProcessEvent: Hook data not found");
+        //throw std::runtime_error("GameModeBaseProcessEvent: Hook data not found");
         return;
     }
     lpHookData->OriginalFn(lpObject, lpFunction, lpParams);
@@ -321,13 +348,20 @@ NATIVEHOOK _HookedUpdateCollisionStateChange(
 ) {
     using namespace HookManager;
 
+    NativeHooker::InFlightGuard inFlight;
+
+    // If teardown is happening, don't do extra work.
+    if (NativeHooker::IsRestoring()) {
+        return;
+    }
+
     NativeHooker::HookEntry* lpHookData = NativeHooker::GetHookByHookedFunction(
         &_HookedUpdateCollisionStateChange
     );
 
     if (nullptr == lpHookData) {
         // catastrophic cataclysmic shit
-        throw std::runtime_error("UpdateCollisionStateChange: Hook data not found");
+        //throw std::runtime_error("UpdateCollisionStateChange: Hook data not found");
         return;
     }
 
@@ -363,6 +397,53 @@ NATIVEHOOK _HookedUpdateCollisionStateChange(
     
 _RYUJI:
     lpHookData->OriginalFn(lpObj, lpFFrame, lpResult);
+
+    if (lpHookData->bDebugFilterEnabled.load()) {
+        NativeProcessEventParams funcParams{
+            lpObj,
+            lpFFrame,
+            lpResult
+        };
+        ProcessDebugFilter(lpHookData, &funcParams);
+    }
+}
+
+NATIVEHOOK _HookedGetPlacementValid(
+    SDK::UObject* lpObj,
+    void* lpFFrame,
+    void* lpResult
+) {
+    using namespace HookManager;
+    NativeHooker::InFlightGuard inFlight;
+    if (NativeHooker::IsRestoring()) {
+        return;
+    }
+    NativeHooker::HookEntry* lpHookData = NativeHooker::GetHookByHookedFunction(
+        (NativeHooker::NativeFunc_t) &_HookedGetPlacementValid
+    );
+
+    if (nullptr == lpHookData) {
+        // catastrophic cataclysmic 
+        return;
+    }
+
+    if (g_GameOptions.BuildAnywhere.load()) {
+        LPBYTE lpPlacementValidBool = reinterpret_cast<LPBYTE>(lpResult);
+        if (nullptr != lpPlacementValidBool) {
+            *lpPlacementValidBool = (BYTE) 1;
+        }
+    } else {
+        lpHookData->OriginalFn(lpObj, lpFFrame, lpResult);
+    }
+
+    if (lpHookData->bDebugFilterEnabled.load()) {
+        NativeProcessEventParams funcParams{
+            lpObj,
+            lpFFrame,
+            lpResult
+        };
+        ProcessDebugFilter(lpHookData, &funcParams);
+    }
 }
 
 /////////////////////////////////////////////////////////////
@@ -406,6 +487,13 @@ DWORD WINAPI ThreadEntry(
         std::to_string(GroundedMinimalVersionInfo.minor) + "." +
         std::to_string(GroundedMinimalVersionInfo.patch) + "." +
         std::to_string(GroundedMinimalVersionInfo.build)
+    );
+
+    CoreUtils::GetCurrentWorkingDirectory(g_G2MOptions.szCurrentDirectory);
+    LogMessage(
+        "Init",
+        "Current working directory: " + g_G2MOptions.szCurrentDirectory,
+        true
     );
 
     while (nullptr == UnrealUtils::GetLocalPawn()) {
@@ -494,6 +582,19 @@ DWORD WINAPI ThreadEntry(
         goto _RYUJI;
     }
 
+    LogMessage("Init", "Initializing IPlaceable::GetPlacementValid native hook...", true);
+    if (nullptr == HookManager::NativeHooker::HookNativeFunction(
+        "GetPlacementValid",
+        &_HookedGetPlacementValid,
+        "GetPlacementValid_Native"
+    )) {
+        LogError(
+            "Init",
+            "Failed to hook IPlaceable::GetPlacementValid"
+        );
+        goto _RYUJI;
+    }
+
     LogMessage("Init", "Hooks initialized");
 
     if (g_G2MOptions.bIsClientHost) {
@@ -516,6 +617,12 @@ DWORD WINAPI ThreadEntry(
     }
     LogMessage("Init", "Grounded2Minimal: GUI thread launched successfully");
 
+    LogMessage("Init", "Starting keybind thread...");
+    // Keybinds initialization
+    Interpreter::KeyBinds::Initialize();
+
+    // ready to process commands
+    g_G2MOptions.bRunning.store(true);
     while (g_G2MOptions.bRunning.load()) {
         Command::WaitForCommandBufferReady();
 
@@ -537,6 +644,7 @@ DWORD WINAPI ThreadEntry(
     iRet = EXIT_SUCCESS;
 
     WinGUI::Stop();
+    Interpreter::KeyBinds::Shutdown();
 
     /////// Cleanup ///////
 _RYUJI:

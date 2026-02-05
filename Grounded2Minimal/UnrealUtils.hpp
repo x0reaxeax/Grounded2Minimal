@@ -31,6 +31,12 @@ namespace UnrealUtils {
 
     SDK::UWorld *GetWorld(bool bCached = false);
 
+    SDK::UEngine *GetEngine(void);
+
+    SDK::UUserInterfaceStatics *GetUserInterfaceStatics(void);
+
+    SDK::AGameUI *GetGameUI(void);
+
     SDK::APawn *GetLocalPawn(void);
 
     SDK::ABP_SurvivalPlayerCharacter_C *GetLocalSurvivalPlayerCharacter(void);
