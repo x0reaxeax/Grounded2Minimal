@@ -43,19 +43,26 @@ struct GameOptions {
 };
 
 struct G2MOptions {
-    std::atomic<ubool> bRunning{ true };                // Main console input loop control
+    std::atomic<ubool> bRunning{ false };               // Main console input loop control
     std::atomic<ubool> bShowDebugConsole{ true };       // Debug console visibility status
     std::atomic<ubool> bHideAutoPlayerDbgInfo{ true };  // Automatic player debug info control flag
     std::atomic<bool> bIsGamePaused{ false };           // Game paused state
     bool bIsClientHost{ false };                        // Client is host flag
     GLOBALHANDLE hLogFile = nullptr;                    // Log file handle
     std::atomic<ubool> bSuperSecretDebugFlag{ false };  // Experimental debug flag for internal testing
+    std::string szCurrentDirectory;                     // Current working directory, used for resolving relative paths
 };
 
 struct ProcessEventParams {
     SDK::UObject* lpObject = nullptr;
     SDK::UFunction* lpFunction = nullptr;
     void* lpParams = nullptr;
+};
+
+struct NativeProcessEventParams {
+    SDK::UObject* lpObject = nullptr;
+    void* lpFFrame = nullptr;
+    void* lpResult = nullptr;
 };
 
 ///////////////////////////////////////////////////////////////
@@ -69,6 +76,9 @@ extern VersionInfo GroundedMinimalVersionInfo;
 
 // Game options
 extern GameOptions g_GameOptions;
+
+// Console handle
+extern HWND g_hConsole;
 
 //////////////////////////////////////////////////////////////////
 /// Function declarations and inline implementations

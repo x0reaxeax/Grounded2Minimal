@@ -187,4 +187,16 @@ namespace PlayerCache {
             );
         }
     }
+
+    void InvalidateCache(void) {
+        ClearPlayerCache();
+        g_CachedData.LocalPlayerId = INVALID_PLAYER_ID;
+        g_CachedData.WorldInstance = nullptr;
+        
+        LogMessage(
+            "CacheControl",
+            "Invalidated cached data",
+            true
+        );
+    }
 } // namespace PlayerCache

@@ -47,6 +47,7 @@ namespace PlayerCache {
         SDK::APlayerState* lpPlayerState
     );
 
+    void InvalidateCache(void);
 }
 
 #endif // _GROUNDED2_MINIMAL_PLAYER_CACHE_HPP

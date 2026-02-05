@@ -34,6 +34,11 @@ namespace HookManager {
 
     class ProcessEventHooker {
     public:
+        struct InFlightGuard {
+            InFlightGuard() { s_InFlight.fetch_add(1, std::memory_order_acq_rel); }
+            ~InFlightGuard() { s_InFlight.fetch_sub(1, std::memory_order_acq_rel); }
+        };
+
         using HookedFn = void(__fastcall*)(SDK::UObject*, SDK::UFunction*, void*);
 
         struct HookData {
@@ -85,19 +90,33 @@ namespace HookManager {
             const std::string& szDebugFilter
         );
 
+        static bool ClearAllDebugFilters(void);
+
         static bool SetHookDebugFilterById(
             int32_t iHookId,
             const std::string& szDebugFilter
         );
 
+        static bool IsRestoring(void) {
+            return s_Restoring.load(std::memory_order_acquire);
+        }
+
     private:
         inline static std::unordered_map<SDK::UObject*, HookData> s_Hooks;
         inline static std::unordered_set<void**> s_HookedVTables;
         inline static std::mutex s_HookMutex;
+
+        inline static std::atomic<bool> s_Restoring{ false };
+        inline static std::atomic<uint32_t> s_InFlight{ 0 };
     };
 
     class NativeHooker {
     public:
+        struct InFlightGuard {
+            InFlightGuard() { s_InFlight.fetch_add(1, std::memory_order_acq_rel); }
+            ~InFlightGuard() { s_InFlight.fetch_sub(1, std::memory_order_acq_rel); }
+        };
+
         using NativeFunc_t = void(*)(SDK::UObject* lpObject, void *lpFFrame, void* lpResult);
 
         struct HookEntry {
@@ -150,14 +169,23 @@ namespace HookManager {
             const std::string& szDebugFilter
         );
 
+        static bool ClearAllDebugFilters(void);
+
         static bool SetHookDebugFilterById(
             int32_t iHookId,
             const std::string& szDebugFilter
         );
 
+        static bool IsRestoring(void) {
+            return s_Restoring.load(std::memory_order_acquire);
+        }
+
     private:
         static inline std::unordered_map<SDK::UFunction*, HookEntry> nh_Hooks;
         static inline std::mutex nh_Mutex;
+
+        inline static std::atomic<bool> s_Restoring{ false };
+        inline static std::atomic<uint32_t> s_InFlight{ 0 };
 
         static inline bool IsNative(const SDK::UFunction* lpcTargetFunc) {
             constexpr uint32_t FUNC_Native = 0x00000400;

@@ -126,7 +126,7 @@ namespace Command {
             }
 
             case CommandId::CmdIdCheatManagerExecute: {
-                LogMessage("ProcessEvent", "Command: Execute Cheat Manager Command");
+                LogMessage("ProcessEvent", "Command: Execute Cheat Manager Command", true);
                 
                 CheatManager::BufferParamsExecuteCheat *lpParams =
                     static_cast<CheatManager::BufferParamsExecuteCheat*>(localBuffer.Params);

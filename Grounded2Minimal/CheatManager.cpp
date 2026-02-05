@@ -852,7 +852,8 @@ namespace CheatManager {
         CheatManagerFunctionId fdwFunctionId = lpParams->FunctionId;
         LogMessage(
             "CheatManager",
-            "Executing cheat function ID: " + std::to_string(static_cast<uint32_t>(fdwFunctionId))
+            "Executing cheat function ID: " + std::to_string(static_cast<uint32_t>(fdwFunctionId)),
+            true
         );
 
         const uint64_t *alpqwParams = lpParams->FunctionParams;

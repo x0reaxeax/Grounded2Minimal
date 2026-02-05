@@ -18,11 +18,9 @@ namespace HookManager {
         {
             std::lock_guard<std::mutex> lockGuard(s_HookMutex);
 
-            for (auto& kv : s_Hooks)
-            {
+            for (auto& kv : s_Hooks) {
                 auto& hook = kv.second;
-                if (hook.iUniqueId == iHookId)
-                {
+                if (hook.iUniqueId == iHookId) {
                     return &hook;
                 }
             }
@@ -40,11 +38,9 @@ namespace HookManager {
         {
             std::lock_guard<std::mutex> lockGuard(s_HookMutex);
 
-            for (auto& kv : s_Hooks)
-            {
+            for (auto& kv : s_Hooks) {
                 auto& hook = kv.second;
-                if (true == Pred(hook))
-                {
+                if (true == Pred(hook)) {
                     return &hook;
                 }
             }
@@ -89,18 +85,15 @@ namespace HookManager {
             int32_t iAllHooksSentinel
         )
         {
-            if (iHookId == iAllHooksSentinel)
-            {
+            if (iHookId == iAllHooksSentinel) {
                 return SetHookDebugFilterAll(s_Hooks, s_HookMutex, cszDebugFilter, cszLogTag);
             }
 
             std::lock_guard<std::mutex> lockGuard(s_HookMutex);
 
-            for (auto& kv : s_Hooks)
-            {
+            for (auto& kv : s_Hooks) {
                 auto& hook = kv.second;
-                if (hook.iUniqueId == iHookId)
-                {
+                if (hook.iUniqueId == iHookId) {
                     hook.szDebugFilter = cszDebugFilter;
                     hook.bDebugFilterEnabled.store(!cszDebugFilter.empty());
 
@@ -141,11 +134,9 @@ namespace HookManager {
                 const auto& hook = kv.second;
 
                 std::string szFilterInfo;
-                if (true == hook.bDebugFilterEnabled.load())
-                {
+                if (true == hook.bDebugFilterEnabled.load()) {
                     szFilterInfo = "  * Active Debug Filter: '" + hook.szDebugFilter + "'";
-                } else
-                {
+                } else {
                     szFilterInfo = "  * No active debug filter";
                 }
 
@@ -259,6 +250,7 @@ namespace HookManager {
     }
 
     void ProcessEventHooker::RestoreHooks(void) {
+        //ClearAllDebugFilters();
         std::lock_guard<std::mutex> lockGuard(s_HookMutex);
 
         for (const auto& [lpObject, hookInfo] : s_Hooks) {
@@ -355,6 +347,10 @@ namespace HookManager {
             szDebugFilter,
             "HookManager"
         );
+    }
+
+    bool ProcessEventHooker::ClearAllDebugFilters(void) {
+        return SetHookDebugFilterAll("");
     }
 
     bool ProcessEventHooker::SetHookDebugFilterById(
@@ -512,6 +508,15 @@ namespace HookManager {
     }
 
     bool NativeHooker::Restore(SDK::UFunction* lpTargetFunc) {
+        s_Restoring.store(true, std::memory_order_release);
+
+        for (int i = 0; i < 200; ++i) { // ~2s at 10ms
+            if (s_InFlight.load(std::memory_order_acquire) == 0) {
+                break;
+            }
+            Sleep(10);
+        }
+
         if (nullptr == lpTargetFunc) {
             LogError(
                 "NativeHooker",
@@ -558,6 +563,16 @@ namespace HookManager {
     }
 
     void NativeHooker::RestoreAll(void) {
+        s_Restoring.store(true, std::memory_order_release);
+
+        // Wait for active hook invocations to finish (avoid tearing down while executing)
+        for (int i = 0; i < 200; ++i) { // ~2s at 10ms
+            if (s_InFlight.load(std::memory_order_acquire) == 0) {
+                break;
+            }
+            Sleep(10);
+        }
+
         std::lock_guard<std::mutex> lock(nh_Mutex);
         for (auto& kv : nh_Hooks) {
             auto* func = kv.first;
@@ -626,6 +641,10 @@ namespace HookManager {
             szDebugFilter,
             "NativeHooker"
         );
+    }
+
+    bool NativeHooker::ClearAllDebugFilters(void) {
+        return SetHookDebugFilterAll("");
     }
 
     bool NativeHooker::SetHookDebugFilterById(

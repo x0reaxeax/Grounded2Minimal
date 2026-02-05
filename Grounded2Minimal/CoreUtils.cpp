@@ -26,12 +26,25 @@ namespace CoreUtils {
         return g_szHexConvertBuffer;
     }
 
-    bool StringContainsCaseInsensitive(
-        const std::string& szHaystack,
-        const std::string& szNeedle
+    bool IsStringWildcard(
+        const std::string& cszString
     ) {
-        std::string szHaystackLower = szHaystack;
-        std::string szNeedleLower = szNeedle;
+        if (cszString.empty()) {
+            return false;
+        }
+
+        if ('*' != cszString[0]) {
+            return false;
+        }
+        return true;
+    }
+
+    bool StringContainsCaseInsensitive(
+        const std::string& cszHaystack,
+        const std::string& cszNeedle
+    ) {
+        std::string szHaystackLower = cszHaystack;
+        std::string szNeedleLower = cszNeedle;
 
         std::transform(
             szHaystackLower.begin(),
@@ -206,6 +219,28 @@ namespace CoreUtils {
         }
 
         return false;
+    }
+
+    bool GetCurrentWorkingDirectory(
+        std::string& szOutDirectory
+    ) {
+        CHAR szBuffer[MAX_PATH] = { 0 };
+        DWORD dwResult = GetCurrentDirectoryA(
+            sizeof(szBuffer),
+            szBuffer
+        );
+        if (dwResult == 0 || dwResult >= sizeof(szBuffer)) {
+            return false;
+        }
+        szOutDirectory = std::string(szBuffer);
+        return true;
+    }
+
+    bool FileExists(
+        LPCSTR cszFilePath
+    ) {
+        DWORD dwAttrib = GetFileAttributesA(cszFilePath);
+        return (INVALID_FILE_ATTRIBUTES != dwAttrib) && !(FILE_ATTRIBUTE_DIRECTORY & dwAttrib);
     }
 
     int32_t GenerateUniqueId(void) {
