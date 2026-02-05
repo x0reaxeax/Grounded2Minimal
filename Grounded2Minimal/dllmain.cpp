@@ -70,10 +70,14 @@ void ProcessDebugFilter(
         return;
     }
 
-    if (CoreUtils::StringContainsCaseInsensitive(
-        lpParams->lpFunction->GetFullName(),
-        lpHookData->szDebugFilter
-    )) {
+    if (
+        CoreUtils::IsStringWildcard(lpHookData->szDebugFilter)
+        ||
+        CoreUtils::StringContainsCaseInsensitive(
+            lpParams->lpFunction->GetFullName(),
+            lpHookData->szDebugFilter
+        )
+    ) {
         LogMessage(
             lpHookData->szHookName,
             "Function: " + lpParams->lpFunction->GetName() + " ['" + lpParams->lpFunction->GetFullName() + "']",
