@@ -520,7 +520,7 @@ namespace WinGUI {
                 CheckDlgButton(
                     g_hMainWnd,
                     IDC_TOGGLE_HANDY_GNAT,
-                    g_GameOptions.HandyGnatForceEnable.load() ? BST_CHECKED : BST_UNCHECKED
+                    g_GameOptions.GameStatics.HandyGnatForceEnable.load() ? BST_CHECKED : BST_UNCHECKED
                 );
             }
 
@@ -535,7 +535,7 @@ namespace WinGUI {
                 CheckDlgButton(
                     g_hMainWnd,
                     IDC_TOGGLE_AUTO_COMPLETE_BUILDINGS,
-                    g_GameOptions.AutoCompleteBuildings.load() ? BST_CHECKED : BST_UNCHECKED
+                    g_GameOptions.GameStatics.AutoCompleteBuildings.load() ? BST_CHECKED : BST_UNCHECKED
                 );
             }
 
@@ -550,7 +550,7 @@ namespace WinGUI {
                 CheckDlgButton(
                     g_hMainWnd,
                     IDC_TOGGLE_BUILDING_INTEGRITY,
-                    g_GameOptions.BuildingIntegrity.load() ? BST_CHECKED : BST_UNCHECKED
+                    g_GameOptions.GameStatics.BuildingIntegrity.load() ? BST_CHECKED : BST_UNCHECKED
                 );
             }
 
@@ -1425,7 +1425,7 @@ namespace WinGUI {
                             IDC_TOGGLE_HANDY_GNAT
                         ));
 
-                        g_GameOptions.HandyGnatForceEnable.store(
+                        g_GameOptions.GameStatics.HandyGnatForceEnable.store(
                             bNewState,
                             std::memory_order_acq_rel
                         );
@@ -1453,7 +1453,7 @@ namespace WinGUI {
                             IDC_TOGGLE_AUTO_COMPLETE_BUILDINGS
                         ));
                         
-                        g_GameOptions.AutoCompleteBuildings.store(
+                        g_GameOptions.GameStatics.AutoCompleteBuildings.store(
                             bNewState,
                             std::memory_order_acq_rel
                         );
@@ -1480,7 +1480,7 @@ namespace WinGUI {
                             IDC_TOGGLE_BUILDING_INTEGRITY
                         ));
                         
-                        g_GameOptions.BuildingIntegrity.store(
+                        g_GameOptions.GameStatics.BuildingIntegrity.store(
                             bNewState,
                             std::memory_order_acq_rel
                         );

@@ -410,6 +410,48 @@ namespace CheatManager {
             lpSettings->bEnableBuildingIntegrity = bEnable;
         }
 
+        void ToggleFreeCrafting(
+            bool bEnable
+        ) {
+            SDK::USurvivalGameModeSettings *lpSettings = UnrealUtils::GetSurvivalGameModeSettings();
+            if (nullptr == lpSettings) {
+                LogError(
+                    "FreeCrafting",
+                    "Failed to get SurvivalGameModeSettings from SurvivalModeManagerComponent"
+                );
+                return;
+            }
+            lpSettings->bRecipesRequireIngredients = bEnable;
+        }
+
+        void ToggleInvinciblePets(
+            bool bEnable
+        ) {
+            SDK::USurvivalGameModeSettings *lpSettings = UnrealUtils::GetSurvivalGameModeSettings();
+            if (nullptr == lpSettings) {
+                LogError(
+                    "InvinciblePets",
+                    "Failed to get SurvivalGameModeSettings from SurvivalModeManagerComponent"
+                );
+                return;
+            }
+            lpSettings->bPetInvincible = !bEnable;
+        }
+
+        void SetPlayerDamageMultiplier(
+            float fNewMultiplier
+        ) {
+            SDK::USurvivalGameModeSettings *lpSettings = UnrealUtils::GetSurvivalGameModeSettings();
+            if (nullptr == lpSettings) {
+                LogError(
+                    "PlayerDamageMultiplier",
+                    "Failed to get SurvivalGameModeSettings from SurvivalModeManagerComponent"
+                );
+                return;
+            }
+            lpSettings->PlayerDamageMultiplier = fNewMultiplier;
+        }
+
         void SetGameType(
             SDK::EGameType eNewGameType
         ) {

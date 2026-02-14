@@ -160,6 +160,9 @@ namespace UnrealUtils {
         bool IsHandyGnatEnabled(void);
         bool IsBuildingIntegrityEnabled(void);
         bool IsAutoCompleteBuildingsEnabled(void);
+        bool IsPetInvincibilityEnabled(void);
+        bool IsFreeCraftingEnabled(void);
+        float GetPlayerDamageMultiplier(void);
     }
 }
 

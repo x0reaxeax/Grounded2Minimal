@@ -1309,5 +1309,41 @@ namespace UnrealUtils {
             }
             return lpSettings->bAutoCompleteBuildings;
         }
+
+        bool IsPetInvincibilityEnabled(void) {
+            SDK::USurvivalGameModeSettings *lpSettings = UnrealUtils::GetSurvivalGameModeSettings();
+            if (nullptr == lpSettings) {
+                LogError(
+                    "PetInvincibility",
+                    "Failed to get SurvivalGameModeSettings from SurvivalModeManagerComponent"
+                );
+                return false;
+            }
+            return lpSettings->bPetInvincible;
+        }
+
+        bool IsFreeCraftingEnabled(void) {
+            SDK::USurvivalGameModeSettings *lpSettings = UnrealUtils::GetSurvivalGameModeSettings();
+            if (nullptr == lpSettings) {
+                LogError(
+                    "FreeCrafting",
+                    "Failed to get SurvivalGameModeSettings from SurvivalModeManagerComponent"
+                );
+                return false;
+            }
+            return !lpSettings->bRecipesRequireIngredients;
+        }
+
+        float GetPlayerDamageMultiplier(void) {
+            SDK::USurvivalGameModeSettings *lpSettings = UnrealUtils::GetSurvivalGameModeSettings();
+            if (nullptr == lpSettings) {
+                LogError(
+                    "PlayerDamageMultiplier",
+                    "Failed to get SurvivalGameModeSettings from SurvivalModeManagerComponent"
+                );
+                return 1.0f; // Default multiplier, I hope xDD
+            }
+            return lpSettings->PlayerDamageMultiplier;
+        }
     }
 }

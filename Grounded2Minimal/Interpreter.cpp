@@ -981,6 +981,61 @@ namespace Interpreter {
         );
     }
 
+    static void HandleGameTypeSwitch(void) {
+        /*
+        	Story                                    = 0,
+	        Playground                               = 1,
+        */
+
+        const std::string cszGameTypes = "Available game types:\n"
+            " 0 - Story\n"
+            " 1 - Playground\n";
+
+        std::cout << cszGameTypes;
+
+        int32_t iGameType = ReadIntegerInput(
+            "[GameTypeSwitch] Enter game type ID to switch to: ",
+            -1
+        );
+
+        if (iGameType < 0 || iGameType > 1) {
+            LogError(
+                "GameTypeSwitch",
+                "Invalid game type ID, must be 0 or 1"
+            );
+            return;
+        }
+
+        CheatManager::StaticCheats::SetGameType(
+            static_cast<SDK::EGameType>(iGameType)
+        );
+
+        LogMessage(
+            "GameTypeSwitch",
+            "Switched game type to ID " + std::to_string(iGameType)
+        );
+    }
+
+    static void HandleSetPlayerDamageMultiplier(void) {
+        float fDamageMultiplier = ReadFloatInput(
+            "[SetPlayerDamageMultiplier] Enter new player damage multiplier: ",
+            -1.0f
+        );
+        if (fDamageMultiplier < 0.0f) {
+            LogError(
+                "SetPlayerDamageMultiplier",
+                "Invalid damage multiplier, must be non-negative"
+            );
+            return;
+        }
+        CheatManager::StaticCheats::SetPlayerDamageMultiplier(fDamageMultiplier);
+        
+        LogMessage(
+            "SetPlayerDamageMultiplier",
+            "Player damage multiplier set to " + std::to_string(fDamageMultiplier)
+        );
+    }
+
     void PrintAvailableCommands(void);
 
     ConsoleCommand g_Commands[] = {
@@ -994,6 +1049,8 @@ namespace Interpreter {
         { "F_FunctionDump", "Dump functions", HandleFunctionDump },
         { "F_ClassDump", "Dump classes by name", HandleClassDump },
         { "H_GetAuthority", "Check host authority", HandleGetAuthority },
+        { "H_SetGameMode", "Switch game mode", HandleGameModeSwitch },
+        { "H_SetGameType", "Switch game type", HandleGameTypeSwitch },
         { "I_SpawnItem", "Spawn item", HandleSpawnItem },
         { "I_ItemSpawn", "Spawn item", HandleSpawnItem },
         { "S_SummonClass", "Summon an internal class", HandleSummon },
@@ -1069,15 +1126,19 @@ namespace Interpreter {
         },
         {
             "X_ShowGameOptions", "Show current game options", []() {
+            // TODO: streamline this shi
                 LogMessage(
                     "GameOptions",
                     "Current Game Options:\n" +
-                    std::string(" - BuildAnywhere: ") + (g_GameOptions.BuildAnywhere.load() ? "enabled" : "disabled") + "\n" +
-                    std::string(" - HandyGnatForceEnable: ") + (g_GameOptions.HandyGnatForceEnable.load() ? "enabled" : "disabled") + "\n" +
-                    std::string(" - AutoCompleteBuildings: ") + (g_GameOptions.AutoCompleteBuildings.load() ? "enabled" : "disabled") + "\n" +
-                    std::string(" - BuildingIntegrity: ") + (g_GameOptions.BuildingIntegrity.load() ? "enabled" : "disabled") + "\n" +
-                    std::string(" - GodMode: ") + (g_GameOptions.GodMode.load() ? "enabled" : "disabled") + "\n" +
-                    std::string(" - InfiniteStamina: ") + (g_GameOptions.InfiniteStamina.load() ? "enabled" : "disabled") + "\n"
+                    std::string(" - Build Anywhere          - ") + (g_GameOptions.BuildAnywhere.load() ? "enabled" : "disabled") + "\n" +
+                    std::string(" - Handy GnatForce Enable  - ") + (g_GameOptions.GameStatics.HandyGnatForceEnable.load() ? "enabled" : "disabled") + "\n" +
+                    std::string(" - Auto Complete Buildings - ") + (g_GameOptions.GameStatics.AutoCompleteBuildings.load() ? "enabled" : "disabled") + "\n" +
+                    std::string(" - Building Integrity      - ") + (g_GameOptions.GameStatics.BuildingIntegrity.load() ? "enabled" : "disabled") + "\n" +
+                    std::string(" - God Mode                - ") + (g_GameOptions.GodMode.load() ? "enabled" : "disabled") + "\n" +
+                    std::string(" - Infinite Stamina        - ") + (g_GameOptions.InfiniteStamina.load() ? "enabled" : "disabled") + "\n" + 
+                    std::string(" - Pet Invincibility       - ") + (g_GameOptions.GameStatics.InvinciblePets.load() ? "enabled" : "disabled") + "\n" +
+                    std::string(" - Free Crafting           - ") + (g_GameOptions.GameStatics.FreeCrafting.load() ? "enabled" : "disabled") + "\n" +
+                    std::string(" - Damage Multiplier       - ") + std::to_string(g_GameOptions.GameStatics.PlayerDamageMultiplier.load()) + "\n"
                 );
             }
         },
@@ -1115,38 +1176,61 @@ namespace Interpreter {
         }},
         { "OPT_ToggleHandyGnat", "Force enable/disable Handy Gnat availability", []() {
             CheatManager::StaticCheats::ToggleHandyGnat(
-                g_GameOptions.HandyGnatForceEnable.fetch_xor(1, std::memory_order_acq_rel)
+                g_GameOptions.GameStatics.HandyGnatForceEnable.fetch_xor(1, std::memory_order_acq_rel)
             );
             LogMessage(
                 "HandyGnat",
                 "Handy Gnat force enable is now " + std::string(
-                    g_GameOptions.HandyGnatForceEnable.load() ? "enabled" : "disabled"
+                    g_GameOptions.GameStatics.HandyGnatForceEnable.load() ? "enabled" : "disabled"
                 )
             );
         }},
         { "OPT_ToggleAutoCompleteBuildings", "Toggle auto-completion of building placements", []() {
             CheatManager::StaticCheats::ToggleAutoCompleteBuildings(
-                g_GameOptions.AutoCompleteBuildings.fetch_xor(1, std::memory_order_acq_rel)
+                g_GameOptions.GameStatics.AutoCompleteBuildings.fetch_xor(1, std::memory_order_acq_rel)
             );
             LogMessage(
                 "AutoCompleteBuildings",
                 "Auto-completion of building placements is now " + std::string(
-                    g_GameOptions.AutoCompleteBuildings.load() ? "enabled" : "disabled"
+                    g_GameOptions.GameStatics.AutoCompleteBuildings.load() ? "enabled" : "disabled"
                 )
             );
         }},
         { "OPT_ToggleBuildingIntegrity", "Toggle building integrity checks", []() {
             CheatManager::StaticCheats::ToggleBuildingIntegrity(
-                g_GameOptions.BuildingIntegrity.fetch_xor(1, std::memory_order_acq_rel)
+                g_GameOptions.GameStatics.BuildingIntegrity.fetch_xor(1, std::memory_order_acq_rel)
             );
             LogMessage(
                 "BuildingIntegrity",
                 "Building integrity checks are now " + std::string(
-                    g_GameOptions.BuildingIntegrity.load() ? "enabled" : "disabled"
+                    g_GameOptions.GameStatics.BuildingIntegrity.load() ? "enabled" : "disabled"
                 )
             );
 
-        }}
+        }},
+        { "OPT_ToggleFreeCrafting", "Toggle free crafting", []() {
+            CheatManager::StaticCheats::ToggleFreeCrafting(
+                g_GameOptions.GameStatics.FreeCrafting.fetch_xor(1, std::memory_order_acq_rel)
+            );
+            LogMessage(
+                "FreeCrafting",
+                "Free crafting is now " + std::string(
+                    g_GameOptions.GameStatics.FreeCrafting.load() ? "enabled" : "disabled"
+                )
+            );
+        }},
+        { "OPT_TogglePetInvincibility", "Toggle pet invincibility", []() {
+            CheatManager::StaticCheats::ToggleInvinciblePets(
+                g_GameOptions.GameStatics.InvinciblePets.fetch_xor(1, std::memory_order_acq_rel)
+            );
+            LogMessage(
+                "InvinciblePets",
+                "Pet invincibility is now " + std::string(
+                    g_GameOptions.GameStatics.InvinciblePets.load() ? "enabled" : "disabled"
+                )
+            );
+        }}, 
+        { "OPT_SetPlayerDamageMultiplier", "Set player damage multiplier", HandleSetPlayerDamageMultiplier }
     };
 
     void PrintAvailableCommands(

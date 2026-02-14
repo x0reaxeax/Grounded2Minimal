@@ -41,6 +41,18 @@ namespace CheatManager {
         void SetGameType(
             SDK::EGameType eNewGameType
         );
+
+        void ToggleFreeCrafting(
+            bool bEnable
+        );
+
+        void ToggleInvinciblePets(
+            bool bEnable
+        );
+
+        void SetPlayerDamageMultiplier(
+            float fNewMultiplier
+        );
     }
     
     namespace InvokedCheats {
