@@ -1028,8 +1028,10 @@ namespace Interpreter {
             );
             return;
         }
+
         CheatManager::StaticCheats::SetPlayerDamageMultiplier(fDamageMultiplier);
-        
+        g_GameOptions.GameStatics.PlayerDamageMultiplier.store(fDamageMultiplier, std::memory_order_relaxed);
+
         LogMessage(
             "SetPlayerDamageMultiplier",
             "Player damage multiplier set to " + std::to_string(fDamageMultiplier)
