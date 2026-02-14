@@ -446,6 +446,18 @@ namespace WinGUI {
                     (WS_CHILD | WS_VISIBLE | BS_PUSHLIKE | BS_AUTOCHECKBOX | WS_TABSTOP) :
                     (WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON | WS_TABSTOP);
                 
+                if (nullptr == g_CheatButtons[i].ButtonText) {
+                    // there's an oopsie with `Build All Structures`, because the button is separate 
+                    //  from the other buttons in terms of position, so it doesn't have an initializer in `g_CheatButtons` array.
+                    // deal with it 5iq style: 
+                    LogError(
+                        "WinGUI", 
+                        "Button text is null for button ID: %u" + g_CheatButtons[i].ButtonId,
+                        true
+                    );
+                    continue;
+                }
+
                 g_CheatButtons[i].ButtonHandle = CreateWindowExW(
                     0, L"BUTTON", g_CheatButtons[i].ButtonText,
                     dwStyle,
@@ -491,7 +503,7 @@ namespace WinGUI {
             );
 
             g_hButtonToggleHandyGnat = CreateWindowEx(
-                0, L"BUTTON", L"Toggle Handy Gnat Force Enable",
+                0, L"BUTTON", L"Enable Handy Gnat",
                 WS_CHILD | WS_VISIBLE | BS_AUTOCHECKBOX | WS_TABSTOP,
                 210, 35, 180, 20,
                 g_hMainWnd, (HMENU) IDC_TOGGLE_HANDY_GNAT, wcWindowClass.hInstance, NULL
@@ -506,7 +518,7 @@ namespace WinGUI {
             }
 
             g_hButtonToggleAutoCompleteBuildings = CreateWindowEx(
-                0, L"BUTTON", L"Toggle Auto Complete Buildings",
+                0, L"BUTTON", L"Auto Complete Buildings",
                 WS_CHILD | WS_VISIBLE | BS_AUTOCHECKBOX | WS_TABSTOP,
                 410, 10, 200, 20,
                 g_hMainWnd, (HMENU) IDC_TOGGLE_AUTO_COMPLETE_BUILDINGS, wcWindowClass.hInstance, NULL
@@ -521,7 +533,7 @@ namespace WinGUI {
             }
 
             g_hButtonToggleBuildingIntegrity = CreateWindowEx(
-                0, L"BUTTON", L"Toggle Building Integrity",
+                0, L"BUTTON", L"Building Integrity",
                 WS_CHILD | WS_VISIBLE | BS_AUTOCHECKBOX | WS_TABSTOP,
                 410, 35, 200, 20,
                 g_hMainWnd, (HMENU) IDC_TOGGLE_BUILDING_INTEGRITY, wcWindowClass.hInstance, NULL
