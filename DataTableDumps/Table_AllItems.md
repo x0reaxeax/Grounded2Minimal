@@ -339,15 +339,15 @@ Dump for game version 0.3.0.3
 | `BasketballPupa` | |
 | `ShieldAntRed` | |
 | `WarhammerPebblet` | |
-| `FistsMitey` | |
-| `FistsNorthern` | |
+| `FistsMitey` | Mitey Claws |
+| `FistsNorthern` | Northern Shredders |
 | `ShieldBombardier` | |
 | `ShieldLadybug` | |
 | `StaffSpicyTier2` | Spicy Staff |
 | `StaffMintTier2` | Mint Staff |
-| `Popsickle` | |
-| `DaggersWeaverFang` | |
-| `DaggersWolfFang` | |
+| `Popsickle` | Ice Sickles |
+| `DaggersWeaverFang` | Weaver Daggers |
+| `DaggersWolfFang` | Wolfsbane Fangs |
 | `SwordAntRed` | |
 | `SpearLarva` | |
 | `BowSpiderWolf` | |
@@ -554,7 +554,7 @@ Dump for game version 0.3.0.3
 | `SubjectVWorkshop01` | |
 | `SubjectVWorkshop02` | |
 | `AudioLogAnthill_Hatchery` | |
-| `GrilledScience` | |
+| `GrilledScience` | Grilled Science |
 | `SubjectVUnderdeck` | |
 | `KeyIceCart` | |
 | `KeyCoaltanaMats` | |
@@ -789,9 +789,9 @@ Dump for game version 0.3.0.3
 | `StaffSourTier3` | |
 | `KatangaSour` | |
 | `BowCricket` | |
-| `EarwigSickles` | |
+| `EarwigSickles` | Dusk Blades |
 | `StaffSourTier3Unique` | |
-| `EarwigSicklesUnique` | |
+| `EarwigSicklesUnique` | Crimson Reapers |
 | `BowCricketUnique` | |
 | `WarhammerSpicyUnique` | |
 | `GreatArrowSpicy` | |
