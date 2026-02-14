@@ -365,22 +365,6 @@ namespace CheatManager {
                 setter
             );
         }
-    }
-
-    namespace InvokedCheats {
-        void SetPlayerCollision(
-            bool bNewCollisionState
-        ) {
-            Command::Params::SetCollision *scParams = new Command::Params::SetCollision {
-                .lpPlayerState = UnrealUtils::GetLocalSurvivalPlayerState(),
-                .bNewCollisionState = bNewCollisionState
-            };
-
-            Command::SubmitTypedCommand(
-                Command::CommandId::CmdIdSetCollision,
-                scParams
-            );
-        }
 
         void ToggleHandyGnat(
             bool bEnable
@@ -424,6 +408,38 @@ namespace CheatManager {
                 return;
             }
             lpSettings->bEnableBuildingIntegrity = bEnable;
+        }
+
+
+    }
+
+    namespace InvokedCheats {
+        void SetPlayerCollision(
+            bool bNewCollisionState
+        ) {
+            Command::Params::SetCollision *scParams = new Command::Params::SetCollision {
+                .lpPlayerState = UnrealUtils::GetLocalSurvivalPlayerState(),
+                .bNewCollisionState = bNewCollisionState
+            };
+
+            Command::SubmitTypedCommand(
+                Command::CommandId::CmdIdSetCollision,
+                scParams
+            );
+        }
+
+        void SetGameMode(
+            SDK::EGameMode eNewGameMode
+        ) {
+            Command::Params::SetGameMode *lpParams  = new Command::Params::SetGameMode {
+                .lpSurvivalModeManager = UnrealUtils::GetSurvivalModeManagerComponent(),
+                .eNewGameMode = eNewGameMode
+            };
+
+            Command::SubmitTypedCommand(
+                Command::CommandId::CmdIdSetGameMode,
+                lpParams
+            );
         }
 
         void ServerBuildAllStructures(void) {

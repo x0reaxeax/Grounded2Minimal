@@ -1423,7 +1423,7 @@ namespace WinGUI {
                             std::memory_order_acq_rel
                         );
 
-                        CheatManager::InvokedCheats::ToggleHandyGnat(
+                        CheatManager::StaticCheats::ToggleHandyGnat(
                             bNewState
                         );
 
@@ -1451,7 +1451,7 @@ namespace WinGUI {
                             std::memory_order_acq_rel
                         );
 
-                        CheatManager::InvokedCheats::ToggleAutoCompleteBuildings(
+                        CheatManager::StaticCheats::ToggleAutoCompleteBuildings(
                             bNewState
                         );
 
@@ -1478,7 +1478,7 @@ namespace WinGUI {
                             std::memory_order_acq_rel
                         );
                         
-                        CheatManager::InvokedCheats::ToggleBuildingIntegrity(
+                        CheatManager::StaticCheats::ToggleBuildingIntegrity(
                             bNewState
                         );
 

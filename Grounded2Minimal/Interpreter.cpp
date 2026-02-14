@@ -1070,7 +1070,7 @@ namespace Interpreter {
             );
         }},
         { "OPT_ToggleHandyGnat", "Force enable/disable Handy Gnat availability", []() {
-            CheatManager::InvokedCheats::ToggleHandyGnat(
+            CheatManager::StaticCheats::ToggleHandyGnat(
                 g_GameOptions.HandyGnatForceEnable.fetch_xor(1, std::memory_order_acq_rel)
             );
             LogMessage(
@@ -1081,7 +1081,7 @@ namespace Interpreter {
             );
         }},
         { "OPT_ToggleAutoCompleteBuildings", "Toggle auto-completion of building placements", []() {
-            CheatManager::InvokedCheats::ToggleAutoCompleteBuildings(
+            CheatManager::StaticCheats::ToggleAutoCompleteBuildings(
                 g_GameOptions.AutoCompleteBuildings.fetch_xor(1, std::memory_order_acq_rel)
             );
             LogMessage(
@@ -1092,7 +1092,7 @@ namespace Interpreter {
             );
         }},
         { "OPT_ToggleBuildingIntegrity", "Toggle building integrity checks", []() {
-            CheatManager::InvokedCheats::ToggleBuildingIntegrity(
+            CheatManager::StaticCheats::ToggleBuildingIntegrity(
                 g_GameOptions.BuildingIntegrity.fetch_xor(1, std::memory_order_acq_rel)
             );
             LogMessage(

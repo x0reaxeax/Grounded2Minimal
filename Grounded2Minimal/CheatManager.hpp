@@ -25,13 +25,7 @@ namespace CheatManager {
         float CurrentWaterLevel(EStaticCheatOp eOperation, int32_t iTargetPlayerId, float fNewSetValue);
         float StaminaRegenRate(EStaticCheatOp eOperation, int32_t iTargetPlayerId, float fNewRegenRate);
         float StaminaRegenDelay(EStaticCheatOp eOperation, int32_t iTargetPlayerId, float fNewRegenDelay);
-    }
-    
-    namespace InvokedCheats {
-        void SetPlayerCollision(
-            bool bNewCollisionState
-        );
-
+        
         void ToggleHandyGnat(
             bool bEnable
         );
@@ -42,6 +36,12 @@ namespace CheatManager {
 
         void ToggleBuildingIntegrity(
             bool bEnable
+        );
+    }
+    
+    namespace InvokedCheats {
+        void SetPlayerCollision(
+            bool bNewCollisionState
         );
 
         void ServerBuildAllStructures(void);
