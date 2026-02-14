@@ -1,4 +1,5 @@
 # Data Table Dump - `Table_AllItems`
+Dump for game version 0.3.0.3
 
 | Internal Item Name |   Description   |
 | -----------------  | --------------- |
