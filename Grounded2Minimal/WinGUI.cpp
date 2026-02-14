@@ -452,7 +452,7 @@ namespace WinGUI {
                     // deal with it 5iq style: 
                     LogError(
                         "WinGUI", 
-                        "Button text is null for button ID: %u" + g_CheatButtons[i].ButtonId,
+                        "Button text is null for button ID: " + std::to_string(g_CheatButtons[i].ButtonId),
                         true
                     );
                     continue;
@@ -467,7 +467,14 @@ namespace WinGUI {
                 );
 
                 if (nullptr == g_CheatButtons[i].ButtonHandle) {
-                    LogError("WinGUI", "Failed to create CheatManager button: %ls", g_CheatButtons[i].ButtonText);
+                    std::wstring wszButtonText(
+                        (nullptr != g_CheatButtons[i].ButtonText) ? g_CheatButtons[i].ButtonText : L"(null)"
+                    );
+                    LogError(
+                        L"WinGUI", 
+                        L"Failed to create CheatManager button: '" + wszButtonText + L"'",
+                        true
+                    );
                     continue;
                 }
             }
@@ -1128,7 +1135,7 @@ namespace WinGUI {
             if (iPlayerId < 0) {
                 LogError(
                     "WinGUI", 
-                    "Invalid PlayerId: %d" + std::to_string(iPlayerId)
+                    "Invalid PlayerId: " + std::to_string(iPlayerId)
                 );
                 continue; // Skip invalid players
             }

@@ -937,6 +937,50 @@ namespace Interpreter {
         }
     }
 
+    static void HandleGameModeSwitch(void) {
+        /*
+         * Normal                                   = 1,
+	     * Relaxed                                  = 2,
+	     * Hard                                     = 3,
+	     * Creative                                 = 4,
+	     * CreativeCreatures                        = 5,
+	     * Custom                                   = 6,
+	     * Inventor                                 = 7,
+        */
+        const std::string cszGameModes = "Available game modes:\n"
+            " 1 - Normal\n"
+            " 2 - Relaxed\n"
+            " 3 - Hard\n"
+            " 4 - Creative\n"
+            " 5 - CreativeCreatures\n"
+            " 6 - Custom\n"
+            " 7 - Inventor\n";
+
+        std::cout << cszGameModes;
+
+        int32_t iGameMode = ReadIntegerInput(
+            "[GameModeSwitch] Enter game mode ID to switch to: ",
+            -1
+        );
+
+        if (iGameMode < 1 || iGameMode > 7) {
+            LogError(
+                "GameModeSwitch",
+                "Invalid game mode ID, must be between 1 and 7"
+            );
+            return;
+        }
+
+        CheatManager::InvokedCheats::SetGameMode(
+            static_cast<SDK::EGameMode>(iGameMode)
+        );
+
+        LogMessage(
+            "GameModeSwitch",
+            "Switched game mode to ID " + std::to_string(iGameMode)
+        );
+    }
+
     void PrintAvailableCommands(void);
 
     ConsoleCommand g_Commands[] = {

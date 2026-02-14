@@ -37,11 +37,19 @@ namespace CheatManager {
         void ToggleBuildingIntegrity(
             bool bEnable
         );
+
+        void SetGameType(
+            SDK::EGameType eNewGameType
+        );
     }
     
     namespace InvokedCheats {
         void SetPlayerCollision(
             bool bNewCollisionState
+        );
+
+        void SetGameMode(
+            SDK::EGameMode eNewGameMode
         );
 
         void ServerBuildAllStructures(void);

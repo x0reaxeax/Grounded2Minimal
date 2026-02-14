@@ -1206,6 +1206,72 @@ namespace UnrealUtils {
         return lpSurvivalModeManager->GameModeSettings;
     }
 
+    const std::string GameModeToString(
+        SDK::EGameMode eGameMode
+    ) {
+        switch (eGameMode) {
+            case SDK::EGameMode::None:
+                return "None";
+            case SDK::EGameMode::Normal:
+                return "Normal";
+            case SDK::EGameMode::Relaxed:
+                return "Relaxed";
+            case SDK::EGameMode::Hard:
+                return "Hard";
+            case SDK::EGameMode::Creative:
+                return "Creative";
+            case SDK::EGameMode::CreativeCreatures:
+                return "CreativeCreatures";
+            case SDK::EGameMode::Custom:
+                return "Custom";
+            case SDK::EGameMode::Inventor:
+                return "Inventor";
+            default:
+                return "Unknown";
+        }
+    }
+
+    [[maybe_unused]] SDK::EGameMode GameModeFromString(
+        const std::string& szGameModeStr
+    ) {
+        struct _Pair {
+            SDK::EGameMode eGameMode;
+            const std::string szGameModeStr;
+        };
+
+        std::vector<_Pair> vMappings = {
+            { SDK::EGameMode::None, "None" },
+            { SDK::EGameMode::Normal, "Normal" },
+            { SDK::EGameMode::Relaxed, "Relaxed" },
+            { SDK::EGameMode::Hard, "Hard" },
+            { SDK::EGameMode::Creative, "Creative" },
+            { SDK::EGameMode::CreativeCreatures, "CreativeCreatures" },
+            { SDK::EGameMode::Custom, "Custom" },
+            { SDK::EGameMode::Inventor, "Inventor" }
+        };
+
+        for (const auto& pair : vMappings) {
+            if (pair.szGameModeStr == szGameModeStr) {
+                return pair.eGameMode;
+            }
+        }
+
+        return SDK::EGameMode::None; // Default or unknown
+    }
+
+    const std::string GameTypeToString(
+        SDK::EGameType eGameType
+    ) {
+        switch (eGameType) {
+            case SDK::EGameType::Playground:
+                return "Playground";
+            case SDK::EGameType::Story:
+                return "Story";
+            default:
+                return "Unknown";
+        }
+    }
+
     namespace GameStatics {
         bool IsHandyGnatEnabled(void) {
             SDK::USurvivalGameModeSettings *lpSettings = UnrealUtils::GetSurvivalGameModeSettings();

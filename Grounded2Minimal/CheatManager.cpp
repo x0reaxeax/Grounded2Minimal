@@ -410,7 +410,27 @@ namespace CheatManager {
             lpSettings->bEnableBuildingIntegrity = bEnable;
         }
 
+        void SetGameType(
+            SDK::EGameType eNewGameType
+        ) {
+            SDK::USurvivalModeManagerComponent *lpManager =
+                UnrealUtils::GetSurvivalModeManagerComponent();
 
+            if (nullptr == lpManager) {
+                LogError(
+                    "GameType",
+                    "Failed to get SurvivalModeManagerComponent for SetGameType"
+                );
+                return;
+            }
+
+            lpManager->GameType = eNewGameType;
+
+            LogMessage(
+                "GameType",
+                "Game type set to " + UnrealUtils::GameTypeToString(eNewGameType)
+            );
+        }
     }
 
     namespace InvokedCheats {
