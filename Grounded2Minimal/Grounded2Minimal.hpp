@@ -39,6 +39,9 @@ struct GameOptions {
     std::atomic<ubool> BuildAnywhere{ false };
     std::atomic<ubool> GodMode{ false };
     std::atomic<ubool> InfiniteStamina{ false };
+    std::atomic<ubool> HandyGnatForceEnable{ false };
+    std::atomic<ubool> AutoCompleteBuildings{ false };
+    std::atomic<ubool> BuildingIntegrity{ false };
     SDK::ABuilding *lpCurrentlyAdjustedBuilding = nullptr;
 };
 

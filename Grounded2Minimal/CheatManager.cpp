@@ -382,6 +382,50 @@ namespace CheatManager {
             );
         }
 
+        void ToggleHandyGnat(
+            bool bEnable
+        ) {
+            SDK::USurvivalGameModeSettings *lpSettings = UnrealUtils::GetSurvivalGameModeSettings();
+            if (nullptr == lpSettings) {
+                LogError(
+                    "HandyGnat",
+                    "Failed to get SurvivalGameModeSettings from SurvivalModeManagerComponent"
+                );
+                return;
+            }
+
+            lpSettings->bBuildModeAvailable = bEnable;
+        }
+
+        void ToggleAutoCompleteBuildings(
+            bool bEnable
+        ) {
+            SDK::USurvivalGameModeSettings *lpSettings = UnrealUtils::GetSurvivalGameModeSettings();
+            if (nullptr == lpSettings) {
+                LogError(
+                    "HandyGnat",
+                    "Failed to get SurvivalGameModeSettings from SurvivalModeManagerComponent"
+                );
+                return;
+            }
+
+            lpSettings->bAutoCompleteBuildings = bEnable;
+        }
+
+        void ToggleBuildingIntegrity(
+            bool bEnable
+        ) {
+            SDK::USurvivalGameModeSettings *lpSettings = UnrealUtils::GetSurvivalGameModeSettings();
+            if (nullptr == lpSettings) {
+                LogError(
+                    "BuildingIntegrity",
+                    "Failed to get SurvivalGameModeSettings from SurvivalModeManagerComponent"
+                );
+                return;
+            }
+            lpSettings->bEnableBuildingIntegrity = bEnable;
+        }
+
         void ServerBuildAllStructures(void) {
             return; // Implemented through CheatManager
             /*Command::Params::BuildAll *lpParams = new Command::Params::BuildAll {

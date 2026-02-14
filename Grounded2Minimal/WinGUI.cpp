@@ -26,6 +26,9 @@
 #define IDC_CHECK_SHOW_CONSOLE                  100
 #define IDC_CHECK_GLOBAL_CHEAT                  101
 #define IDC_TOGGLE_BUILD_ANYWHERE               102
+#define IDC_TOGGLE_HANDY_GNAT                   103
+#define IDC_TOGGLE_AUTO_COMPLETE_BUILDINGS      104
+#define IDC_TOGGLE_BUILDING_INTEGRITY           105
 #define IDC_LIST_PLAYERS                        200
 #define IDC_LIST_DATA_TABLES                    201
 #define IDC_LIST_ITEM_NAMES                     202
@@ -271,6 +274,9 @@ namespace WinGUI {
     static HWND g_hCheckShowConsole = nullptr;
     static HWND g_hCheckGlobalCheat = nullptr;
     static HWND g_hButtonToggleBuildAnywhere = nullptr;
+    static HWND g_hButtonToggleHandyGnat = nullptr;
+    static HWND g_hButtonToggleBuildingIntegrity = nullptr;
+    static HWND g_hButtonToggleAutoCompleteBuildings = nullptr;
 
     ///////////////////////////////////////////////////////
     /// Forward declarations
@@ -483,6 +489,51 @@ namespace WinGUI {
                 210, 10, 180, 20,
                 g_hMainWnd, (HMENU) IDC_TOGGLE_BUILD_ANYWHERE, wcWindowClass.hInstance, NULL
             );
+
+            g_hButtonToggleHandyGnat = CreateWindowEx(
+                0, L"BUTTON", L"Toggle Handy Gnat Force Enable",
+                WS_CHILD | WS_VISIBLE | BS_AUTOCHECKBOX | WS_TABSTOP,
+                210, 35, 180, 20,
+                g_hMainWnd, (HMENU) IDC_TOGGLE_HANDY_GNAT, wcWindowClass.hInstance, NULL
+            );
+
+            if (nullptr != g_hButtonToggleHandyGnat) {
+                CheckDlgButton(
+                    g_hMainWnd,
+                    IDC_TOGGLE_HANDY_GNAT,
+                    g_GameOptions.HandyGnatForceEnable.load() ? BST_CHECKED : BST_UNCHECKED
+                );
+            }
+
+            g_hButtonToggleAutoCompleteBuildings = CreateWindowEx(
+                0, L"BUTTON", L"Toggle Auto Complete Buildings",
+                WS_CHILD | WS_VISIBLE | BS_AUTOCHECKBOX | WS_TABSTOP,
+                410, 10, 200, 20,
+                g_hMainWnd, (HMENU) IDC_TOGGLE_AUTO_COMPLETE_BUILDINGS, wcWindowClass.hInstance, NULL
+            );
+
+            if (nullptr != g_hButtonToggleAutoCompleteBuildings) {
+                CheckDlgButton(
+                    g_hMainWnd,
+                    IDC_TOGGLE_AUTO_COMPLETE_BUILDINGS,
+                    g_GameOptions.AutoCompleteBuildings.load() ? BST_CHECKED : BST_UNCHECKED
+                );
+            }
+
+            g_hButtonToggleBuildingIntegrity = CreateWindowEx(
+                0, L"BUTTON", L"Toggle Building Integrity",
+                WS_CHILD | WS_VISIBLE | BS_AUTOCHECKBOX | WS_TABSTOP,
+                410, 35, 200, 20,
+                g_hMainWnd, (HMENU) IDC_TOGGLE_BUILDING_INTEGRITY, wcWindowClass.hInstance, NULL
+            );
+
+            if (nullptr != g_hButtonToggleBuildingIntegrity) {
+                CheckDlgButton(
+                    g_hMainWnd,
+                    IDC_TOGGLE_BUILDING_INTEGRITY,
+                    g_GameOptions.BuildingIntegrity.load() ? BST_CHECKED : BST_UNCHECKED
+                );
+            }
 
             // Create player list
             g_hListPlayers = CreateWindowEx(
@@ -1332,8 +1383,10 @@ namespace WinGUI {
                             IDC_TOGGLE_BUILD_ANYWHERE
                         ));
                         g_GameOptions.BuildAnywhere.store(
-                            bNewState
+                            bNewState,
+                            std::memory_order_acq_rel
                         );
+
                         LogMessage(
                             "WinGUI", 
                             "Build Anywhere " + std::string(
@@ -1344,6 +1397,88 @@ namespace WinGUI {
                             true
                         );
 
+                        break;
+                    }
+
+                    case IDC_TOGGLE_HANDY_GNAT: {
+                        bool bNewState = (BST_CHECKED == IsDlgButtonChecked(
+                            hWnd, 
+                            IDC_TOGGLE_HANDY_GNAT
+                        ));
+
+                        g_GameOptions.HandyGnatForceEnable.store(
+                            bNewState,
+                            std::memory_order_acq_rel
+                        );
+
+                        CheatManager::InvokedCheats::ToggleHandyGnat(
+                            bNewState
+                        );
+
+                        LogMessage(
+                            "WinGUI", 
+                            "Handy Gnat Force Enable " + std::string(
+                                bNewState 
+                                ? "enabled" 
+                                : "disabled"
+                            ),
+                            true
+                        );
+
+                        break;
+                    }
+
+                    case IDC_TOGGLE_AUTO_COMPLETE_BUILDINGS: {
+                        bool bNewState = (BST_CHECKED == IsDlgButtonChecked(
+                            hWnd, 
+                            IDC_TOGGLE_AUTO_COMPLETE_BUILDINGS
+                        ));
+                        
+                        g_GameOptions.AutoCompleteBuildings.store(
+                            bNewState,
+                            std::memory_order_acq_rel
+                        );
+
+                        CheatManager::InvokedCheats::ToggleAutoCompleteBuildings(
+                            bNewState
+                        );
+
+                        LogMessage(
+                            "WinGUI", 
+                            "Auto-Complete Buildings " + std::string(
+                                bNewState 
+                                ? "enabled" 
+                                : "disabled"
+                            ),
+                            true
+                        );
+                        break;
+                    }
+
+                    case IDC_TOGGLE_BUILDING_INTEGRITY: {
+                        bool bNewState = (BST_CHECKED == IsDlgButtonChecked(
+                            hWnd, 
+                            IDC_TOGGLE_BUILDING_INTEGRITY
+                        ));
+                        
+                        g_GameOptions.BuildingIntegrity.store(
+                            bNewState,
+                            std::memory_order_acq_rel
+                        );
+                        
+                        CheatManager::InvokedCheats::ToggleBuildingIntegrity(
+                            bNewState
+                        );
+
+                        LogMessage(
+                            "WinGUI", 
+                            "Building Integrity Checks " + std::string(
+                                bNewState 
+                                ? "enabled" 
+                                : "disabled"
+                            ),
+                            true
+                        );
                         break;
                     }
 

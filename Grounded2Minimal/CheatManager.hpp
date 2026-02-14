@@ -32,6 +32,18 @@ namespace CheatManager {
             bool bNewCollisionState
         );
 
+        void ToggleHandyGnat(
+            bool bEnable
+        );
+
+        void ToggleAutoCompleteBuildings(
+            bool bEnable
+        );
+
+        void ToggleBuildingIntegrity(
+            bool bEnable
+        );
+
         void ServerBuildAllStructures(void);
     }
 

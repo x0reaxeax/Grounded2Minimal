@@ -143,6 +143,20 @@ namespace UnrealUtils {
     SDK::ASurvivalPlayerState *GetLocalSurvivalPlayerState(void);
 
     void DumpSurvivalCheatManagerInstances(void);
+
+    SDK::USurvivalModeManagerComponent *GetSurvivalModeManagerComponent(
+        void
+    );
+
+    SDK::USurvivalGameModeSettings* GetSurvivalGameModeSettings(
+        void
+    );
+
+    namespace GameStatics {
+        bool IsHandyGnatEnabled(void);
+        bool IsBuildingIntegrityEnabled(void);
+        bool IsAutoCompleteBuildingsEnabled(void);
+    }
 }
 
 #endif // _GROUNDED2_UNREAL_UTILS_HPP

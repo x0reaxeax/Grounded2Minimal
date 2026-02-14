@@ -452,6 +452,32 @@ NATIVEHOOK _HookedGetPlacementValid(
 
 /////////////////////////////////////////////////////////////
 
+void InitializeGameStatics(void) {
+    g_GameOptions.HandyGnatForceEnable.store(
+        UnrealUtils::GameStatics::IsHandyGnatEnabled(),
+        std::memory_order_acq_rel
+    );
+
+    g_GameOptions.BuildingIntegrity.store(
+        UnrealUtils::GameStatics::IsBuildingIntegrityEnabled(),
+        std::memory_order_acq_rel
+    );
+
+    g_GameOptions.AutoCompleteBuildings.store(
+        UnrealUtils::GameStatics::IsAutoCompleteBuildingsEnabled(),
+        std::memory_order_acq_rel
+    );
+
+    LogMessage(
+        "Init - GameStatics",
+        "Initial game options: " +
+        std::string("HandyGnatForceEnable=") + (g_GameOptions.HandyGnatForceEnable.load() ? "true" : "false") + ", " +
+        std::string("BuildingIntegrity=") + (g_GameOptions.BuildingIntegrity.load() ? "true" : "false") + ", " +
+        std::string("AutoCompleteBuildings=") + (g_GameOptions.AutoCompleteBuildings.load() ? "true" : "false"),
+        true
+    );
+}
+
 DWORD WINAPI ThreadEntry(
     LPVOID lpParam
 ) { 
@@ -516,7 +542,7 @@ DWORD WINAPI ThreadEntry(
     // Host authority check
     LogMessage(
         "Init",
-        "Checking client host authority"
+        "Checking client host authority..."
     );
 
     g_G2MOptions.bIsClientHost = UnrealUtils::IsPlayerHostAuthority(
@@ -602,13 +628,18 @@ DWORD WINAPI ThreadEntry(
     LogMessage("Init", "Hooks initialized");
 
     if (g_G2MOptions.bIsClientHost) {
-        LogMessage("Init", "Initializing CheatManager..");
+        LogMessage("Init", "Initializing CheatManager...");
         if (!CheatManager::ManualInitialize()) {
             LogError("Init", "Failed to initialize CheatManager");
             goto _RYUJI;
         }
         LogMessage("Init", "CheatManager initialized successfully");
     }
+
+    // Game Statics read
+    LogMessage("Init", "Reading 'GameStatics' game option values...");
+
+    InitializeGameStatics();
 
     // Cache initialization
 

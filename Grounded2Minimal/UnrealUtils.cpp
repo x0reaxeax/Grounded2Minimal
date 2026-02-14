@@ -99,8 +99,17 @@ namespace UnrealUtils {
     }
 
     SDK::USurvivalGameplayStatics* GetSurvivalGameplayStatics(void) {
-        SDK::USurvivalGameplayStatics* lpStatics = nullptr;
-        
+        SDK::USurvivalGameplayStatics* lpStatics = 
+            SDK::USurvivalGameplayStatics::GetDefaultObj();
+
+        if (nullptr == lpStatics) {
+            LogError(
+                "GetSurvivalGameplayStatics",
+                "USurvivalGameplayStatics default object is NULL"
+            );
+        }
+
+        return lpStatics;
     }
 
     void DumpClasses(
@@ -1143,6 +1152,96 @@ namespace UnrealUtils {
                 "Found SurvivalCheatManager instance: " + lpSurvivalCheatManager->GetFullName()
                 + " (index: " + std::to_string(lpSurvivalCheatManager->Index) + ")"
             );
+        }
+    }
+
+    SDK::USurvivalModeManagerComponent *GetSurvivalModeManagerComponent(
+        void
+    ) {
+        SDK::ASurvivalGameState *lpGameState = GetSurvivalGameplayStatics()->GetSurvivalGameState(
+            GetWorld()
+        );
+
+        if (nullptr == lpGameState) {
+            LogError(
+                "SurvivalModeManager", 
+                "Failed to get SurvivalGameState"
+            );
+            return nullptr;
+        }
+
+        SDK::USurvivalModeManagerComponent *lpModeManagerComponent = 
+            lpGameState->SurvivalModeManagerComponent;
+
+        if (nullptr == lpModeManagerComponent) {
+            LogError(
+                "SurvivalModeManager",
+                "SurvivalModeManagerComponent is NULL"
+            );
+        }
+
+        return lpModeManagerComponent;
+    }
+
+    SDK::USurvivalGameModeSettings* GetSurvivalGameModeSettings(
+        void
+    ) {
+        SDK::USurvivalModeManagerComponent * lpSurvivalModeManager =
+            UnrealUtils::GetSurvivalModeManagerComponent();
+
+        if (nullptr == lpSurvivalModeManager) {
+            LogError(
+                "SurvivalGameModeSettings",
+                "Failed to get SurvivalModeManagerComponent"
+            );
+            return nullptr;
+        }
+
+        if (nullptr == lpSurvivalModeManager->GameModeSettings) {
+            LogError(
+                "SurvivalGameModeSettings",
+                "GameModeSettings is NULL in SurvivalModeManagerComponent"
+            );
+        }
+        return lpSurvivalModeManager->GameModeSettings;
+    }
+
+    namespace GameStatics {
+        bool IsHandyGnatEnabled(void) {
+            SDK::USurvivalGameModeSettings *lpSettings = UnrealUtils::GetSurvivalGameModeSettings();
+            if (nullptr == lpSettings) {
+                LogError(
+                    "HandyGnat",
+                    "Failed to get SurvivalGameModeSettings from SurvivalModeManagerComponent"
+                );
+                return false;
+            }
+
+            return lpSettings->bBuildModeAvailable;
+        }
+
+        bool IsBuildingIntegrityEnabled(void) {
+            SDK::USurvivalGameModeSettings *lpSettings = UnrealUtils::GetSurvivalGameModeSettings();
+            if (nullptr == lpSettings) {
+                LogError(
+                    "BuildingIntegrity",
+                    "Failed to get SurvivalGameModeSettings from SurvivalModeManagerComponent"
+                );
+                return false;
+            }
+            return lpSettings->bEnableBuildingIntegrity;
+        }
+
+        bool IsAutoCompleteBuildingsEnabled(void) {
+            SDK::USurvivalGameModeSettings *lpSettings = UnrealUtils::GetSurvivalGameModeSettings();
+            if (nullptr == lpSettings) {
+                LogError(
+                    "AutoCompleteBuildings",
+                    "Failed to get SurvivalGameModeSettings from SurvivalModeManagerComponent"
+                );
+                return false;
+            }
+            return lpSettings->bAutoCompleteBuildings;
         }
     }
 }

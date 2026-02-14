@@ -1023,6 +1023,20 @@ namespace Interpreter {
                 }
             }
         },
+        {
+            "X_ShowGameOptions", "Show current game options", []() {
+                LogMessage(
+                    "GameOptions",
+                    "Current Game Options:\n" +
+                    std::string(" - BuildAnywhere: ") + (g_GameOptions.BuildAnywhere.load() ? "enabled" : "disabled") + "\n" +
+                    std::string(" - HandyGnatForceEnable: ") + (g_GameOptions.HandyGnatForceEnable.load() ? "enabled" : "disabled") + "\n" +
+                    std::string(" - AutoCompleteBuildings: ") + (g_GameOptions.AutoCompleteBuildings.load() ? "enabled" : "disabled") + "\n" +
+                    std::string(" - BuildingIntegrity: ") + (g_GameOptions.BuildingIntegrity.load() ? "enabled" : "disabled") + "\n" +
+                    std::string(" - GodMode: ") + (g_GameOptions.GodMode.load() ? "enabled" : "disabled") + "\n" +
+                    std::string(" - InfiniteStamina: ") + (g_GameOptions.InfiniteStamina.load() ? "enabled" : "disabled") + "\n"
+                );
+            }
+        },
         { 
             "OPT_BuildAnywhere", "Toggle BuildAnywhere option", []() {
                 // todo: make a macro for global output enable for a function call
@@ -1054,6 +1068,40 @@ namespace Interpreter {
             HandleMaxCozinessLevelAchieved(
                 CheatManager::StaticCheats::EStaticCheatOp::Set
             );
+        }},
+        { "OPT_ToggleHandyGnat", "Force enable/disable Handy Gnat availability", []() {
+            CheatManager::InvokedCheats::ToggleHandyGnat(
+                g_GameOptions.HandyGnatForceEnable.fetch_xor(1, std::memory_order_acq_rel)
+            );
+            LogMessage(
+                "HandyGnat",
+                "Handy Gnat force enable is now " + std::string(
+                    g_GameOptions.HandyGnatForceEnable.load() ? "enabled" : "disabled"
+                )
+            );
+        }},
+        { "OPT_ToggleAutoCompleteBuildings", "Toggle auto-completion of building placements", []() {
+            CheatManager::InvokedCheats::ToggleAutoCompleteBuildings(
+                g_GameOptions.AutoCompleteBuildings.fetch_xor(1, std::memory_order_acq_rel)
+            );
+            LogMessage(
+                "AutoCompleteBuildings",
+                "Auto-completion of building placements is now " + std::string(
+                    g_GameOptions.AutoCompleteBuildings.load() ? "enabled" : "disabled"
+                )
+            );
+        }},
+        { "OPT_ToggleBuildingIntegrity", "Toggle building integrity checks", []() {
+            CheatManager::InvokedCheats::ToggleBuildingIntegrity(
+                g_GameOptions.BuildingIntegrity.fetch_xor(1, std::memory_order_acq_rel)
+            );
+            LogMessage(
+                "BuildingIntegrity",
+                "Building integrity checks are now " + std::string(
+                    g_GameOptions.BuildingIntegrity.load() ? "enabled" : "disabled"
+                )
+            );
+
         }}
     };
 
