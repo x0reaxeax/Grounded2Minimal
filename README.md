@@ -53,7 +53,7 @@ The Item Count field allows you to specify how many items you want to spawn. By 
 In order to spawn an item:
  1.  Select a player from the list who will receive the item.
  2.  Select a data table from the dropdown.
- 3.  Select an item from the dropdown.
+ 3.  Select an item from the dropdown.  
  3.5 Optionally, you can specify the quantity.
  4.  Click the "Spawn Item" button.
 
