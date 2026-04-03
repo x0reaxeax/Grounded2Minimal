@@ -101,6 +101,9 @@ The debug console can be used to execute the following commands:
 | `OPT_SetMaxActiveMutations` | Set max active mutations |
 | `OPT_GetMaxCozinessLevelAchieved` | Get max coziness level achieved |
 | `OPT_SetMaxCozinessLevelAchieved` | Set max coziness level achieved |
+| `OPT_ToggleHandyGnat` | Force enable/disable Handy Gnat availability |
+| `OPT_ToggleAutoCompleteBuildings` | Toggle auto-completion of building placements |
+| `OPT_ToggleBuildingIntegrity` | Toggle building integrity checks |
 | `<Item Name Needle>` | Searches for spawned items around the player by a given name needle (empty input displays all) |
 | `X_HookInfo` | Show details on installed hooks |
 | `X_DebugToggle`      | Toggles debug output (very spammy and performance heavy) |
@@ -108,6 +111,7 @@ The debug console can be used to execute the following commands:
 | `X_InitCheatManager` | Initializes CheatManager |
 | `X_ToggleDebugPlayerReport` | Toggle automatic debug player report |
 | `X_ReloadBinds` | Reloads key binds from configuration file |
+| `X_ShowGameOptions` | Show current game options set by the tool | 
 | `exit` or `quit`     | Unloads game hooks and exits the tool |
 
 ## Keybinds
@@ -145,7 +149,15 @@ Grounded2Minimal [$(ProjectDir)]:
 |       blah blah blah
 ```
 
-C++17 or higher is required.
+C++17 or higher is required.  
+  
+**Note:**  
+If one of the following offsets in `CppSdk\Basic.hpp` is `0` (`0x00000000`):
+ - `GWorld`
+ - `GNames`
+ - `GObjects`  
+  
+\- use this additional dumper tool - [G2Dumper](https://github.com/x0reaxeax/G2Dumper), or find the offsets manually.  
 
 ## Notes
  - This tool is more of a proof of concept meme than a dependable tool. I have zero knowledge in OOP, and minimal knowledge of Unreal Engine, or non-C C++ features.
