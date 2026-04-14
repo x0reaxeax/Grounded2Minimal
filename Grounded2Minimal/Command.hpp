@@ -23,6 +23,11 @@ namespace Command {
             bool bNewCollisionState;
         };
 
+        struct SetGameMode {
+            SDK::USurvivalModeManagerComponent *lpSurvivalModeManager = nullptr;
+            SDK::EGameMode eNewGameMode;
+        };
+
         struct ManualAdjustment {
             SDK::ABuilding *lpBuilding = nullptr;
             SDK::FVector AdjustmentVector{ 0.0f, 0.0f, 0.0f };
@@ -51,6 +56,7 @@ namespace Command {
         CmdIdUnlockAchievement,
         CmdIdSetCollision,
         CmdIdManualBuildingAdjustment,
+        CmdIdSetGameMode,
         CmdIdMax
     };
 

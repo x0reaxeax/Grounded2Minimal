@@ -365,22 +365,6 @@ namespace CheatManager {
                 setter
             );
         }
-    }
-
-    namespace InvokedCheats {
-        void SetPlayerCollision(
-            bool bNewCollisionState
-        ) {
-            Command::Params::SetCollision *scParams = new Command::Params::SetCollision {
-                .lpPlayerState = UnrealUtils::GetLocalSurvivalPlayerState(),
-                .bNewCollisionState = bNewCollisionState
-            };
-
-            Command::SubmitTypedCommand(
-                Command::CommandId::CmdIdSetCollision,
-                scParams
-            );
-        }
 
         void ToggleHandyGnat(
             bool bEnable
@@ -424,6 +408,100 @@ namespace CheatManager {
                 return;
             }
             lpSettings->bEnableBuildingIntegrity = bEnable;
+        }
+
+        void ToggleFreeCrafting(
+            bool bEnable
+        ) {
+            SDK::USurvivalGameModeSettings *lpSettings = UnrealUtils::GetSurvivalGameModeSettings();
+            if (nullptr == lpSettings) {
+                LogError(
+                    "FreeCrafting",
+                    "Failed to get SurvivalGameModeSettings from SurvivalModeManagerComponent"
+                );
+                return;
+            }
+            lpSettings->bRecipesRequireIngredients = bEnable;
+        }
+
+        void ToggleInvinciblePets(
+            bool bEnable
+        ) {
+            SDK::USurvivalGameModeSettings *lpSettings = UnrealUtils::GetSurvivalGameModeSettings();
+            if (nullptr == lpSettings) {
+                LogError(
+                    "InvinciblePets",
+                    "Failed to get SurvivalGameModeSettings from SurvivalModeManagerComponent"
+                );
+                return;
+            }
+            lpSettings->bPetInvincible = !bEnable;
+        }
+
+        void SetPlayerDamageMultiplier(
+            float fNewMultiplier
+        ) {
+            SDK::USurvivalGameModeSettings *lpSettings = UnrealUtils::GetSurvivalGameModeSettings();
+            if (nullptr == lpSettings) {
+                LogError(
+                    "PlayerDamageMultiplier",
+                    "Failed to get SurvivalGameModeSettings from SurvivalModeManagerComponent"
+                );
+                return;
+            }
+            lpSettings->PlayerDamageMultiplier = fNewMultiplier;
+        }
+
+        void SetGameType(
+            SDK::EGameType eNewGameType
+        ) {
+            SDK::USurvivalModeManagerComponent *lpManager =
+                UnrealUtils::GetSurvivalModeManagerComponent();
+
+            if (nullptr == lpManager) {
+                LogError(
+                    "GameType",
+                    "Failed to get SurvivalModeManagerComponent for SetGameType"
+                );
+                return;
+            }
+
+            lpManager->GameType = eNewGameType;
+
+            LogMessage(
+                "GameType",
+                "Game type set to " + UnrealUtils::GameTypeToString(eNewGameType)
+            );
+        }
+    }
+
+    namespace InvokedCheats {
+        void SetPlayerCollision(
+            bool bNewCollisionState
+        ) {
+            Command::Params::SetCollision *scParams = new Command::Params::SetCollision {
+                .lpPlayerState = UnrealUtils::GetLocalSurvivalPlayerState(),
+                .bNewCollisionState = bNewCollisionState
+            };
+
+            Command::SubmitTypedCommand(
+                Command::CommandId::CmdIdSetCollision,
+                scParams
+            );
+        }
+
+        void SetGameMode(
+            SDK::EGameMode eNewGameMode
+        ) {
+            Command::Params::SetGameMode *lpParams  = new Command::Params::SetGameMode {
+                .lpSurvivalModeManager = UnrealUtils::GetSurvivalModeManagerComponent(),
+                .eNewGameMode = eNewGameMode
+            };
+
+            Command::SubmitTypedCommand(
+                Command::CommandId::CmdIdSetGameMode,
+                lpParams
+            );
         }
 
         void ServerBuildAllStructures(void) {

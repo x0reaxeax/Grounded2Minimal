@@ -452,7 +452,7 @@ namespace WinGUI {
                     // deal with it 5iq style: 
                     LogError(
                         "WinGUI", 
-                        "Button text is null for button ID: %u" + g_CheatButtons[i].ButtonId,
+                        "Button text is null for button ID: " + std::to_string(g_CheatButtons[i].ButtonId),
                         true
                     );
                     continue;
@@ -467,7 +467,14 @@ namespace WinGUI {
                 );
 
                 if (nullptr == g_CheatButtons[i].ButtonHandle) {
-                    LogError("WinGUI", "Failed to create CheatManager button: %ls", g_CheatButtons[i].ButtonText);
+                    std::wstring wszButtonText(
+                        (nullptr != g_CheatButtons[i].ButtonText) ? g_CheatButtons[i].ButtonText : L"(null)"
+                    );
+                    LogError(
+                        L"WinGUI", 
+                        L"Failed to create CheatManager button: '" + wszButtonText + L"'",
+                        true
+                    );
                     continue;
                 }
             }
@@ -513,7 +520,7 @@ namespace WinGUI {
                 CheckDlgButton(
                     g_hMainWnd,
                     IDC_TOGGLE_HANDY_GNAT,
-                    g_GameOptions.HandyGnatForceEnable.load() ? BST_CHECKED : BST_UNCHECKED
+                    g_GameOptions.GameStatics.HandyGnatForceEnable.load() ? BST_CHECKED : BST_UNCHECKED
                 );
             }
 
@@ -528,7 +535,7 @@ namespace WinGUI {
                 CheckDlgButton(
                     g_hMainWnd,
                     IDC_TOGGLE_AUTO_COMPLETE_BUILDINGS,
-                    g_GameOptions.AutoCompleteBuildings.load() ? BST_CHECKED : BST_UNCHECKED
+                    g_GameOptions.GameStatics.AutoCompleteBuildings.load() ? BST_CHECKED : BST_UNCHECKED
                 );
             }
 
@@ -543,7 +550,7 @@ namespace WinGUI {
                 CheckDlgButton(
                     g_hMainWnd,
                     IDC_TOGGLE_BUILDING_INTEGRITY,
-                    g_GameOptions.BuildingIntegrity.load() ? BST_CHECKED : BST_UNCHECKED
+                    g_GameOptions.GameStatics.BuildingIntegrity.load() ? BST_CHECKED : BST_UNCHECKED
                 );
             }
 
@@ -1128,7 +1135,7 @@ namespace WinGUI {
             if (iPlayerId < 0) {
                 LogError(
                     "WinGUI", 
-                    "Invalid PlayerId: %d" + std::to_string(iPlayerId)
+                    "Invalid PlayerId: " + std::to_string(iPlayerId)
                 );
                 continue; // Skip invalid players
             }
@@ -1418,12 +1425,12 @@ namespace WinGUI {
                             IDC_TOGGLE_HANDY_GNAT
                         ));
 
-                        g_GameOptions.HandyGnatForceEnable.store(
+                        g_GameOptions.GameStatics.HandyGnatForceEnable.store(
                             bNewState,
                             std::memory_order_acq_rel
                         );
 
-                        CheatManager::InvokedCheats::ToggleHandyGnat(
+                        CheatManager::StaticCheats::ToggleHandyGnat(
                             bNewState
                         );
 
@@ -1446,12 +1453,12 @@ namespace WinGUI {
                             IDC_TOGGLE_AUTO_COMPLETE_BUILDINGS
                         ));
                         
-                        g_GameOptions.AutoCompleteBuildings.store(
+                        g_GameOptions.GameStatics.AutoCompleteBuildings.store(
                             bNewState,
                             std::memory_order_acq_rel
                         );
 
-                        CheatManager::InvokedCheats::ToggleAutoCompleteBuildings(
+                        CheatManager::StaticCheats::ToggleAutoCompleteBuildings(
                             bNewState
                         );
 
@@ -1473,12 +1480,12 @@ namespace WinGUI {
                             IDC_TOGGLE_BUILDING_INTEGRITY
                         ));
                         
-                        g_GameOptions.BuildingIntegrity.store(
+                        g_GameOptions.GameStatics.BuildingIntegrity.store(
                             bNewState,
                             std::memory_order_acq_rel
                         );
                         
-                        CheatManager::InvokedCheats::ToggleBuildingIntegrity(
+                        CheatManager::StaticCheats::ToggleBuildingIntegrity(
                             bNewState
                         );
 

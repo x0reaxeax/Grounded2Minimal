@@ -39,10 +39,15 @@ struct GameOptions {
     std::atomic<ubool> BuildAnywhere{ false };
     std::atomic<ubool> GodMode{ false };
     std::atomic<ubool> InfiniteStamina{ false };
-    std::atomic<ubool> HandyGnatForceEnable{ false };
-    std::atomic<ubool> AutoCompleteBuildings{ false };
-    std::atomic<ubool> BuildingIntegrity{ false };
-    SDK::ABuilding *lpCurrentlyAdjustedBuilding = nullptr;
+    struct _GameStatics {
+        std::atomic<ubool> HandyGnatForceEnable{ false };
+        std::atomic<ubool> AutoCompleteBuildings{ false };
+        std::atomic<ubool> BuildingIntegrity{ false };
+        std::atomic<ubool> FreeCrafting{ false };
+        std::atomic<ubool> InvinciblePets{ false };
+        std::atomic<float> PlayerDamageMultiplier{ 1.0f };
+    } GameStatics;
+    std::atomic<SDK::ABuilding *> CurrentlyAdjustedBuilding = nullptr;
 };
 
 struct G2MOptions {

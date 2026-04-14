@@ -49,6 +49,12 @@ void LogError(
     bool bOnlyDebug = false
 );
 
+void LogError(
+    const std::wstring& wszPrefix,
+    const std::wstring& wszMessage,
+    bool bOnlyDebug = false
+);
+
 HANDLE *InitalizeLogFile(void);
 
 #endif // _GROUNDED2_MINIMAL_LOGGING_HPP

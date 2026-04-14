@@ -152,10 +152,17 @@ namespace UnrealUtils {
         void
     );
 
+    const std::string GameTypeToString(
+        SDK::EGameType eGameType
+    );
+
     namespace GameStatics {
         bool IsHandyGnatEnabled(void);
         bool IsBuildingIntegrityEnabled(void);
         bool IsAutoCompleteBuildingsEnabled(void);
+        bool IsPetInvincibilityEnabled(void);
+        bool IsFreeCraftingEnabled(void);
+        float GetPlayerDamageMultiplier(void);
     }
 }
 

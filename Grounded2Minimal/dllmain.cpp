@@ -453,27 +453,50 @@ NATIVEHOOK _HookedGetPlacementValid(
 /////////////////////////////////////////////////////////////
 
 void InitializeGameStatics(void) {
-    g_GameOptions.HandyGnatForceEnable.store(
+    g_GameOptions.GameStatics.HandyGnatForceEnable.store(
         UnrealUtils::GameStatics::IsHandyGnatEnabled(),
         std::memory_order_acq_rel
     );
 
-    g_GameOptions.BuildingIntegrity.store(
+    g_GameOptions.GameStatics.BuildingIntegrity.store(
         UnrealUtils::GameStatics::IsBuildingIntegrityEnabled(),
         std::memory_order_acq_rel
     );
 
-    g_GameOptions.AutoCompleteBuildings.store(
+    g_GameOptions.GameStatics.AutoCompleteBuildings.store(
         UnrealUtils::GameStatics::IsAutoCompleteBuildingsEnabled(),
         std::memory_order_acq_rel
     );
 
+    g_GameOptions.GameStatics.FreeCrafting.store(
+        UnrealUtils::GameStatics::IsFreeCraftingEnabled(),
+        std::memory_order_acq_rel
+    );
+
+    g_GameOptions.GameStatics.InvinciblePets.store(
+        UnrealUtils::GameStatics::IsPetInvincibilityEnabled(),
+        std::memory_order_acq_rel
+    );
+
+    g_GameOptions.GameStatics.PlayerDamageMultiplier.store(
+        UnrealUtils::GameStatics::GetPlayerDamageMultiplier(),
+        std::memory_order_acq_rel
+    );
+
+    g_GameOptions.CurrentlyAdjustedBuilding.store(
+        nullptr,
+        std::memory_order_release
+    );
+
     LogMessage(
         "Init - GameStatics",
-        "Initial game options: " +
-        std::string("HandyGnatForceEnable=") + (g_GameOptions.HandyGnatForceEnable.load() ? "true" : "false") + ", " +
-        std::string("BuildingIntegrity=") + (g_GameOptions.BuildingIntegrity.load() ? "true" : "false") + ", " +
-        std::string("AutoCompleteBuildings=") + (g_GameOptions.AutoCompleteBuildings.load() ? "true" : "false"),
+        "Initial game options: \n" +
+        std::string(" * HandyGnatForceEnable   =") + (g_GameOptions.GameStatics.HandyGnatForceEnable.load() ? "true" : "false") + "\n" +
+        std::string(" * BuildingIntegrity      =") + (g_GameOptions.GameStatics.BuildingIntegrity.load() ? "true" : "false") + "\n" +
+        std::string(" * AutoCompleteBuildings  =") + (g_GameOptions.GameStatics.AutoCompleteBuildings.load() ? "true" : "false") + "\n" +
+        std::string(" * FreeCrafting           =") + (g_GameOptions.GameStatics.FreeCrafting.load() ? "true" : "false") + "\n" +
+        std::string(" * InvinciblePets         =") + (g_GameOptions.GameStatics.InvinciblePets.load() ? "true" : "false") + "\n" +
+        std::string(" * PlayerDamageMultiplier =") + std::to_string(g_GameOptions.GameStatics.PlayerDamageMultiplier.load()) + "\n",
         true
     );
 }

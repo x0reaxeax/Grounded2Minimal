@@ -196,6 +196,36 @@ void LogError(
     std::cout << szErrorMessage;
 }
 
+void LogError(
+    const std::wstring& wszPrefix,
+    const std::wstring& wszMessage,
+    bool bOnlyDebug
+) {
+    std::wstring wszErrorMessage = L"[" + wszPrefix + L"] ERROR: " + wszMessage + L"\r\n";
+    if (IsFileLoggingEnabled()) {
+        if (IsHandleValid(g_hLogFile)) {
+            DWORD dwBytesWritten = 0;
+            WriteFile(
+                g_hLogFile,
+                wszErrorMessage.c_str(),
+                static_cast<DWORD>(wszErrorMessage.length() * sizeof(wchar_t)),
+                &dwBytesWritten,
+                nullptr
+            );
+            // flush the file buffers to ensure immediate write
+            FlushFileBuffers(g_hLogFile);
+        }
+    }
+    if (!IsGlobalOutputEnabled() && !IsDebugOutputEnabled()) {
+        return;
+    }
+    if (bOnlyDebug && !IsDebugOutputEnabled()) {
+        return; // Skip logging if debug mode is off
+    }
+    //std::wcout << L"[" << wszPrefix << L"] ERROR: " << wszMessage << std::endl;
+    std::wcout << wszErrorMessage;
+}
+
 HANDLE *InitalizeLogFile(void) {
     g_hLogFile = CreateFileA(
         G2M_LOG_PATH,

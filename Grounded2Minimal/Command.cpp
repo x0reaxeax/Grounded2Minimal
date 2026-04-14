@@ -215,6 +215,33 @@ namespace Command {
                 break;
             }
 
+            case CommandId::CmdIdSetGameMode: {
+                LogMessage("ProcessEvent", "Command: Set Game Mode", true);
+
+                if (nullptr == localBuffer.Params) {
+                    LogError("ProcessEvent", "CmdIdSetGameMode: Params are null");
+                    break;
+                }
+
+                Params::SetGameMode* lpParams =
+                    static_cast<Params::SetGameMode*>(localBuffer.Params);
+
+                if (nullptr == lpParams->lpSurvivalModeManager) {
+                    LogError("ProcessEvent", "CmdIdSetGameMode: SurvivalModeManager is null");
+                    break;
+                }
+
+                LogMessage(
+                    "ProcessEvent",
+                    "SetGameMode - New Game Mode: " +
+                    std::to_string(static_cast<uint16_t>(lpParams->eNewGameMode)),
+                    true
+                );
+
+                lpParams->lpSurvivalModeManager->SetGameMode(lpParams->eNewGameMode);
+                break;
+            }
+
             default: {
                 LogError(
                     "ProcessEvent",
