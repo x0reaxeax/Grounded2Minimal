@@ -1,6 +1,6 @@
 # Grounded2Minimal - Small debug/cheat/mod tool for Grounded 2 (Steam + Xbox Game Pass)
 
-[![Release workflow](https://github.com/x0reaxeax/G2M-Private/actions/workflows/release.yml/badge.svg)](https://github.com/x0reaxeax/G2M-Private/actions/workflows/release.yml)
+[![Release workflow](https://github.com/x0reaxeax/Grounded2Minimal/actions/workflows/release.yml/badge.svg)](https://github.com/x0reaxeax/Grounded2Minimal/actions/workflows/release.yml)
 
 ## !!!IMPORTANT PLZ READ!!!
 Under set configurations, this tool can allow any connected players to **EXECUTE CONTROLLED CODE ON YOUR MACHINE**.  
