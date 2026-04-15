@@ -1,0 +1,252 @@
+name: Build and Release
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: read
+
+jobs:
+  build-release:
+    name: Build ${{ matrix.target_name }}
+    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target_name: STEAM
+            solution_config: Release-Steam
+            output_dir: x64/Release-Steam
+            readme_file: .github/release-assets/README-STEAM.txt
+            zip_name: Grounded2Minimal-STEAM.zip
+            injector_name: Injector-STEAM.exe
+            pdb_name: Grounded2Minimal-STEAM.pdb
+            hash_name: SHA384-STEAM.txt
+          - target_name: XGP
+            solution_config: Release-XGP
+            output_dir: x64/Release-XGP
+            readme_file: .github/release-assets/README-XGP.txt
+            zip_name: Grounded2Minimal-XGP.zip
+            injector_name: Injector-XGP.exe
+            pdb_name: Grounded2Minimal-XGP.pdb
+            hash_name: SHA384-XGP.txt
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup MSBuild
+        uses: microsoft/setup-msbuild@v2
+
+      - name: Download SDK asset
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          New-Item -ItemType Directory -Force -Path _sdk | Out-Null
+          gh release download sdk --pattern "Grounded2Minimal-SDK.zip" --dir _sdk
+
+      - name: Extract SDK into project directory
+        shell: pwsh
+        run: |
+          $projectDir = Join-Path $pwd "Grounded2Minimal"
+          $sdkArchive = Join-Path $pwd "_sdk/Grounded2Minimal-SDK.zip"
+          $sdkProjectFiles = @(
+            "SDK",
+            "NameCollisions.inl",
+            "PropertyFixup.hpp",
+            "SDK.hpp",
+            "UtfN.hpp",
+            "UnrealContainers.hpp"
+          )
+
+          foreach ($relativePath in $sdkProjectFiles) {
+            $fullPath = Join-Path $projectDir $relativePath
+            if (Test-Path $fullPath) {
+              Remove-Item $fullPath -Recurse -Force
+            }
+          }
+
+          Expand-Archive -Path $sdkArchive -DestinationPath $projectDir -Force
+
+          $requiredPaths = @(
+            "SDK",
+            "SDK.hpp",
+            "UnrealContainers.hpp",
+            "UtfN.hpp"
+          )
+
+          foreach ($relativePath in $requiredPaths) {
+            $fullPath = Join-Path $projectDir $relativePath
+            if (-not (Test-Path $fullPath)) {
+              throw "Missing expected SDK path after extraction: $relativePath"
+            }
+          }
+
+      - name: Build solution
+        shell: pwsh
+        env:
+          CI: "1"
+        run: |
+          msbuild .\Grounded2Minimal.sln `
+            /m `
+            /p:Configuration=${{ matrix.solution_config }} `
+            /p:Platform=x64 `
+            /verbosity:minimal
+
+      - name: Package target
+        shell: pwsh
+        run: |
+          $outputDir = Join-Path $pwd "${{ matrix.output_dir }}"
+          $dllPath = Join-Path $outputDir "Grounded2Minimal.dll"
+          $injectorPath = Join-Path $outputDir "Injector.exe"
+          $pdbPath = Join-Path $outputDir "Grounded2Minimal.pdb"
+          $packageRoot = Join-Path $pwd "_package/${{ matrix.target_name }}"
+          $releaseRoot = Join-Path $pwd "_release/${{ matrix.target_name }}"
+          $readmeSource = Join-Path $pwd "${{ matrix.readme_file }}"
+          $readmeName = [System.IO.Path]::GetFileName("${{ matrix.readme_file }}")
+
+          if (-not (Test-Path $dllPath)) {
+            throw "Missing DLL output: $dllPath"
+          }
+
+          New-Item -ItemType Directory -Force -Path $packageRoot | Out-Null
+          New-Item -ItemType Directory -Force -Path $releaseRoot | Out-Null
+
+          Copy-Item $dllPath (Join-Path $packageRoot "Grounded2Minimal.dll") -Force
+          Copy-Item $readmeSource (Join-Path $packageRoot $readmeName) -Force
+
+          if (Test-Path $injectorPath) {
+            Copy-Item $injectorPath (Join-Path $releaseRoot "${{ matrix.injector_name }}") -Force
+          }
+
+          if (Test-Path $pdbPath) {
+            Copy-Item $pdbPath (Join-Path $releaseRoot "${{ matrix.pdb_name }}") -Force
+          }
+
+          $zipPath = Join-Path $releaseRoot "${{ matrix.zip_name }}"
+          if (Test-Path $zipPath) {
+            Remove-Item $zipPath -Force
+          }
+
+          Compress-Archive -Path (Join-Path $packageRoot "*") -DestinationPath $zipPath -Force
+
+      - name: Write SHA384
+        shell: pwsh
+        run: |
+          $releaseRoot = Join-Path $pwd "_release/${{ matrix.target_name }}"
+          $hashFile = Join-Path $releaseRoot "${{ matrix.hash_name }}"
+          $candidateFiles = @(
+            (Join-Path $releaseRoot "${{ matrix.zip_name }}"),
+            (Join-Path $releaseRoot "${{ matrix.injector_name }}"),
+            (Join-Path $releaseRoot "${{ matrix.pdb_name }}")
+          )
+          $files = $candidateFiles | Where-Object { Test-Path $_ }
+
+          if ($files.Count -eq 0) {
+            throw "No release files found to hash in $releaseRoot"
+          }
+
+          $lines = foreach ($file in $files) {
+            $hash = (Get-FileHash -Algorithm SHA384 $file).Hash.ToLower()
+            "{0}  {1}" -f $hash, [System.IO.Path]::GetFileName($file)
+          }
+
+          Set-Content -Path $hashFile -Value $lines
+
+      - name: Upload packaged artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-${{ matrix.target_name }}
+          path: _release/${{ matrix.target_name }}
+          if-no-files-found: error
+
+  publish-release:
+    name: Publish GitHub release
+    if: startsWith(github.ref, 'refs/tags/')
+    needs: build-release
+    runs-on: windows-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Download packaged artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: _artifacts
+
+      - name: Prepare release notes and assets
+        shell: pwsh
+        run: |
+          $tag = "${{ github.ref_name }}"
+          $artifactRoot = Join-Path $pwd "_artifacts"
+          $releaseRoot = Join-Path $pwd "_release"
+          New-Item -ItemType Directory -Force -Path $releaseRoot | Out-Null
+
+          Get-ChildItem -Path $artifactRoot -Recurse -File | ForEach-Object {
+            Copy-Item $_.FullName (Join-Path $releaseRoot $_.Name) -Force
+          }
+
+          $steamHashes = Get-Content (Join-Path $releaseRoot "SHA384-STEAM.txt")
+          $xgpHashes = Get-Content (Join-Path $releaseRoot "SHA384-XGP.txt")
+
+          $notes = [System.Collections.Generic.List[string]]::new()
+          $notes.Add("## Grounded2Minimal $tag")
+          $notes.Add("")
+          $notes.Add("### Packages")
+          $notes.Add("- Grounded2Minimal-STEAM.zip")
+          $notes.Add("- Grounded2Minimal-XGP.zip")
+          $notes.Add("")
+          $notes.Add("### Included Assets")
+          $notes.Add("- Injector-STEAM.exe")
+          $notes.Add("- Injector-XGP.exe")
+          $notes.Add("- Grounded2Minimal-STEAM.pdb")
+          $notes.Add("- Grounded2Minimal-XGP.pdb")
+          $notes.Add("")
+          $notes.Add("### SHA384")
+          $notes.Add("")
+          $notes.Add("Grounded2Minimal-STEAM:")
+          $notes.Add('```text')
+          $steamHashes | ForEach-Object { $notes.Add($_) }
+          $notes.Add('```')
+          $notes.Add("")
+          $notes.Add("Grounded2Minimal-XGP:")
+          $notes.Add('```text')
+          $xgpHashes | ForEach-Object { $notes.Add($_) }
+          $notes.Add('```')
+
+          Set-Content -Path RELEASE_NOTES.md -Value $notes
+
+      - name: Create or update GitHub release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          $tag = "${{ github.ref_name }}"
+          $files = Get-ChildItem -Path _release -File | ForEach-Object { $_.FullName }
+
+          $null = gh release view $tag 2>$null
+          if ($LASTEXITCODE -eq 0) {
+            gh release upload $tag $files --clobber
+            if ($LASTEXITCODE -ne 0) {
+              throw "Failed to upload assets to release $tag."
+            }
+
+            gh release edit $tag --title "Grounded2Minimal $tag" --notes-file RELEASE_NOTES.md
+            if ($LASTEXITCODE -ne 0) {
+              throw "Failed to update release metadata for $tag."
+            }
+          }
+          else {
+            gh release create $tag `
+              --title "Grounded2Minimal $tag" `
+              --notes-file RELEASE_NOTES.md `
+              $files
+            if ($LASTEXITCODE -ne 0) {
+              throw "Failed to create release $tag."
+            }
+          }
