@@ -733,6 +733,61 @@ namespace Interpreter {
         }
     }
 
+    static void HandleDodgeDistance(
+        CheatManager::StaticCheats::EStaticCheatOp eOperation
+    ) {
+        using StaticOp = CheatManager::StaticCheats::EStaticCheatOp;
+        std::string szOperationStr = (StaticOp::Set == eOperation) ? "set" : "get";
+        float fDodgeDistance = 0.0f;
+        if (StaticOp::Set == eOperation) {
+            fDodgeDistance = ReadFloatInput(
+                "[DodgeDistance] Enter new dodge distance: ",
+                -1.0f
+            );
+            if (fDodgeDistance < 0.0f) {
+                LogError(
+                    "DodgeDistance",
+                    "Invalid dodge distance, must be non-negative"
+                );
+                return;
+            }
+            LogMessage(
+                "DodgeDistance",
+                "Setting dodge distance to " + std::to_string(fDodgeDistance)
+            );
+        }
+        int32_t iTargetPlayerId = ReadIntegerInput(
+            "[DodgeDistance] Enter target player ID (empty for local): ",
+            UnrealUtils::GetLocalPlayerId(true)
+        );
+        float fResult = CheatManager::StaticCheats::DodgeDistance(
+            eOperation,
+            iTargetPlayerId,
+            fDodgeDistance   // ignored for Get
+        );
+        if (fResult < 0.0f) {
+            LogError(
+                "DodgeDistance",
+                "Failed to " + szOperationStr + " dodge distance"
+            );
+            return;
+        }
+        if (StaticOp::Set == eOperation) {
+            LogMessage(
+                "DodgeDistance",
+                "Dodge distance successfully set to " + std::to_string(fResult) +
+                " for player ID " + std::to_string(iTargetPlayerId)
+            );
+        } else {
+            LogMessage(
+                "DodgeDistance",
+                "Current dodge distance for player ID " +
+                std::to_string(iTargetPlayerId) + ": " +
+                std::to_string(fResult)
+            );
+        }
+    }
+
     static void HandleStaminaRegenDelay(
         CheatManager::StaticCheats::EStaticCheatOp eOperation
     ) {
@@ -1232,7 +1287,25 @@ namespace Interpreter {
                 )
             );
         }}, 
-        { "OPT_SetPlayerDamageMultiplier", "Set player damage multiplier", HandleSetPlayerDamageMultiplier }
+        { "OPT_SetPlayerDamageMultiplier", "Set player damage multiplier", HandleSetPlayerDamageMultiplier },
+        { "OPT_GetDodgeDistance", "Get player dodge distance", []() {
+            HandleDodgeDistance(CheatManager::StaticCheats::EStaticCheatOp::Get);
+        }},
+        { "OPT_SetDodgeDistance", "Set player dodge distance", []() {
+            HandleDodgeDistance(CheatManager::StaticCheats::EStaticCheatOp::Set);
+        }},
+        { "OPT_GetStaminaRegenRate", "Get player stamina regen rate", []() {
+            HandleStaminaRegenRate(CheatManager::StaticCheats::EStaticCheatOp::Get);
+        }},
+        { "OPT_SetStaminaRegenRate", "Set player stamina regen rate", []() {
+            HandleStaminaRegenRate(CheatManager::StaticCheats::EStaticCheatOp::Set);
+        }},
+        { "OPT_GetStaminaRegenDelay", "Get player stamina regen delay", []() {
+            HandleStaminaRegenDelay(CheatManager::StaticCheats::EStaticCheatOp::Get);
+        }},
+        { "OPT_SetStaminaRegenDelay", "Set player stamina regen delay", []() {
+            HandleStaminaRegenDelay(CheatManager::StaticCheats::EStaticCheatOp::Set);
+        }},
     };
 
     void PrintAvailableCommands(

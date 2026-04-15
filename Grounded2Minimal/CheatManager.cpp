@@ -301,11 +301,11 @@ namespace CheatManager {
             float fNewDistance
         ) {
             auto getter = [](SDK::ASurvivalPlayerCharacter* pc) -> float {
-                return pc->DodgeComponent->DodgeDistance;
+                return pc->DodgeComponent->DodgeGroundDistance;
             };
 
             auto setter = [](SDK::ASurvivalPlayerCharacter* pc, float value) {
-                pc->DodgeComponent->DodgeDistance = value;
+                pc->DodgeComponent->DodgeGroundDistance = value;
             };
 
             return HandleFloatCharCheat(
