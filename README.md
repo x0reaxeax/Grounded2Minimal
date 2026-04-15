@@ -99,6 +99,12 @@ The debug console can be used to execute the following commands:
 | `S_SummonClass`      | Summons a selected class |
 | `S_BuildAll`         | Finishes all building blueprints |
 | `OPT_BuildAnywhere`  | Enables 'Build Anywhere' mode |
+| `OPT_GetDodgeDistance` | Get player dodge distance |
+| `OPT_SetDodgeDistance` | Set player dodge distance |
+| `OPT_GetStaminaRegenRate` | Get player stamina regen rate |
+| `OPT_SetStaminaRegenRate` | Set player stamina regen rate |
+| `OPT_GetStaminaRegenDelay` | Get player stamina regen delay |
+| `OPT_SetStaminaRegenDelay` | Set player stamina regen delay |
 | `OPT_GetMaxActiveMutations` | Get max active mutations |
 | `OPT_SetMaxActiveMutations` | Set max active mutations |
 | `OPT_GetMaxCozinessLevelAchieved` | Get max coziness level achieved |
