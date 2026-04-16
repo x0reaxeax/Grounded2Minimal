@@ -111,6 +111,8 @@ namespace UnrealUtils {
 
     SDK::AGameModeBase *GetSurvivalGameModeBase(void);
 
+    SDK::USurvivalGameplayStatics* GetSurvivalGameplayStatics(void);
+
     int32_t GetPlayerIdByName(
         const std::string& szPlayerName
     );
@@ -136,7 +138,7 @@ namespace UnrealUtils {
     );
 
     SDK::ASurvivalPlayerCharacter *GetSurvivalPlayerCharacterById(
-        int32_t iTargetPlayerId,
+        int32_t iTargetPlayerId = INVALID_PLAYER_ID,
         bool bCached = false
     );
 

@@ -1093,6 +1093,39 @@ namespace Interpreter {
         );
     }
 
+    static void HandleToggleFly(void) {
+        CheatManager::CheatManagerParams* lpParams = new CheatManager::CheatManagerParams{
+            .FunctionId = CheatManager::CheatManagerFunctionId::ToggleFly,
+            .FunctionParams = { 
+                reinterpret_cast<uint64_t>(
+                    CheatManager::GetPlayersCheatManager(UnrealUtils::GetLocalPlayerId(true))
+                ),
+                0, 0, 0 
+            }
+        };
+
+        Command::SubmitTypedCommand(
+            Command::CommandId::CmdIdCheatManagerExecute,
+            lpParams
+        );
+    }
+
+    static void HandleToggleGod(void) {
+        CheatManager::CheatManagerParams* lpParams = new CheatManager::CheatManagerParams{
+            .FunctionId = CheatManager::CheatManagerFunctionId::ToggleGod,
+            .FunctionParams = { 
+                reinterpret_cast<uint64_t>(
+                    CheatManager::GetPlayersCheatManager(UnrealUtils::GetLocalPlayerId(true))
+                ),
+                0, 0, 0 
+            }
+        };
+        Command::SubmitTypedCommand(
+            Command::CommandId::CmdIdCheatManagerExecute,
+            lpParams
+        );
+    }
+
     void PrintAvailableCommands(void);
 
     ConsoleCommand g_Commands[] = {
@@ -1112,6 +1145,7 @@ namespace Interpreter {
         { "I_ItemSpawn", "Spawn item", HandleSpawnItem },
         { "S_SummonClass", "Summon an internal class", HandleSummon },
         { "S_BuildAll", "Build all structures for player", HandleBuildAllStructures },
+        { "T_ToggleFly", "Toggle fly mode", HandleToggleFly },
         {
             "P_ShowPlayers", "Show connected players", []() { 
                 UnrealUtils::DumpConnectedPlayers(); 
@@ -1179,6 +1213,31 @@ namespace Interpreter {
                         "Cheat manager initialized successfully"
                     );
                 }
+            }
+        },
+        {
+            "X_EnableCheats", "Enable cheats for a specified player controller", []() {
+                int32_t iTargetPlayerId = ReadIntegerInput(
+                    "[EnableCheats] Enter target player ID (empty for local): ",
+                    UnrealUtils::GetLocalPlayerId(true)
+                );
+                SDK::APlayerController *lpTargetPlayerController = UnrealUtils::GetPlayerControllerById(iTargetPlayerId);
+                if (nullptr == lpTargetPlayerController) {
+                    LogError(
+                        "EnableCheats",
+                        "Player controller not found for player ID: " + std::to_string(iTargetPlayerId)
+                    );
+                    return;
+                }
+
+                CheatManager::QueueCheatManagerEnableCheats(
+                    lpTargetPlayerController
+                );
+
+                LogMessage(
+                    "EnableCheats",
+                    "Queued invokation of EnableCheats for PlayerController of player ID " + std::to_string(iTargetPlayerId)
+                );
             }
         },
         {

@@ -215,8 +215,15 @@ namespace WinGUI {
                 lpParams->Param1 = !g_GameOptions.InfiniteStamina.load();
                 break;
             case CheatManager::CheatManagerFunctionId::ToggleGod:
-                lpParams->Param1 = !g_GameOptions.GodMode.load();
+                lpParams->Param1 = reinterpret_cast<uint64_t>(
+                    CheatManager::GetPlayersCheatManager(UnrealUtils::GetLocalPlayerId(true))
+                );
                 break;
+            //case CheatManager::CheatManagerFunctionId::ToggleFly:
+            //    lpParams->Param1 = reinterpret_cast<uint64_t>(
+            //        UnrealUtils::GetSurvivalPlayerCharacterById()
+            //    );
+            //    break;
             default:
                 break;
         }

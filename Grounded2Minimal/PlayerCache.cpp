@@ -100,7 +100,10 @@ namespace PlayerCache {
     CachedPlayer* GetCachedPlayerById(int32_t iPlayerId)
     {
         if (INVALID_PLAYER_ID == iPlayerId) {
-            return nullptr;
+            int32_t iLocalPlayerId = UnrealUtils::GetLocalPlayerId(true);
+            return (INVALID_PLAYER_ID != iLocalPlayerId)
+                ? GetCachedPlayerById(iLocalPlayerId)
+                : nullptr;
         }
 
         for (auto* lpPlayerState : g_CachedData.Players) {

@@ -109,6 +109,7 @@ namespace CheatManager {
         UnlockMutations,
         UnlockScabs,
         ToggleAnalyzer,
+        ToggleFly,
         ToggleGod,
         ToggleStamina,
         UnlockOmniTool,
@@ -140,6 +141,12 @@ namespace CheatManager {
         SDK::APlayerController *lpLocalPlayerController;    // Pointer to the local player controller
     };
 
+    struct BufferParamsCheatManagerGeneric {
+        int32_t iPlayerId;
+        SDK::UCheatManager *lpCheatManager;
+        uint32_t dwReserved;
+    };
+
     typedef BufferParamsExecuteCheat CheatManagerParams;
     typedef BufferParamsEnableCheats CheatManagerEnableParams;
 
@@ -151,6 +158,10 @@ namespace CheatManager {
 
     void __gamethread CheatManagerExecute(
         const CheatManagerParams* lpParams
+    );
+
+    void QueueCheatManagerEnableCheats(
+        SDK::APlayerController *lpLocalPlayerController
     );
 
     SDK::UCheatManager *GetPlayersCheatManager(

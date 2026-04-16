@@ -955,6 +955,26 @@ namespace CheatManager {
         );
     }
 
+    void QueueCheatManagerEnableCheats(
+        SDK::APlayerController *lpLocalPlayerController
+    ) {
+        if (nullptr == lpLocalPlayerController) {
+            LogError("CheatManager", "Local player controller is NULL");
+            return;
+        }
+        auto* lpParams = new (std::nothrow) CheatManagerEnableParams{
+            .lpLocalPlayerController = lpLocalPlayerController
+        };
+        if (nullptr == lpParams) {
+            LogError("CheatManager", "Failed to allocate memory for CheatManagerEnableParams");
+            return;
+        }
+        Command::SubmitTypedCommand(
+            Command::CommandId::CmdIdEnableCheats,
+            lpParams
+        );
+    }
+
     void __gamethread CheatManagerExecute(
         const CheatManagerParams *lpParams
     ) {
@@ -1045,8 +1065,26 @@ namespace CheatManager {
                 SurvivalCheatManager->UnlockAllColorThemes();
                 break;
             }
+
+            case CheatManagerFunctionId::ToggleFly: {
+                SDK::UCheatManager *lpCheatManager = reinterpret_cast<SDK::UCheatManager*>(
+                    lpParams->Param1
+                );
+
+                if (nullptr == lpCheatManager) {
+                    LogError(
+                        "CheatManager",
+                        "Generic cheat manager instance not initialized, aborting.."
+                    );
+                    return;
+                }
+
+                lpCheatManager->Fly();
+                break;
+            }
+
             case CheatManagerFunctionId::ToggleGod: {
-                SurvivalCheatManager->God();
+                // wip fix
                 break;
             }
 
