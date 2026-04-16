@@ -1145,7 +1145,6 @@ namespace Interpreter {
         { "I_ItemSpawn", "Spawn item", HandleSpawnItem },
         { "S_SummonClass", "Summon an internal class", HandleSummon },
         { "S_BuildAll", "Build all structures for player", HandleBuildAllStructures },
-        { "T_ToggleFly", "Toggle fly mode", HandleToggleFly },
         {
             "P_ShowPlayers", "Show connected players", []() { 
                 UnrealUtils::DumpConnectedPlayers(); 
