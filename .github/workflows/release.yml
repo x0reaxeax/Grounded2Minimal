@@ -138,21 +138,23 @@ jobs:
         shell: pwsh
         run: |
           $releaseRoot = Join-Path $pwd "_release/${{ matrix.target_name }}"
+          $outputDir = Join-Path $pwd "${{ matrix.output_dir }}"
           $hashFile = Join-Path $releaseRoot "${{ matrix.hash_name }}"
-          $candidateFiles = @(
-            (Join-Path $releaseRoot "${{ matrix.zip_name }}"),
-            (Join-Path $releaseRoot "${{ matrix.injector_name }}"),
-            (Join-Path $releaseRoot "${{ matrix.pdb_name }}")
-          )
-          $files = $candidateFiles | Where-Object { Test-Path $_ }
 
-          if ($files.Count -eq 0) {
-            throw "No release files found to hash in $releaseRoot"
+          $entries = @(
+            @{ Path = (Join-Path $outputDir "Grounded2Minimal.dll"); Name = "Grounded2Minimal-${{ matrix.target_name }}.dll" },
+            @{ Path = (Join-Path $releaseRoot "${{ matrix.zip_name }}"); Name = "${{ matrix.zip_name }}" },
+            @{ Path = (Join-Path $releaseRoot "${{ matrix.injector_name }}"); Name = "${{ matrix.injector_name }}" },
+            @{ Path = (Join-Path $releaseRoot "${{ matrix.pdb_name }}"); Name = "${{ matrix.pdb_name }}" }
+          ) | Where-Object { Test-Path $_.Path }
+
+          if ($entries.Count -eq 0) {
+            throw "No release files found to hash for ${{ matrix.target_name }}"
           }
 
-          $lines = foreach ($file in $files) {
-            $hash = (Get-FileHash -Algorithm SHA384 $file).Hash.ToLower()
-            "{0}  {1}" -f $hash, [System.IO.Path]::GetFileName($file)
+          $lines = foreach ($entry in $entries) {
+            $hash = (Get-FileHash -Algorithm SHA384 $entry.Path).Hash.ToLower()
+            "{0}  {1}" -f $hash, $entry.Name
           }
 
           Set-Content -Path $hashFile -Value $lines
