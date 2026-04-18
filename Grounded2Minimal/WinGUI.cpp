@@ -212,11 +212,12 @@ namespace WinGUI {
                 lpParams->Param1 = 1000;
                 break;
             case CheatManager::CheatManagerFunctionId::ToggleStamina:
-                lpParams->Param1 = !g_GameOptions.InfiniteStamina.load();
+                // flipped internally by CheatManagerExecute, so we don't need to do it here anymore
+                //lpParams->Param1 = !g_GameOptions.InfiniteStamina.load();
                 break;
             case CheatManager::CheatManagerFunctionId::ToggleGod:
                 lpParams->Param1 = reinterpret_cast<uint64_t>(
-                    CheatManager::GetPlayersCheatManager(UnrealUtils::GetLocalPlayerId(true))
+                    UnrealUtils::GetSurvivalPlayerCharacterById()
                 );
                 break;
             //case CheatManager::CheatManagerFunctionId::ToggleFly:
@@ -1211,6 +1212,8 @@ namespace WinGUI {
         return static_cast<int32_t>(lvGetItem.lParam);
     }
 
+    // moved to CheatManagerExecute 
+    /*
     static void ProcessToggleAction(
         CheatManager::CheatManagerFunctionId fdwFunctionId = CheatManager::CheatManagerFunctionId::None
     ) {
@@ -1227,6 +1230,7 @@ namespace WinGUI {
                 break;
         }
     }
+    */
 
     // Window procedure
     LRESULT CALLBACK WndProc(
@@ -1337,7 +1341,8 @@ namespace WinGUI {
                         }
                     }
 
-                    ProcessToggleAction(fdwTargetId);
+                    // moved to CheatManagerExecute 
+                    //ProcessToggleAction(fdwTargetId);
 
                     CheatManagerExecuteGUIProxy(fdwTargetId);
 

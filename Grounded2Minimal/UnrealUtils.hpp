@@ -39,7 +39,7 @@ namespace UnrealUtils {
 
     SDK::APawn *GetLocalPawn(void);
 
-    SDK::ABP_SurvivalPlayerCharacter_C *GetLocalSurvivalPlayerCharacter(void);
+    SDK::ABP_SurvivalPlayerCharacter_C *GetLocalSurvivalPlayerCharacter_C(void);
 
     void DumpClasses(
         std::vector<std::string>* vszClassesOut = nullptr,
@@ -53,6 +53,10 @@ namespace UnrealUtils {
 
     SDK::UFunction *FindFunction(
         const std::string& szTargetFunctionNameNeedle
+    );
+
+    std::vector<SDK::UFunction*> FindFunctionByAddress(
+        const DWORD64 qwTargetPage
     );
 
     void DumpConnectedPlayers(
@@ -165,6 +169,147 @@ namespace UnrealUtils {
         bool IsPetInvincibilityEnabled(void);
         bool IsFreeCraftingEnabled(void);
         float GetPlayerDamageMultiplier(void);
+    }
+    const int x = sizeof(SDK::FVector);
+    namespace FrameWalker {
+        // https://github.com/EpicGames/UnrealEngine/blob/5.6/Engine/Source/Runtime/CoreUObject/Public/UObject/Stack.h
+        // https://github.com/EpicGames/UnrealEngine/blob/5.6/Engine/Source/Runtime/Core/Public/Misc/OutputDevice.h
+        class FOutputDevice {
+        public:
+            FOutputDevice() = default;
+
+            FOutputDevice(FOutputDevice&&) = default;
+            FOutputDevice(const FOutputDevice&) = default;
+            FOutputDevice& operator=(FOutputDevice&&) = default;
+            FOutputDevice& operator=(const FOutputDevice&) = default;
+
+            virtual ~FOutputDevice() = default;
+
+            // FOutputDevice interface.
+            virtual void Serialize(const TCHAR* V, int32_t Verbosity, const SDK::FName& Category) = 0;
+            virtual void Serialize(const TCHAR* V, int32_t Verbosity, const SDK::FName& Category, const double Time)
+            {
+                Serialize(V, Verbosity, Category);
+            }
+
+            virtual void SerializeRecord(const void* Record);
+
+            virtual void Flush()
+            {
+            }
+
+            /**
+             * Closes output device and cleans up. This can't happen in the destructor
+             * as we might have to call "delete" which cannot be done for static/ global
+             * objects.
+             */
+            virtual void TearDown()
+            {
+            }
+
+            void SetSuppressEventTag(bool bInSuppressEventTag)
+            {
+                bSuppressEventTag = bInSuppressEventTag;
+            }
+            FORCEINLINE bool GetSuppressEventTag() const { return bSuppressEventTag; }
+            void SetAutoEmitLineTerminator(bool bInAutoEmitLineTerminator)
+            {
+                bAutoEmitLineTerminator = bInAutoEmitLineTerminator;
+            }
+            FORCEINLINE bool GetAutoEmitLineTerminator() const { return bAutoEmitLineTerminator; }
+
+            /**
+             * Dumps the contents of this output device's buffer to an archive (supported by output device that have a memory buffer)
+             * @param Ar Archive to dump the buffer to
+             */
+            virtual void Dump(class FArchive& Ar)
+            {
+            }
+
+            /**
+            * @return whether this output device is a memory-only device
+            */
+            virtual bool IsMemoryOnly() const
+            {
+                return false;
+            }
+
+            /**
+             * @return whether this output device can be used on any thread.
+             */
+            virtual bool CanBeUsedOnAnyThread() const
+            {
+                return false;
+            }
+
+            /**
+             * @return whether this output device can be used from multiple threads simultaneously without any locking
+             */
+            virtual bool CanBeUsedOnMultipleThreads() const
+            {
+                return false;
+            }
+
+            /**
+             * @return whether this output device can be used after a panic (crash or fatal error) has been flagged.
+             * @note The return value is cached by AddOutputDevice because calling this during a panic may fail.
+             */
+            virtual bool CanBeUsedOnPanicThread() const
+            {
+                return false;
+            }
+
+        protected:
+            /** Whether to output the 'Log: ' type front... */
+            bool bSuppressEventTag;
+            /** Whether to output a line-terminator after each log call... */
+            bool bAutoEmitLineTerminator;
+        };
+
+        template<typename T, int32_t N>
+        struct TInlineAllocator {
+            alignas(T) uint8_t InlineData[sizeof(T) * N];
+        };
+
+        template<typename T, typename Allocator = void>
+        struct TArray {
+            T* Data;
+            int32_t Num;
+            int32_t Max;
+
+            Allocator Alloc;
+        };
+
+        typedef uint32_t CodeSkipSizeType;
+        using FlowStackType = TArray<CodeSkipSizeType, TInlineAllocator<uint8_t, 8>>;
+
+        struct FFrame : public FOutputDevice {
+        public:
+            // Variables.
+            SDK::UFunction* Node;
+            SDK::UObject* Object;
+            uint8_t* Code;
+            uint8_t* Locals;
+
+            SDK::FProperty* MostRecentProperty;
+            uint8_t* MostRecentPropertyAddress;
+            uint8_t* MostRecentPropertyContainer;
+
+            /** The execution flow stack for compiled Kismet code */
+            FlowStackType FlowStack;
+
+            /** Previous frame on the stack */
+            FFrame* PreviousFrame;
+
+            /** contains information on any out parameters */
+            void* OutParms;
+
+            /** If a class is compiled in then this is set to the property chain for compiled-in functions. In that case, we follow the links to setup the args instead of executing by code. */
+            void* PropertyChainForCompiledIn;
+
+            /** Currently executed native function */
+            SDK::UFunction* CurrentNativeFunction;
+        };
     }
 }
 

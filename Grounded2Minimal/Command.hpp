@@ -57,6 +57,7 @@ namespace Command {
         CmdIdSetCollision,
         CmdIdManualBuildingAdjustment,
         CmdIdSetGameMode,
+        CmdIdDebugEvent,
         CmdIdMax
     };
 

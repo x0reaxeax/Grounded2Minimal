@@ -48,6 +48,14 @@ namespace CoreUtils {
     );
 
     int32_t GenerateUniqueId(void);
+
+    uintptr_t GetModuleBaseAddressA(
+        const char* szModuleName
+    );
+
+    uintptr_t GetModuleBaseAddressW(
+        const wchar_t* wszModuleName
+    );
 } // namespace CoreUtils
 
 #endif // _GROUNDED_MINIMAL_CORE_UTILS_HPP

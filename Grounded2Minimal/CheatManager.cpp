@@ -703,6 +703,74 @@ namespace CheatManager {
         }
     }
 
+    namespace x64Patcher {
+        bool PatchFunction(
+            uintptr_t funcAddress,
+            const std::vector<uint8_t>& patchBytes
+        ) {
+            if (0 == funcAddress) {
+                LogError("x64Patcher", "Function address is null");
+                return false;
+            }
+            if (patchBytes.empty()) {
+                LogError("x64Patcher", "Patch bytes are empty");
+                return false;
+            }
+
+            DWORD dwOldProtect;
+            if (!VirtualProtect(
+                reinterpret_cast<LPVOID>(funcAddress),
+                patchBytes.size(),
+                PAGE_EXECUTE_READWRITE,
+                &dwOldProtect
+            )) {
+                LogError(
+                    "x64Patcher", 
+                    "Failed to change memory protection"
+                );
+                return false;
+            }
+            
+            memcpy(reinterpret_cast<void*>(funcAddress), patchBytes.data(), patchBytes.size());
+            
+            DWORD dwTemp;
+            VirtualProtect(
+                reinterpret_cast<LPVOID>(funcAddress),
+                patchBytes.size(),
+                dwOldProtect,
+                &dwTemp
+            );
+
+            return true;
+        }
+        /*
+        bool ToggleGodMode_TempFix(void) {
+            uintptr_t qwBaseOffset = 0x5C868E2ULL;
+            uintptr_t qwBaseAddress = CoreUtils::GetModuleBaseAddressA(
+#if (TARGET_PLATFORM == TARGET_PLATFORM_STEAM)
+                "Grounded2-WinGRTS-Shipping.exe"
+#elif (TARGET_PLATFORM == TARGET_PLATFORM_XGP)
+                "Grounded2-WinGDK-Shipping.exe"
+#else
+#error "No target platform defined for CheatManager x64 patching"
+#endif  // TARGET_PLATFORM
+            );
+
+            if (0 == qwBaseAddress) {
+                LogError("x64Patcher", "Failed to get module base address");
+                return false;
+            }
+
+            uintptr_t qwTargetInst = qwBaseAddress + qwBaseOffset;
+            BYTE abOriginalBytes[] = {
+                0xF3, 0x0F, 0x11, 0xBB, 0x2C, 0x03, 0x00, 0x00      // movss [rbx+32Ch], xmm7
+            };
+
+        }
+            */
+
+    }
+
     // Local Player's SurvivalCheatManager instance
     static SDK::USurvivalCheatManager *SurvivalCheatManager = nullptr;
 
@@ -1084,7 +1152,23 @@ namespace CheatManager {
             }
 
             case CheatManagerFunctionId::ToggleGod: {
-                // wip fix
+                SDK::ASurvivalPlayerCharacter *lpPlayerCharacter = reinterpret_cast<SDK::ASurvivalPlayerCharacter*>(
+                    lpParams->Param1
+                );
+
+                if (nullptr == lpPlayerCharacter) {
+                    LogError(
+                        "CheatManager",
+                        "Player character instance not initialized, aborting.."
+                    );
+                    return;
+                }
+
+                ubool bCanDie = g_GameOptions.GodMode.fetch_xor(1, std::memory_order_acq_rel);
+                lpPlayerCharacter->HealthComponent->bCanDieEver = bCanDie;
+                lpPlayerCharacter->HealthComponent->bCanDieFromDamage = bCanDie;
+                lpPlayerCharacter->HealthComponent->bCanDieFromFragility = bCanDie;
+                lpPlayerCharacter->HealthComponent->CurrentDamage = 0.0f;   // reset dmg
                 break;
             }
 
@@ -1101,8 +1185,9 @@ namespace CheatManager {
                     );
                     return;
                 }
-                bool bInfiniteStaminaEnabled = (bool) alpqwParams[0];
-                SurvivalCheatManager->Stamina(bInfiniteStaminaEnabled);
+                //bool bInfiniteStaminaEnabled = (bool) alpqwParams[0];
+                ubool bStaminaEnabled = g_GameOptions.InfiniteStamina.fetch_xor(1, std::memory_order_acq_rel);
+                SurvivalCheatManager->Stamina(bStaminaEnabled);
                 break;
             }
 

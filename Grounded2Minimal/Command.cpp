@@ -242,6 +242,11 @@ namespace Command {
                 break;
             }
 
+            case CommandId::CmdIdDebugEvent: {
+                // ApplyDamage
+                break;
+            }
+            
             default: {
                 LogError(
                     "ProcessEvent",
@@ -250,6 +255,7 @@ namespace Command {
                 break;
             }
         }
+
 
         // Clean up memory
         if (nullptr != localBuffer.Deleter && nullptr != localBuffer.Params) {

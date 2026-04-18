@@ -88,7 +88,7 @@ namespace UnrealUtils {
         return SDK::UUserInterfaceStatics::GetGameUI(lpEngine->GameViewport);
     }
 
-    SDK::ABP_SurvivalPlayerCharacter_C* GetLocalSurvivalPlayerCharacter(void) {
+    SDK::ABP_SurvivalPlayerCharacter_C* GetLocalSurvivalPlayerCharacter_C(void) {
         SDK::APawn *lpPawn = GetLocalPawn();
         if (nullptr == lpPawn) {
             LogError("GetLocalSurvivalPlayerCharacter", "Pawn is NULL");
@@ -167,10 +167,17 @@ namespace UnrealUtils {
                 continue;
             }
 
-            if (!CoreUtils::StringContainsCaseInsensitive(
-                lpObj->GetName(),
-                szTargetFunctionNameNeedle
-            )) {
+            if (
+                !CoreUtils::StringContainsCaseInsensitive(
+                    lpObj->GetName(),
+                    szTargetFunctionNameNeedle
+                )
+                &&
+                !CoreUtils::StringContainsCaseInsensitive(
+                    lpObj->GetFullName(),
+                    szTargetFunctionNameNeedle
+                )
+            ) {
                 continue;
             }
 
@@ -199,10 +206,17 @@ namespace UnrealUtils {
                 continue;
             }
 
-            if (!CoreUtils::StringContainsCaseInsensitive(
-                lpObj->GetName(),
-                szPartialName
-            )) {
+            if (
+                !CoreUtils::StringContainsCaseInsensitive(
+                    lpObj->GetName(),
+                    szPartialName
+                )
+                &&
+                !CoreUtils::StringContainsCaseInsensitive(
+                    lpObj->GetFullName(),
+                    szPartialName
+                )
+            ) {
                 continue;
             }
 
@@ -210,6 +224,27 @@ namespace UnrealUtils {
             return lpFunction;
         }
         return nullptr; // function not found
+    }
+    
+    std::vector<SDK::UFunction*> FindFunctionByAddress(
+        const DWORD64 qwTargetPage
+    ) {
+        std::vector<SDK::UFunction*> vMatchingFunctions;
+        for (INT32 i = 0; i < SDK::UFunction::GObjects->Num(); ++i) {
+            SDK::UObject* lpObj = SDK::UFunction::GObjects->GetByIndex(i);
+            if (nullptr == lpObj) {
+                continue;
+            }
+            if (!lpObj->IsA(SDK::UFunction::StaticClass())) {
+                continue;
+            }
+            SDK::UFunction *lpFunction = static_cast<SDK::UFunction*>(lpObj);
+            DWORD64 qwFuncAddress = reinterpret_cast<DWORD64>(lpFunction);
+            if ((qwFuncAddress & 0xFFFFFFFFFFFFF000) == qwTargetPage) {
+                vMatchingFunctions.push_back(lpFunction);
+            }
+        }
+        return vMatchingFunctions;
     }
 
     // Don't cache this one, since we now have auto-retry on GetWorld()

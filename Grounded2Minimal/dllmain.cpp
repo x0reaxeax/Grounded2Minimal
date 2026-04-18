@@ -80,13 +80,25 @@ void ProcessDebugFilter(
     ) {
         LogMessage(
             lpHookData->szHookName,
-            "Function: " + lpParams->lpFunction->GetName() + " ['" + lpParams->lpFunction->GetFullName() + "']",
+            "ProcessEvent called for hook ID " + std::to_string(lpHookData->iUniqueId) + " (" + lpHookData->szHookName + ")",
             true
         );
 
         LogMessage(
             lpHookData->szHookName,
-            "Object: " + lpParams->lpObject->GetName() + " ['" + lpParams->lpObject->GetFullName() + "']",
+            " * Function: " + lpParams->lpFunction->GetName() 
+            + " ['" + lpParams->lpFunction->GetFullName() 
+            + "'] @ " 
+            + CoreUtils::HexConvert(reinterpret_cast<uintptr_t>(lpParams->lpFunction)),
+            true
+        );
+
+        LogMessage(
+            lpHookData->szHookName,
+            " * Object: " + lpParams->lpObject->GetName() 
+            + " ['" + lpParams->lpObject->GetFullName() 
+            + "'] @ " 
+            + CoreUtils::HexConvert(reinterpret_cast<uintptr_t>(lpParams->lpObject)),
             true
         );
     }
@@ -97,15 +109,35 @@ void ProcessDebugFilter(
     NativeProcessEventParams* lpParams
 ) {
     if (nullptr == lpHookData) {
+        LogMessage(
+            "ProcessDebugFilter",
+            "Invalid hook data for native debug filter, skipping debug output",
+            true
+        );
         return;
     }
     if (lpHookData->szDebugFilter.empty()) {
+        LogMessage(
+            "ProcessDebugFilter",
+            "Debug filter is empty for hook '" + lpHookData->szHookName + "', skipping debug output",
+            true
+        );
         return;
     }
     if (nullptr == lpParams) {
+        LogMessage(
+            "ProcessDebugFilter",
+            "Invalid parameters for native debug filter, skipping debug output",
+            true
+        );
         return;
     }
     if (nullptr == lpParams->lpObject) {
+        LogMessage(
+            "ProcessDebugFilter",
+            "Object parameter is null for native debug filter, skipping debug output",
+            true
+        );
         return;
     }
     if (
@@ -118,7 +150,41 @@ void ProcessDebugFilter(
     ) {
         LogMessage(
             lpHookData->szHookName,
-            "Object: " + lpParams->lpObject->GetName() + " ['" + lpParams->lpObject->GetFullName() + "']",
+            "Native hook triggered for hook ID " + std::to_string(lpHookData->iUniqueId) + " (" + lpHookData->szHookName + ")",
+            true
+        );
+        LogMessage(
+            lpHookData->szHookName,
+            " * Object: " 
+            + lpParams->lpObject->GetName() 
+            + " ['" + lpParams->lpObject->GetFullName() 
+            + "'] @ " 
+            + CoreUtils::HexConvert(reinterpret_cast<uintptr_t>(lpParams->lpObject)),
+            true
+        );
+
+        LogMessage(
+            lpHookData->szHookName,
+            " * FFrame: " + CoreUtils::HexConvert(reinterpret_cast<uintptr_t>(lpParams->lpFFrame)),
+            true
+        );
+
+        LogMessage(
+            lpHookData->szHookName,
+            " * Result: " + CoreUtils::HexConvert(reinterpret_cast<uintptr_t>(lpParams->lpResult)),
+            true
+        );
+    } else {
+        LogMessage(
+            lpHookData->szHookName,
+            "Native hook triggered but did not match debug filter for hook ID " + std::to_string(lpHookData->iUniqueId) + " (" + lpHookData->szHookName + ")",
+            true
+        );
+
+        // print debug filter
+        LogMessage(
+            lpHookData->szHookName,
+            " * Debug filter: '" + lpHookData->szDebugFilter + "'",
             true
         );
     }
@@ -449,6 +515,92 @@ NATIVEHOOK _HookedGetPlacementValid(
         ProcessDebugFilter(lpHookData, &funcParams);
     }
 }
+
+NATIVEHOOK Maine_HealthComponent_OnRep_CurrentDamage(
+    SDK::UObject* lpObj,
+    void* lpFFrame,
+    void* lpResult
+) {
+    using namespace HookManager;
+    NativeHooker::InFlightGuard inFlight;
+    if (NativeHooker::IsRestoring()) {
+        return;
+    }
+    NativeHooker::HookEntry* lpHookData = NativeHooker::GetHookByHookedFunction(
+        (NativeHooker::NativeFunc_t) &Maine_HealthComponent_OnRep_CurrentDamage
+    );
+
+    if (nullptr == lpHookData) {
+        LogMessage(
+            "OnRep_CurrentDamageHook",
+            "Hook data not found, skipping damage modification",
+            true
+        );
+        // catastrophic cataclysmic 
+        return;
+    }
+
+    lpHookData->OriginalFn(lpObj, lpFFrame, lpResult);
+
+    if (lpHookData->bDebugFilterEnabled.load()) {
+        NativeProcessEventParams funcParams{
+            lpObj,
+            lpFFrame,
+            lpResult
+        };
+        ProcessDebugFilter(lpHookData, &funcParams);
+    }
+}
+
+//NATIVEHOOK Maine_SurvivalPlayerController_OnDamaged(
+//    SDK::UObject* lpObj,
+//    void* lpFFrame,
+//    void* lpResult
+//) {
+//    using namespace HookManager;
+//    NativeHooker::InFlightGuard inFlight;
+//    if (NativeHooker::IsRestoring()) {
+//        return;
+//    }
+//    NativeHooker::HookEntry* lpHookData = NativeHooker::GetHookByHookedFunction(
+//        (NativeHooker::NativeFunc_t) &Maine_SurvivalPlayerController_OnDamaged
+//    );
+//    if (nullptr == lpHookData) {
+//        LogMessage(
+//            "SPC_OnDamaged_Hook",
+//            "Hook data not found, skipping damage modification",
+//            true
+//        );
+//        // catastrophic cataclysmic 
+//        return;
+//    }
+//
+//    //UnrealUtils::FrameWalker::FFrame* lpStack = reinterpret_cast<UnrealUtils::FrameWalker::FFrame*>(lpFFrame);
+//
+//    lpHookData->OriginalFn(lpObj, lpFFrame, lpResult);
+//
+//    if (g_GameOptions.GodMode.load()) {
+//        SDK::ASurvivalPlayerCharacter* lpPlayerCharacter = UnrealUtils::GetSurvivalPlayerCharacterById();
+//        if (nullptr == lpPlayerCharacter) {
+//            LogMessage(
+//                "SPC_OnDamaged_Hook",
+//                "Failed to get local player character, cannot apply god mode damage modification",
+//                true
+//            );
+//        } else {
+//            lpPlayerCharacter->HealthComponent->CurrentDamage = 0.0f;
+//        }
+//    }
+//
+//    if (lpHookData->bDebugFilterEnabled.load()) {
+//        NativeProcessEventParams funcParams{
+//            lpObj,
+//            lpFFrame,
+//            lpResult
+//        };
+//        ProcessDebugFilter(lpHookData, &funcParams);
+//    }
+//}
 
 /////////////////////////////////////////////////////////////
 

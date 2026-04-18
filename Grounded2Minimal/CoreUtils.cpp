@@ -247,4 +247,24 @@ namespace CoreUtils {
         static std::atomic<int32_t> s_iCurrentId{ 0 };
         return ++s_iCurrentId;
     }
+
+    uintptr_t GetModuleBaseAddressA(
+        const char* szModuleName
+    ) {
+        HMODULE hModule = GetModuleHandleA(szModuleName);
+        if (hModule == nullptr) {
+            return 0;
+        }
+        return reinterpret_cast<uintptr_t>(hModule);
+    }
+
+    uintptr_t GetModuleBaseAddressW(
+        const wchar_t* wszModuleName
+    ) {
+        HMODULE hModule = GetModuleHandleW(wszModuleName);
+        if (hModule == nullptr) {
+            return 0;
+        }
+        return reinterpret_cast<uintptr_t>(hModule);
+    }
 }

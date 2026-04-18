@@ -428,6 +428,47 @@ namespace Interpreter {
         UnrealUtils::DumpFunctions(szFunctionName);
     }
 
+    static void HandleFunctionAddressSearch(void) {
+        std::string szAddressHexStr;
+        if (!ReadInterpreterInput(
+            "[FunctionAddressSearch] Enter function address (hex): ",
+            szAddressHexStr
+        )) {
+            LogError("FunctionAddressSearch", "Invalid input, please provide a function address in hex");
+            return;
+        }
+
+        DWORD64 qwAddress = 0;
+        try {
+            qwAddress = std::stoull(szAddressHexStr, nullptr, 16);
+        } catch (const std::exception& e) {
+            LogError("FunctionAddressSearch", "Error parsing address: " + std::string(e.what()));
+            return;
+        }
+
+        if (0 == qwAddress) {
+            LogError("FunctionAddressSearch", "Address cannot be zero");
+            return;
+        }
+
+        qwAddress &= ~0xFFFULL;
+        LogMessage(
+            "FunctionAddressSearch",
+            "Searching for functions at page-aligned address: 0x" + 
+            CoreUtils::HexConvert(qwAddress)
+        );
+        
+        std::vector<SDK::UFunction *> vlpTargetFuncs = UnrealUtils::FindFunctionByAddress(qwAddress);
+        for (SDK::UFunction* lpFunc : vlpTargetFuncs) {
+            LogMessage(
+                "FunctionAddressSearch",
+                "Found function: '" + lpFunc->GetFullName() + 
+                "' ['" + lpFunc->GetName() + "'] @" + 
+                CoreUtils::HexConvert(reinterpret_cast<uintptr_t>(lpFunc))
+            );
+        }
+    }
+
     static void HandleClassDump(void) {
         std::string szClassName;
         if (!ReadInterpreterInput(
@@ -1085,7 +1126,7 @@ namespace Interpreter {
         }
 
         CheatManager::StaticCheats::SetPlayerDamageMultiplier(fDamageMultiplier);
-        g_GameOptions.GameStatics.PlayerDamageMultiplier.store(fDamageMultiplier, std::memory_order_relaxed);
+        g_GameOptions.GameStatics.PlayerDamageMultiplier.store(fDamageMultiplier, std::memory_order_acq_rel);
 
         LogMessage(
             "SetPlayerDamageMultiplier",
@@ -1111,11 +1152,12 @@ namespace Interpreter {
     }
 
     static void HandleToggleGod(void) {
+        LogMessage("ToggleGod", "I understand that it's raining", true);
         CheatManager::CheatManagerParams* lpParams = new CheatManager::CheatManagerParams{
             .FunctionId = CheatManager::CheatManagerFunctionId::ToggleGod,
             .FunctionParams = { 
                 reinterpret_cast<uint64_t>(
-                    CheatManager::GetPlayersCheatManager(UnrealUtils::GetLocalPlayerId(true))
+                    UnrealUtils::GetSurvivalPlayerCharacterById()
                 ),
                 0, 0, 0 
             }
@@ -1137,6 +1179,7 @@ namespace Interpreter {
         { "F_EntryDump", "Dump DataTable entries", HandleItemDump },
         { "F_FindItemTable", "Find DataTable for item", HandleFindItemTable },
         { "F_FunctionDump", "Dump functions", HandleFunctionDump },
+        { "F_FunctionAddressSearch", "Search for function by address", HandleFunctionAddressSearch },
         { "F_ClassDump", "Dump classes by name", HandleClassDump },
         { "H_GetAuthority", "Check host authority", HandleGetAuthority },
         { "H_SetGameMode", "Switch game mode", HandleGameModeSwitch },
@@ -1145,6 +1188,7 @@ namespace Interpreter {
         { "I_ItemSpawn", "Spawn item", HandleSpawnItem },
         { "S_SummonClass", "Summon an internal class", HandleSummon },
         { "S_BuildAll", "Build all structures for player", HandleBuildAllStructures },
+        { "T_ToggleGod", "Toggle god mode for local player", HandleToggleGod },
         {
             "P_ShowPlayers", "Show connected players", []() { 
                 UnrealUtils::DumpConnectedPlayers(); 
@@ -1189,7 +1233,7 @@ namespace Interpreter {
         },
         {
             "X_InitCheatManager", "Initialize cheat manager", []() {
-                if (!CheatManager::IsSurvivalCheatManagerInitialized()) {
+                if (CheatManager::IsSurvivalCheatManagerInitialized()) {
                     LogMessage(
                         "CheatManager", 
                         "Cheat manager already initialized, skipping"
