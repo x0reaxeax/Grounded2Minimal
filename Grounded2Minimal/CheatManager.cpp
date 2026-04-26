@@ -1192,7 +1192,8 @@ namespace CheatManager {
             }
 
             case CheatManagerFunctionId::UnlockOmniTool: {
-                SurvivalCheatManager->SetOmniToolTier(6);
+                uint8_t uNewTier = static_cast<uint8_t>(lpParams->Param1);
+                SurvivalCheatManager->SetOmniToolTier(uNewTier);
                 break;
             }
 

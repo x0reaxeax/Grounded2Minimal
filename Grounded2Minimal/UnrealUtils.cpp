@@ -57,6 +57,11 @@ namespace UnrealUtils {
             return nullptr;
         }
 
+        if (nullptr == lpLocalPlayer->PlayerController) {
+            LogError("GetLocalPawn", "PlayerController is NULL for LocalPlayer");
+            return nullptr;
+        }
+
         return lpLocalPlayer->PlayerController->Pawn;
     }
 
@@ -869,6 +874,52 @@ namespace UnrealUtils {
         }
 
         return nullptr;
+    }
+
+    SDK::ASurvivalPlayerController* GetLocalSurvivalPlayerControllerFast(void) {
+        SDK::UWorld* lpWorld = GetWorld();
+        if (nullptr == lpWorld) {
+            LogError("FindLocalSPC", "Failed to get UWorld instance");
+            return nullptr;
+        }
+
+        SDK::UGameInstance *lpOwningGameInstance = lpWorld->OwningGameInstance;
+        if (nullptr == lpOwningGameInstance) {
+            LogError("FindLocalSPC", "OwningGameInstance is NULL");
+            return nullptr;
+        }
+
+        if (lpOwningGameInstance->LocalPlayers.Num() < 1) {
+            LogError("FindLocalSPC", "No LocalPlayers found in OwningGameInstance");
+            return nullptr;
+        }
+
+        SDK::ULocalPlayer* lpLocalPlayer = lpOwningGameInstance->LocalPlayers[0];
+        if (nullptr == lpLocalPlayer) {
+            LogError("FindLocalSPC", "LocalPlayer is NULL");
+            return nullptr;
+        }
+
+        SDK::APlayerController* lpPlayerController = lpLocalPlayer->PlayerController;
+        if (nullptr == lpPlayerController) {
+            LogError("FindLocalSPC", "PlayerController is NULL");
+            return nullptr;
+        }
+
+        if (!lpPlayerController->IsA(SDK::ASurvivalPlayerController::StaticClass())) {
+            LogError("FindLocalSPC", "PlayerController is not of type ASurvivalPlayerController");
+            return nullptr;
+        }
+
+        SDK::ASurvivalPlayerController* lpSurvivalPlayerController = 
+            static_cast<SDK::ASurvivalPlayerController*>(lpPlayerController);
+
+        if (nullptr == lpSurvivalPlayerController->PlayerState) {
+            LogError("FindLocalSPC", "PlayerState is NULL for SurvivalPlayerController");
+            return nullptr;
+        }
+
+        return lpSurvivalPlayerController;
     }
 
     SDK::ASurvivalPlayerController *GetLocalSurvivalPlayerController(void) {

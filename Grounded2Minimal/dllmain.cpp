@@ -653,11 +653,27 @@ void InitializeGameStatics(void) {
     );
 }
 
+static bool IsDebugFilePresent(void) {
+    LPCSTR cszDebugFileName = ".g2m_debug";
+
+    DWORD dwAttrib = GetFileAttributesA(cszDebugFileName);
+    return (dwAttrib != INVALID_FILE_ATTRIBUTES && !(dwAttrib & FILE_ATTRIBUTE_DIRECTORY));
+}
+
 DWORD WINAPI ThreadEntry(
     LPVOID lpParam
 ) { 
 #ifndef _RELEASE
     EnableDebugOutput();
+#else 
+    if (IsDebugFilePresent()) {
+        EnableDebugOutput();
+        LogMessage(
+            "Init",
+            "Debug output enabled via presence of .g2m_debug file in working directory",
+            true
+        );
+    }
 #endif // _RELEASE
     EnableGlobalOutput();
 
@@ -733,8 +749,41 @@ DWORD WINAPI ThreadEntry(
     // Don't hook SPC and ChatBox events if client is not host
     if (g_G2MOptions.bIsClientHost) {
         LogMessage("Init", "Initializing SurvivalPlayerController ProcessEvent hook...", true);
+        SDK::ASurvivalPlayerController* lpLocalSPC = UnrealUtils::GetLocalSurvivalPlayerControllerFast();
+
+        if (nullptr == lpLocalSPC) {
+            LogMessage(
+                "Init",
+                "Failed to get local SurvivalPlayerController, trying fallback..."
+            );
+            lpLocalSPC = UnrealUtils::GetLocalSurvivalPlayerController();
+
+            if (nullptr == lpLocalSPC) {
+                LogError(
+                    "Init",
+                    "Failed to get local SurvivalPlayerController for hooking"
+                );
+                goto _RYUJI;
+            }
+            LogMessage(
+                "Init",
+                "Successfully obtained local SurvivalPlayerController via fallback: " + CoreUtils::HexConvert(
+                    reinterpret_cast<uintptr_t>(lpLocalSPC)
+                ),
+                true
+            );
+        } else {
+            LogMessage(
+                "Init",
+                "Successfully obtained local SurvivalPlayerController: " + CoreUtils::HexConvert(
+                    reinterpret_cast<uintptr_t>(lpLocalSPC)
+                ),
+                true
+            );
+        }
+
         if (!HookManager::ProcessEventHooker::InstallHook(
-            UnrealUtils::GetLocalSurvivalPlayerController(),
+            lpLocalSPC,
             _HookedSPCProcessEvent,    // ASurvivalPlayerController
             "SPC_ProcessEvent"
         )) {
@@ -742,7 +791,7 @@ DWORD WINAPI ThreadEntry(
                 "Init",
                 "Failed to hook SurvivalPlayerController ProcessEvent"
             );
-            return EXIT_FAILURE;
+            goto _RYUJI;
         }
 
         LogMessage("Init", "Initializing ChatBoxWidget ProcessEvent hook...", true);

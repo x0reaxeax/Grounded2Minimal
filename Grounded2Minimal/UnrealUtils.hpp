@@ -134,6 +134,7 @@ namespace UnrealUtils {
         int32_t iPlayerId
     );
 
+    SDK::ASurvivalPlayerController *GetLocalSurvivalPlayerControllerFast(void);
     SDK::ASurvivalPlayerController *GetLocalSurvivalPlayerController(void);
 
     SDK::UPartyComponent *FindLocalPlayerParty(

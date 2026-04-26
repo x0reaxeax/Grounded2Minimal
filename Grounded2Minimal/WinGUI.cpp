@@ -225,6 +225,9 @@ namespace WinGUI {
             //        UnrealUtils::GetSurvivalPlayerCharacterById()
             //    );
             //    break;
+            case CheatManager::CheatManagerFunctionId::UnlockOmniTool:
+                lpParams->Param1 = 6; // max omni tool tier
+                break;
             default:
                 break;
         }

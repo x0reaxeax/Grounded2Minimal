@@ -885,6 +885,35 @@ namespace Interpreter {
         }
     }
 
+    static void HandleSetOmniToolLevel(void) {
+        int32_t iOmniToolLevel = ReadIntegerInput(
+            "[OmniToolLevel] Enter new OmniTool level: ",
+            -1
+        );
+        // clamp to uint8
+        if (iOmniToolLevel < 0 || iOmniToolLevel > 255) {
+            LogError(
+                "OmniToolLevel",
+                "Invalid OmniTool level, must be between 0 and 255"
+            );
+            return;
+        }
+
+        CheatManager::CheatManagerParams* lpParams = new CheatManager::CheatManagerParams{
+            .FunctionId = CheatManager::CheatManagerFunctionId::UnlockOmniTool,
+            .FunctionParams = { 
+                static_cast<uint8_t>(iOmniToolLevel), 
+                0, 0, 0 
+            }
+        };
+
+        Command::SubmitTypedCommand(
+            Command::CommandId::CmdIdCheatManagerExecute,
+            lpParams
+        );
+        
+    }
+
 #pragma warning (pop) // C26813
 
     static void HandleCullItemByIndex(void) {
@@ -1408,6 +1437,7 @@ namespace Interpreter {
         { "OPT_SetStaminaRegenDelay", "Set player stamina regen delay", []() {
             HandleStaminaRegenDelay(CheatManager::StaticCheats::EStaticCheatOp::Set);
         }},
+        { "OPT_SetOmniToolLevel", "Set OmniTool level", HandleSetOmniToolLevel },
     };
 
     void PrintAvailableCommands(
