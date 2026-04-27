@@ -109,6 +109,14 @@ The debug console can be used to execute the following commands:
 | `OPT_SetMaxActiveMutations` | Set max active mutations |
 | `OPT_GetMaxCozinessLevelAchieved` | Get max coziness level achieved |
 | `OPT_SetMaxCozinessLevelAchieved` | Set max coziness level achieved |
+| `OPT_SetOmniToolLevel` | Set unlocked OmniTool level |
+| `"OPT_SetPlayerDamageMultiplier` | Set player's output damage multiplayer |
+| `OPT_GetDodgeDistance"` | Get player's dodge distance |
+| `OPT_SetDodgeDistance` | Set player's dodge distance |
+| `OPT_GetStaminaRegenRate` | Get player's stamina regeneration rate |
+| `OPT_SetStaminaRegenRate` | Set player's stamina regeneration rate |
+| `OPT_GetStaminaRegenDelay` | Get player's stamina regeneration delay |
+| `OPT_SetStaminaRegenDelay` | Set player's stamina regeneration delay |
 | `OPT_ToggleHandyGnat` | Force enable/disable Handy Gnat availability |
 | `OPT_ToggleAutoCompleteBuildings` | Toggle auto-completion of building placements |
 | `OPT_ToggleBuildingIntegrity` | Toggle building integrity checks |
@@ -203,6 +211,7 @@ Cheat Manager functions can be added via the following steps:
  - [Unreal Engine Documentation](https://dev.epicgames.com/documentation/en-us/unreal-engine) - Misc UE stuff.
  - [MS Docs](https://learn.microsoft.com/en-us/windows/win32/learnwin32/learn-to-program-for-windows--sample-code) - GUI skeleton copypasta.
 
+## FAQ
 
 **Q:** Can I get banned for using this tool?  
 **A:** No, there's no anti-cheat.  
@@ -219,8 +228,8 @@ Cheat Manager functions can be added via the following steps:
 **Q:** Will an XYZ feature be added?  
 **A:** Possibly! Check the [Trello Board](https://trello.com/b/On1YdILA/grounded2minimal-status-map)!
 
-**Q:** Why is this being released now, when Grounded 2 is dropping in less than 2 weeks?  
-**A:** Good question xD  
+**Q:** The GUI is really small and I can't see shit.
+**A:** The GUI is indeed unfortunately total dogshit right now. Rework is WIP. For now, try adjusting your display scaling settings.  
 
 ## Disclaimer
 This project is licensed under the [GNU General Public License v3.0](#license).  
