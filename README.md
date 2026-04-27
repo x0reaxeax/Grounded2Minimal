@@ -2,7 +2,7 @@
 
 [![Release workflow](https://github.com/x0reaxeax/Grounded2Minimal/actions/workflows/release.yml/badge.svg)](https://github.com/x0reaxeax/Grounded2Minimal/actions/workflows/release.yml)
 
-## !!!IMPORTANT PLZ READ!!!
+## !!! IMPORTANT PLZ READ !!!
 Under set configurations, this tool can allow any connected players to **EXECUTE CONTROLLED CODE ON YOUR MACHINE**.  
 Only use this tool with people you trust, and only if you understand the risks involved.  
 
@@ -228,7 +228,7 @@ Cheat Manager functions can be added via the following steps:
 **Q:** Will an XYZ feature be added?  
 **A:** Possibly! Check the [Trello Board](https://trello.com/b/On1YdILA/grounded2minimal-status-map)!
 
-**Q:** The GUI is really small and I can't see shit.
+**Q:** The GUI is really small and I can't see shit.  
 **A:** The GUI is indeed unfortunately total dogshit right now. Rework is WIP. For now, try adjusting your display scaling settings.  
 
 ## Disclaimer
