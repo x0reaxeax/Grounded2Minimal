@@ -13,7 +13,7 @@ int main(void) {
     CHAR szCurrentDir[MAX_PATH] = { 0 };
     CHAR szTargetDllPath[MAX_PATH * 2] = { 0 };
 #if (TARGET_PLATFORM == TARGET_PLATFORM_STEAM)
-    LPCSTR cszTargetProcessName = "Grounded2-WinGRTS-Shipping.exe";
+    LPCSTR cszTargetProcessName = "Grounded2Steam-Win64-Shipping.exe";
 #elif (TARGET_PLATFORM == TARGET_PLATFORM_XGP)
     LPCSTR cszTargetProcessName = "Grounded2-WinGDK-Shipping.exe";
 #endif // PLATFORM_STEAM
@@ -128,7 +128,7 @@ int main(void) {
             "[-] OpenProcess() - E%lu\n",
             GetLastError()
         );
-        return EXIT_FAILURE;
+        goto _FINAL;
     }
 
     printf(
