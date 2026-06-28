@@ -50,8 +50,8 @@ END
 //
 
 VS_VERSION_INFO VERSIONINFO
-FILEVERSION 2,2,7,4
-PRODUCTVERSION 2,2,7,4
+FILEVERSION 2,2,7,5
+PRODUCTVERSION 2,2,7,5
  FILEFLAGSMASK 0x3fL
 #ifdef _DEBUG
  FILEFLAGS 0x1L
@@ -70,7 +70,7 @@ BEGIN
             VALUE "FileDescription", "Grounded2Minimal Tool"
             VALUE "FileVersion", "2.2.7.5"
             VALUE "InternalName", "Grounded2Minimal.dll"
-            VALUE "LegalCopyright", "Copyright (C) 2025 x0reaxeax"
+            VALUE "LegalCopyright", "Copyright (C) 2026 x0reaxeax"
             VALUE "OriginalFilename", "Grounded2Minimal.dll"
             VALUE "ProductName", "Grounded2Minimal"
             VALUE "ProductVersion", "2.2.7.5"
