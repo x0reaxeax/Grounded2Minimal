@@ -1418,7 +1418,7 @@ namespace WinGUI {
                         ));
                         g_GameOptions.BuildAnywhere.store(
                             bNewState,
-                            std::memory_order_acq_rel
+                            std::memory_order_release
                         );
 
                         LogMessage(
@@ -1442,7 +1442,7 @@ namespace WinGUI {
 
                         g_GameOptions.GameStatics.HandyGnatForceEnable.store(
                             bNewState,
-                            std::memory_order_acq_rel
+                            std::memory_order_release
                         );
 
                         CheatManager::StaticCheats::ToggleHandyGnat(
@@ -1470,7 +1470,7 @@ namespace WinGUI {
                         
                         g_GameOptions.GameStatics.AutoCompleteBuildings.store(
                             bNewState,
-                            std::memory_order_acq_rel
+                            std::memory_order_release
                         );
 
                         CheatManager::StaticCheats::ToggleAutoCompleteBuildings(
@@ -1497,7 +1497,7 @@ namespace WinGUI {
                         
                         g_GameOptions.GameStatics.BuildingIntegrity.store(
                             bNewState,
-                            std::memory_order_acq_rel
+                            std::memory_order_release
                         );
                         
                         CheatManager::StaticCheats::ToggleBuildingIntegrity(

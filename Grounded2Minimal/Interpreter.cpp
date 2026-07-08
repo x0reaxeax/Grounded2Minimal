@@ -1155,7 +1155,7 @@ namespace Interpreter {
         }
 
         CheatManager::StaticCheats::SetPlayerDamageMultiplier(fDamageMultiplier);
-        g_GameOptions.GameStatics.PlayerDamageMultiplier.store(fDamageMultiplier, std::memory_order_acq_rel);
+        g_GameOptions.GameStatics.PlayerDamageMultiplier.store(fDamageMultiplier, std::memory_order_release);
 
         LogMessage(
             "SetPlayerDamageMultiplier",

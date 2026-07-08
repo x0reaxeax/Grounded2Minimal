@@ -607,32 +607,32 @@ NATIVEHOOK Maine_HealthComponent_OnRep_CurrentDamage(
 void InitializeGameStatics(void) {
     g_GameOptions.GameStatics.HandyGnatForceEnable.store(
         UnrealUtils::GameStatics::IsHandyGnatEnabled(),
-        std::memory_order_acq_rel
+        std::memory_order_release
     );
 
     g_GameOptions.GameStatics.BuildingIntegrity.store(
         UnrealUtils::GameStatics::IsBuildingIntegrityEnabled(),
-        std::memory_order_acq_rel
+        std::memory_order_release
     );
 
     g_GameOptions.GameStatics.AutoCompleteBuildings.store(
         UnrealUtils::GameStatics::IsAutoCompleteBuildingsEnabled(),
-        std::memory_order_acq_rel
+        std::memory_order_release
     );
 
     g_GameOptions.GameStatics.FreeCrafting.store(
         UnrealUtils::GameStatics::IsFreeCraftingEnabled(),
-        std::memory_order_acq_rel
+        std::memory_order_release
     );
 
     g_GameOptions.GameStatics.InvinciblePets.store(
         UnrealUtils::GameStatics::IsPetInvincibilityEnabled(),
-        std::memory_order_acq_rel
+        std::memory_order_release
     );
 
     g_GameOptions.GameStatics.PlayerDamageMultiplier.store(
         UnrealUtils::GameStatics::GetPlayerDamageMultiplier(),
-        std::memory_order_acq_rel
+        std::memory_order_release
     );
 
     g_GameOptions.CurrentlyAdjustedBuilding.store(
