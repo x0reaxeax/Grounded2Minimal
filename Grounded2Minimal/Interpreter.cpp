@@ -61,7 +61,9 @@ namespace Interpreter {
                 LPCWSTR cwszMessage = bNow ? L"BuildAnywhere enabled" : L"BuildAnywhere disabled";
 
                 SDK::FString fszMessage = SDK::FString(cwszMessage);
-                UnrealUtils::GetGameUI()->PostGenericMessage(fszMessage, nullptr);
+                // Green if enabled, red if disabled
+                SDK::FColor textColor = bNow ? SDK::FColor{ 0, 255, 0, 255 } : SDK::FColor{ 255, 0, 0, 255 };
+                UnrealUtils::GetGameUI()->PostGenericMessage(fszMessage, nullptr, true, textColor);
 
                 if (IsDebugOutputEnabled()) {
                     LogMessage(
