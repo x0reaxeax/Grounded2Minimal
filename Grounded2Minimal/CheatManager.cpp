@@ -366,6 +366,33 @@ namespace CheatManager {
             );
         }
 
+        // Breath Regen
+        float CurrentBreathAdjustRate(
+            EStaticCheatOp eOperation,
+            int32_t iTargetPlayerId,
+            float fNewBreathAdjustRate
+        ) {
+            auto getter = [](SDK::ASurvivalPlayerCharacter* pc) -> float {
+                g_GameOptions.GameStatics.BreathAdjustRate.store(
+                    pc->SurvivalComponent->BreathSettings.AdjustmentPerSecond, 
+                    std::memory_order_release
+                );
+                return pc->SurvivalComponent->BreathSettings.AdjustmentPerSecond;
+            };
+            auto setter = [](SDK::ASurvivalPlayerCharacter* pc, float value) {
+                pc->SurvivalComponent->BreathSettings.AdjustmentPerSecond = value;
+                g_GameOptions.GameStatics.BreathAdjustRate.store(value, std::memory_order_release);
+            };
+            return HandleFloatCharCheat(
+                eOperation,
+                iTargetPlayerId,
+                fNewBreathAdjustRate,
+                "CurrentBreathAdjustRate",
+                getter,
+                setter
+            );
+        }
+
         void ToggleHandyGnat(
             bool bEnable
         ) {
@@ -450,6 +477,8 @@ namespace CheatManager {
                 return;
             }
             lpSettings->PlayerDamageMultiplier = fNewMultiplier;
+
+            g_GameOptions.GameStatics.PlayerDamageMultiplier.store(fNewMultiplier, std::memory_order_release);
         }
 
         void SetGameType(
@@ -1097,6 +1126,16 @@ namespace CheatManager {
                 break;
             }
 
+            case CheatManagerFunctionId::AddBuggyUpgradePoints: {
+                if (nullptr == alpqwParams) {
+                    LogError("CheatManager", "Params are NULL for AddBuggyUpgradePoints");
+                    return;
+                }
+                int32_t iAmount = static_cast<int32_t>(alpqwParams[0]);
+                SurvivalCheatManager->AddBuggyUpgradePoints(iAmount);
+                break;
+            }
+
             case CheatManagerFunctionId::AddRawScience: {
                 if (nullptr == alpqwParams) {
                     LogError("CheatManager", "Params are NULL for AddRawScience");
@@ -1106,6 +1145,27 @@ namespace CheatManager {
                 int32_t iAmount = static_cast<int32_t>(alpqwParams[0]);
                 SurvivalCheatManager->AddScience(iAmount);
 
+                break;
+            }
+
+            case CheatManagerFunctionId::Revive: {
+                SurvivalCheatManager->Revive();
+                break;
+            }
+
+            case CheatManagerFunctionId::AdvanceTimeByHours: {
+                if (nullptr == alpqwParams) {
+                    LogError("CheatManager", "Params are NULL for AdvanceTimeByHours");
+                    return;
+                }
+                float fHours = *reinterpret_cast<const float*>(&alpqwParams[0]);
+                SurvivalCheatManager->AdvanceTimeByHours(fHours);
+                break;
+            }
+
+            case CheatManagerFunctionId::ToggleInfiniteDamage: {
+                g_GameOptions.InfiniteDamage.fetch_xor(1, std::memory_order_acq_rel);
+                SurvivalCheatManager->InfiniteDamage();
                 break;
             }
 

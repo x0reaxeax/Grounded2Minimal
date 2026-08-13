@@ -887,6 +887,63 @@ namespace Interpreter {
         }
     }
 
+    static void HandleBreathAdjustRate(
+        CheatManager::StaticCheats::EStaticCheatOp eOperation
+    ) {
+        using StaticOp = CheatManager::StaticCheats::EStaticCheatOp;
+        const bool bIsSet = (eOperation == StaticOp::Set);
+        std::string szOperationStr = bIsSet ? "set" : "get";
+        float fBreathAdjustRate = 0.0f;
+        if (bIsSet) {
+            fBreathAdjustRate = ReadFloatInput(
+                "[BreathAdjustRate] Enter new breath adjust rate: ",
+                -1.0f
+            );
+            if (fBreathAdjustRate < 0.0f) {
+                LogError(
+                    "BreathAdjustRate",
+                    "Invalid breath adjust rate, must be non-negative"
+                );
+                return;
+            }
+            LogMessage(
+                "BreathAdjustRate",
+                "Setting breath adjust rate to " + std::to_string(fBreathAdjustRate)
+            );
+        }
+        int32_t iTargetPlayerId = ReadIntegerInput(
+            "[BreathAdjustRate] Enter target player ID (empty for local): ",
+            UnrealUtils::GetLocalPlayerId(true)
+        );
+        float fResult = CheatManager::StaticCheats::CurrentBreathAdjustRate(
+            eOperation,
+            iTargetPlayerId,
+            fBreathAdjustRate   // ignored for Get
+        );
+
+        if (fResult < 0.0f) {
+            LogError(
+                "BreathAdjustRate",
+                "Failed to " + szOperationStr + " breath adjust rate"
+            );
+            return;
+        }
+        if (bIsSet) {
+            LogMessage(
+                "BreathAdjustRate",
+                "Breath adjust rate successfully set to " + std::to_string(fResult) +
+                " for player ID " + std::to_string(iTargetPlayerId)
+            );
+        } else {
+            LogMessage(
+                "BreathAdjustRate",
+                "Current breath adjust rate for player ID " +
+                std::to_string(iTargetPlayerId) + ": " +
+                std::to_string(fResult)
+            );
+        }
+    }
+
     static void HandleSetOmniToolLevel(void) {
         int32_t iOmniToolLevel = ReadIntegerInput(
             "[OmniToolLevel] Enter new OmniTool level: ",
@@ -1157,7 +1214,6 @@ namespace Interpreter {
         }
 
         CheatManager::StaticCheats::SetPlayerDamageMultiplier(fDamageMultiplier);
-        g_GameOptions.GameStatics.PlayerDamageMultiplier.store(fDamageMultiplier, std::memory_order_release);
 
         LogMessage(
             "SetPlayerDamageMultiplier",
@@ -1198,6 +1254,133 @@ namespace Interpreter {
             lpParams
         );
     }
+
+    static void HandleToggleInfiniteDamage(void) {
+        CheatManager::CheatManagerParams* lpParams = new CheatManager::CheatManagerParams{
+            .FunctionId = CheatManager::CheatManagerFunctionId::ToggleInfiniteDamage,
+            .FunctionParams = {
+                reinterpret_cast<uint64_t>(
+                    UnrealUtils::GetSurvivalPlayerCharacterById()
+                ),
+                0, 0, 0
+            }
+        };
+
+        Command::SubmitTypedCommand(
+            Command::CommandId::CmdIdCheatManagerExecute,
+            lpParams
+        );
+    }
+
+    static void HandleRevive(void) {
+        CheatManager::CheatManagerParams* lpParams = new CheatManager::CheatManagerParams{
+            .FunctionId = CheatManager::CheatManagerFunctionId::Revive,
+            .FunctionParams = {
+                reinterpret_cast<uint64_t>(
+                    UnrealUtils::GetSurvivalPlayerCharacterById()
+                ),
+                0, 0, 0
+            }
+        };
+        Command::SubmitTypedCommand(
+            Command::CommandId::CmdIdCheatManagerExecute,
+            lpParams
+        );
+    }
+
+    static void HandleAddWhiteMolars(void) {
+        int32_t iMolarAddCount = ReadIntegerInput(
+            "[AddWhiteMolars] Enter number of white molars to add: ",
+            -1
+        );
+
+        if (iMolarAddCount < 0) {
+            LogError(
+                "AddWhiteMolars",
+                "Invalid molar count, must be non-negative"
+            );
+            return;
+        }
+
+        // multi-cheatmanager future tests
+        /*int32_t iTargetPlayerId = ReadIntegerInput(
+            "[AddWhiteMolars] Enter target player ID (empty for local): ",
+            UnrealUtils::GetLocalPlayerId(true)
+        );*/
+
+        CheatManager::CheatManagerParams* lpParams = new CheatManager::CheatManagerParams{
+            .FunctionId = CheatManager::CheatManagerFunctionId::AddWhiteMolars,
+            .FunctionParams = {
+                reinterpret_cast<uint64_t>(
+                    CheatManager::GetPlayersCheatManager(UnrealUtils::GetLocalPlayerId(true))
+                ),
+                static_cast<uint64_t>(iMolarAddCount),
+                0, 0
+            }
+        };
+
+        Command::SubmitTypedCommand(
+            Command::CommandId::CmdIdCheatManagerExecute,
+            lpParams
+        );
+    }
+
+    static void HandleAddGoldMolars(void) {
+        int32_t iMolarAddCount = ReadIntegerInput(
+            "[AddGoldMolars] Enter number of gold molars to add: ",
+            -1
+        );
+        if (iMolarAddCount < 0) {
+            LogError(
+                "AddGoldMolars",
+                "Invalid molar count, must be non-negative"
+            );
+            return;
+        }
+        CheatManager::CheatManagerParams* lpParams = new CheatManager::CheatManagerParams{
+            .FunctionId = CheatManager::CheatManagerFunctionId::AddGoldMolars,
+            .FunctionParams = {
+                reinterpret_cast<uint64_t>(
+                    CheatManager::GetPlayersCheatManager(UnrealUtils::GetLocalPlayerId(true))
+                ),
+                static_cast<uint64_t>(iMolarAddCount),
+                0, 0
+            }
+        };
+        Command::SubmitTypedCommand(
+            Command::CommandId::CmdIdCheatManagerExecute,
+            lpParams
+        );
+    }
+
+    static void HandleAddBuggyUpgradePoints(void) {
+        int32_t iBuggyUpgradePoints = ReadIntegerInput(
+            "[AddBuggyUpgradePoints] Enter number of buggy upgrade points to add: ",
+            -1
+        );
+        if (iBuggyUpgradePoints < 0) {
+            LogError(
+                "AddBuggyUpgradePoints",
+                "Invalid upgrade point count, must be non-negative"
+            );
+            return;
+        }
+        CheatManager::CheatManagerParams* lpParams = new CheatManager::CheatManagerParams{
+            .FunctionId = CheatManager::CheatManagerFunctionId::AddBuggyUpgradePoints,
+            .FunctionParams = {
+                reinterpret_cast<uint64_t>(
+                    CheatManager::GetPlayersCheatManager(UnrealUtils::GetLocalPlayerId(true))
+                ),
+                static_cast<uint64_t>(iBuggyUpgradePoints),
+                0, 0
+            }
+        };
+        Command::SubmitTypedCommand(
+            Command::CommandId::CmdIdCheatManagerExecute,
+            lpParams
+        );
+    }
+
 
     void PrintAvailableCommands(void);
 
@@ -1328,7 +1511,8 @@ namespace Interpreter {
                     std::string(" - Infinite Stamina        - ") + (g_GameOptions.InfiniteStamina.load() ? "enabled" : "disabled") + "\n" + 
                     std::string(" - Pet Invincibility       - ") + (g_GameOptions.GameStatics.InvinciblePets.load() ? "enabled" : "disabled") + "\n" +
                     std::string(" - Free Crafting           - ") + (g_GameOptions.GameStatics.FreeCrafting.load() ? "enabled" : "disabled") + "\n" +
-                    std::string(" - Damage Multiplier       - ") + std::to_string(g_GameOptions.GameStatics.PlayerDamageMultiplier.load()) + "\n"
+                    std::string(" - Damage Multiplier       - ") + std::to_string(g_GameOptions.GameStatics.PlayerDamageMultiplier.load()) + "\n" +
+                    std::string(" - Infinite Damage         - ") + (g_GameOptions.InfiniteDamage.load() ? "enabled" : "disabled") + "\n"
                 );
             }
         },
@@ -1439,7 +1623,18 @@ namespace Interpreter {
         { "OPT_SetStaminaRegenDelay", "Set player stamina regen delay", []() {
             HandleStaminaRegenDelay(CheatManager::StaticCheats::EStaticCheatOp::Set);
         }},
+        { "OPT_GetBreathAdjustRate", "Get breath adjustment rate", []() {
+            HandleBreathAdjustRate(CheatManager::StaticCheats::EStaticCheatOp::Get);
+        }},
+        { "OPT_SetBreathAdjustRate", "Set breath adjustment rate", []() {
+            HandleBreathAdjustRate(CheatManager::StaticCheats::EStaticCheatOp::Set);
+        }},
         { "OPT_SetOmniToolLevel", "Set OmniTool level", HandleSetOmniToolLevel },
+        { "OPT_ToggleInfiniteDamage", "Toggle infinite damage", HandleToggleInfiniteDamage },
+        { "OPT_AddWhiteMolars", "Add white molars (PersonalUpgradePoints)", HandleAddWhiteMolars },
+        { "OPT_AddGoldMolars", "Add gold molars (PartyUpgradePoints)", HandleAddGoldMolars },
+        { "OPT_AddBuggyUpgradePoints", "Add moldy molars (BuggyUpgradePoints)", HandleAddBuggyUpgradePoints },
+        { "OPT_InvokeRevive", "Revive player character", HandleRevive }
     };
 
     void PrintAvailableCommands(
