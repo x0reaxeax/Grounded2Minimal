@@ -56,6 +56,10 @@ namespace CoreUtils {
     uintptr_t GetModuleBaseAddressW(
         const wchar_t* wszModuleName
     );
+
+    DWORD32 GetTextRVA(
+        LPCBYTE lpBaseAddress
+    );
 } // namespace CoreUtils
 
 #endif // _GROUNDED_MINIMAL_CORE_UTILS_HPP
