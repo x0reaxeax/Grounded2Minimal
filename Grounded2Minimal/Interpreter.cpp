@@ -1311,11 +1311,11 @@ namespace Interpreter {
         CheatManager::CheatManagerParams* lpParams = new CheatManager::CheatManagerParams{
             .FunctionId = CheatManager::CheatManagerFunctionId::AddWhiteMolars,
             .FunctionParams = {
-                reinterpret_cast<uint64_t>(
+                /*reinterpret_cast<uint64_t>(
                     CheatManager::GetPlayersCheatManager(UnrealUtils::GetLocalPlayerId(true))
-                ),
+                ), leaving for future multi-cheatmanager */
                 static_cast<uint64_t>(iMolarAddCount),
-                0, 0
+                0, 0, 0
             }
         };
 
@@ -1340,11 +1340,11 @@ namespace Interpreter {
         CheatManager::CheatManagerParams* lpParams = new CheatManager::CheatManagerParams{
             .FunctionId = CheatManager::CheatManagerFunctionId::AddGoldMolars,
             .FunctionParams = {
-                reinterpret_cast<uint64_t>(
+/*                reinterpret_cast<uint64_t>(
                     CheatManager::GetPlayersCheatManager(UnrealUtils::GetLocalPlayerId(true))
-                ),
+                ),*/
                 static_cast<uint64_t>(iMolarAddCount),
-                0, 0
+                0, 0, 0
             }
         };
         Command::SubmitTypedCommand(
@@ -1368,11 +1368,11 @@ namespace Interpreter {
         CheatManager::CheatManagerParams* lpParams = new CheatManager::CheatManagerParams{
             .FunctionId = CheatManager::CheatManagerFunctionId::AddBuggyUpgradePoints,
             .FunctionParams = {
-                reinterpret_cast<uint64_t>(
+                /*reinterpret_cast<uint64_t>(
                     CheatManager::GetPlayersCheatManager(UnrealUtils::GetLocalPlayerId(true))
-                ),
+                ),*/
                 static_cast<uint64_t>(iBuggyUpgradePoints),
-                0, 0
+                0, 0, 0
             }
         };
         Command::SubmitTypedCommand(
