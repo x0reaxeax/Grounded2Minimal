@@ -268,37 +268,59 @@ namespace CoreUtils {
         return reinterpret_cast<uintptr_t>(hModule);
     }
 
-    DWORD32 GetTextRVA(
-        LPCBYTE lpBaseAddress
+    DWORD32 GetSectionRVAOffset(
+        LPCBYTE lpBaseAddress,
+        LPCSTR szSectionName
     ) {
         PIMAGE_DOS_HEADER pDosHeader = (PIMAGE_DOS_HEADER) lpBaseAddress;
         if (IMAGE_DOS_SIGNATURE != pDosHeader->e_magic) {
             LogError(
-                "GetTextRVA",
+                "GetSectionRVAOffset",
                 "[-] Invalid DOS header signature: " + CoreUtils::HexConvert(pDosHeader->e_magic) + "\n"
             );
             return 0;
         }
 
-        PIMAGE_NT_HEADERS pNtHeaders = (PIMAGE_NT_HEADERS) (lpBaseAddress + pDosHeader->e_lfanew);
+        PIMAGE_NT_HEADERS pNtHeaders =
+            (PIMAGE_NT_HEADERS) (lpBaseAddress + pDosHeader->e_lfanew);
+
         if (IMAGE_NT_SIGNATURE != pNtHeaders->Signature) {
             LogError(
-                "GetTextRVA",
+                "GetSectionRVAOffset",
                 "[-] Invalid NT header signature: " + CoreUtils::HexConvert(pNtHeaders->Signature) + "\n"
             );
             return 0;
         }
 
-        PIMAGE_SECTION_HEADER pSectionHeaders = \
-            (PIMAGE_SECTION_HEADER) (lpBaseAddress + pDosHeader->e_lfanew + sizeof(IMAGE_NT_HEADERS));
-        for (WORD i = 0; i < pNtHeaders->FileHeader.NumberOfSections; i++) {
-            if (0 == strcmp(
-                (LPCSTR) pSectionHeaders[i].Name,
-                ".text"
-            )) {
-                return pSectionHeaders[i].VirtualAddress - pSectionHeaders[i].PointerToRawData;
-            }
+        SIZE_T cbSectionName = strlen(szSectionName);
+
+        if (0 == cbSectionName || IMAGE_SIZEOF_SHORT_NAME < cbSectionName) {
+            return 0;
         }
+
+        PIMAGE_SECTION_HEADER pSectionHeaders =
+            IMAGE_FIRST_SECTION(pNtHeaders);
+
+        for (WORD i = 0; i < pNtHeaders->FileHeader.NumberOfSections; i++) {
+            if (0 != memcmp(
+                pSectionHeaders[i].Name,
+                szSectionName,
+                cbSectionName
+            )) {
+                continue;
+            }
+
+            if (
+                IMAGE_SIZEOF_SHORT_NAME != cbSectionName 
+                && 
+                '\0' != pSectionHeaders[i].Name[cbSectionName]
+            ) {
+                continue;
+            }
+
+            return pSectionHeaders[i].VirtualAddress - pSectionHeaders[i].PointerToRawData;
+        }
+
         return 0;
     }
 }

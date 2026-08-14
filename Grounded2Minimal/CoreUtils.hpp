@@ -57,8 +57,9 @@ namespace CoreUtils {
         const wchar_t* wszModuleName
     );
 
-    DWORD32 GetTextRVA(
-        LPCBYTE lpBaseAddress
+    DWORD32 GetSectionRVAOffset(
+        LPCBYTE lpBaseAddress,
+        LPCSTR szSectionName
     );
 } // namespace CoreUtils
 

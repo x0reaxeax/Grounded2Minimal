@@ -105,7 +105,11 @@ void ProcessDebugFilter(
 }
 
 static bool CheckGameCompat(void) {
-    constexpr uintptr_t GameVersionStringOffset = 0x8188224;
+#if (TARGET_PLATFORM == TARGET_PLATFORM_STEAM)
+    constexpr uintptr_t GameVersionStringOffset = 0x08187424;
+#elif (TARGET_PLATFORM == TARGET_PLATFORM_XGP)
+    constexpr uintptr_t GameVersionStringOffset = 0x07A43C24;
+#endif
 
     HMODULE hBaseAddress = GetModuleHandleW(nullptr);
     if (nullptr == hBaseAddress) {
@@ -118,9 +122,12 @@ static bool CheckGameCompat(void) {
 
     MEMORY_BASIC_INFORMATION mbInfo{};
 
-    LPCBYTE lpcTargetVersionAddress = reinterpret_cast<LPCBYTE>(
-        reinterpret_cast<uintptr_t>(hBaseAddress) + GameVersionStringOffset
+    DWORD32 dwRdataRVA = CoreUtils::GetSectionRVAOffset(
+        reinterpret_cast<LPCBYTE>(hBaseAddress), 
+        ".rdata"
     );
+
+    LPCBYTE lpcTargetVersionAddress = reinterpret_cast<LPCBYTE>(hBaseAddress) + dwRdataRVA + GameVersionStringOffset;
 
     if (0 == VirtualQuery(
         lpcTargetVersionAddress,
@@ -150,6 +157,15 @@ static bool CheckGameCompat(void) {
         abGameVersion,
         sizeof(abGameVersion)
     )) {
+        LogMessage(
+            "CheckGameCompat",
+            "Incompatibility report:\n"
+            " * BaseAddress: " + CoreUtils::HexConvert(reinterpret_cast<uintptr_t>(hBaseAddress)) + "\n"
+            " * TargetVersionAddress: " + CoreUtils::HexConvert(reinterpret_cast<uintptr_t>(lpcTargetVersionAddress)) + "\n"
+            " * .rdata RVA: " + CoreUtils::HexConvert(dwRdataRVA) + "\n",
+            true
+        );
+
         LogError(
             "CheckGameCompat",
             "Game version string does not match expected value, the game may have been updated and is incompatible with this mod"
