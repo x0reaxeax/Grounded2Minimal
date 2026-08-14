@@ -104,6 +104,58 @@ void ProcessDebugFilter(
     }
 }
 
+static bool CheckGameCompat(void) {
+    constexpr uintptr_t GameVersionStringOffset = 0x8188224;
+
+    HMODULE hBaseAddress = GetModuleHandleW(nullptr);
+    if (nullptr == hBaseAddress) {
+        LogError(
+            "CheckGameCompat",
+            "Failed to get base address of the game module"
+        );
+        return false;
+    }
+
+    MEMORY_BASIC_INFORMATION mbInfo{};
+
+    if (0 == VirtualQuery(
+        hBaseAddress,
+        &mbInfo,
+        sizeof(mbInfo)
+    )) {
+        LogError(
+            "CheckGameCompat",
+            "Failed to query memory information for the game module"
+        );
+        return false;
+    }
+    
+    if (
+        mbInfo.State != MEM_COMMIT || mbInfo.Protect == PAGE_NOACCESS
+    ) {
+        LogError(
+            "CheckGameCompat",
+            "Game module memory is not committed or is inaccessible"
+        );
+        return false;
+    }
+
+    CONST BYTE abGameVersion[] = { 0x30, 0x00, 0x2E, 0x00, 0x35, 0x00, 0x2E, 0x00, 0x30, 0x00, 0x2E, 0x00, 0x33 };
+    if (0 != memcmp(
+        reinterpret_cast<const void*>(reinterpret_cast<uintptr_t>(hBaseAddress) + GameVersionStringOffset),
+        abGameVersion,
+        sizeof(abGameVersion)
+    )) {
+        LogError(
+            "CheckGameCompat",
+            "Game version string does not match expected value, the game may have been updated and is incompatible with this mod"
+        );
+        return false;
+    }
+
+    return true;
+}
+
 void ProcessDebugFilter(
     HookManager::NativeHooker::HookEntry* lpHookData,
     NativeProcessEventParams* lpParams
@@ -717,6 +769,25 @@ DWORD WINAPI ThreadEntry(
         true
     );
 
+    LogMessage(
+        "Init",
+        "Checking game version compatibility..."
+    );
+    if (!CheckGameCompat()) {
+        LogError(
+            "Init",
+            "FATAL ERROR\n"
+            "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n"
+            "! Incompatible game version detected!     !\n"
+            "! Check for Grounded2Minimal updates.     !\n"
+            "!                                         !\n"
+            "! Press ENTER to continue...              !\n"
+            "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
+        );
+        iRet = EXIT_FAILURE;
+        goto _CLEAN_EXIT;
+    }
+
     while (nullptr == UnrealUtils::GetLocalPawn()) {
         LogMessage("Init", "Waiting for LocalPawn to be available...");
         std::this_thread::sleep_for(std::chrono::milliseconds(1000));
@@ -926,6 +997,7 @@ _RYUJI:
     HookManager::NativeHooker::RestoreAll();
     std::this_thread::sleep_for(std::chrono::milliseconds(500));
 
+_CLEAN_EXIT:
     if (EXIT_SUCCESS != iRet) {
         LogError("Exit", "GroundedMinimal2: Exiting due to errors");
         system("pause");

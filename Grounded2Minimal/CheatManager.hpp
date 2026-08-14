@@ -23,6 +23,7 @@ namespace CheatManager {
         float DodgeDistance(EStaticCheatOp eOperation, int32_t iTargetPlayerId, float fNewSetValue);
         float CurrentFoodLevel(EStaticCheatOp eOperation, int32_t iTargetPlayerId, float fNewSetValue);
         float CurrentWaterLevel(EStaticCheatOp eOperation, int32_t iTargetPlayerId, float fNewSetValue);
+        float CurrentBreathAdjustRate(EStaticCheatOp eOperation, int32_t iTargetPlayerId, float fNewSetValue);
         float StaminaRegenRate(EStaticCheatOp eOperation, int32_t iTargetPlayerId, float fNewRegenRate);
         float StaminaRegenDelay(EStaticCheatOp eOperation, int32_t iTargetPlayerId, float fNewRegenDelay);
         
@@ -102,8 +103,12 @@ namespace CheatManager {
         None = 0,
         AddWhiteMolars,
         AddGoldMolars,
+        AddBuggyUpgradePoints,
         AddRawScience,
+        AdvanceTimeByHours,
+        Revive,
         ToggleHud,
+        ToggleInfiniteDamage,
         UnlockAllRecipes,
         UnlockAllLandmarks,
         UnlockMutations,
