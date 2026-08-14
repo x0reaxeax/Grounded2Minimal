@@ -189,11 +189,11 @@ namespace HookManager {
 
         static inline bool IsNative(const SDK::UFunction* lpcTargetFunc) {
             constexpr uint32_t FUNC_Native = 0x00000400;
-            return lpcTargetFunc && (lpcTargetFunc->FunctionFlags & FUNC_Native);
+            return lpcTargetFunc && (static_cast<uint32_t>(lpcTargetFunc->FunctionFlags) & FUNC_Native);
         };
 
         static inline uint32_t ReadFlags(const SDK::UFunction* lpcTargetFunc) {
-            return lpcTargetFunc ? lpcTargetFunc->FunctionFlags : 0;
+            return lpcTargetFunc ? static_cast<uint32_t>(lpcTargetFunc->FunctionFlags) : 0;
         }
 
         static bool SwapExecFunctionPtr(
