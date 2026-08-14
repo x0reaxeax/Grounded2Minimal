@@ -118,8 +118,12 @@ static bool CheckGameCompat(void) {
 
     MEMORY_BASIC_INFORMATION mbInfo{};
 
+    LPCBYTE lpcTargetVersionAddress = reinterpret_cast<LPCBYTE>(
+        reinterpret_cast<uintptr_t>(hBaseAddress) + GameVersionStringOffset
+    );
+
     if (0 == VirtualQuery(
-        hBaseAddress,
+        lpcTargetVersionAddress,
         &mbInfo,
         sizeof(mbInfo)
     )) {
@@ -142,7 +146,7 @@ static bool CheckGameCompat(void) {
 
     CONST BYTE abGameVersion[] = { 0x30, 0x00, 0x2E, 0x00, 0x35, 0x00, 0x2E, 0x00, 0x30, 0x00, 0x2E, 0x00, 0x33 };
     if (0 != memcmp(
-        reinterpret_cast<const void*>(reinterpret_cast<uintptr_t>(hBaseAddress) + GameVersionStringOffset),
+        reinterpret_cast<const void*>(lpcTargetVersionAddress),
         abGameVersion,
         sizeof(abGameVersion)
     )) {
