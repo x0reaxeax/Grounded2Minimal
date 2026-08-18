@@ -85,12 +85,27 @@ namespace CheatManager {
             SDK::ASpawnedItem *lpItemInstance;
         };
 
+        struct BufferParamsSetItemOwner {
+            SDK::ASpawnedItem* lpItemInstance;
+            SDK::ASurvivalCharacter* lpNewOwner;
+        };
+
         void __gamethread CullItemInstance(
             SDK::ASpawnedItem *lpItemToCull
         );
 
+        void __gamethread SetCulledItemOwner(
+            SDK::ASpawnedItem* lpTargetItem,
+            SDK::ASurvivalCharacter* lpNewOwner
+        );
+
         void CullItemByItemIndex(
             int32_t iItemIndex
+        );
+
+        void SetCulledItemOwnerByItemIndex(
+            int32_t iItemIndex,
+            SDK::ASurvivalCharacter* lpNewOwner
         );
 
         void CullAllItemInstances(

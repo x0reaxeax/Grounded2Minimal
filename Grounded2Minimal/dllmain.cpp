@@ -273,10 +273,6 @@ PROCESSEVENTHOOK _HookedSPCProcessEvent(
 
     ProcessEventHooker::InFlightGuard inFlight;
 
-    if (ProcessEventHooker::IsRestoring()) {
-        return;
-    }
-
     ProcessEventHooker::HookData* lpHookData = ProcessEventHooker::GetHookByHookedFunction(
         _HookedSPCProcessEvent
     );
@@ -285,6 +281,12 @@ PROCESSEVENTHOOK _HookedSPCProcessEvent(
         //throw std::runtime_error("SPCProcessEvent: Hook data not found");
         return;
     }
+
+    if (ProcessEventHooker::IsRestoring()) {
+        lpHookData->OriginalFn(lpObject, lpFunction, lpParams);
+        return;
+    }
+
     // Re-entrancy guard for command processing on the same thread
     static thread_local bool s_InProcessCommands = false;
 
@@ -326,10 +328,6 @@ PROCESSEVENTHOOK _HookedChatBoxProcessEvent(
 
     HookManager::ProcessEventHooker::InFlightGuard inFlight;
 
-    if (ProcessEventHooker::IsRestoring()) {
-        return;
-    }
-
     ProcessEventHooker::HookData* lpHookData = ProcessEventHooker::GetHookByHookedFunction(
         _HookedChatBoxProcessEvent
     );
@@ -338,6 +336,12 @@ PROCESSEVENTHOOK _HookedChatBoxProcessEvent(
         //throw std::runtime_error("ChatBoxProcessEvent: Hook data not found");
         return;
     }
+
+    if (ProcessEventHooker::IsRestoring()) {
+        lpHookData->OriginalFn(lpObject, lpFunction, lpParams);
+        return;
+    }
+
     SDK::FChatBoxMessage* lpMessage = nullptr;
     ItemSpawner::SafeChatMessageData* lpMessageDataCopy = nullptr;
     
@@ -424,10 +428,6 @@ PROCESSEVENTHOOK _HookedGameModeBaseProcessEvent(
     
     HookManager::ProcessEventHooker::InFlightGuard inFlight;
 
-    if (ProcessEventHooker::IsRestoring()) {
-        return;
-    }
-
     ProcessEventHooker::HookData* lpHookData = ProcessEventHooker::GetHookByHookedFunction(
         _HookedGameModeBaseProcessEvent
     );
@@ -435,6 +435,12 @@ PROCESSEVENTHOOK _HookedGameModeBaseProcessEvent(
         //throw std::runtime_error("GameModeBaseProcessEvent: Hook data not found");
         return;
     }
+
+    if (ProcessEventHooker::IsRestoring()) {
+        lpHookData->OriginalFn(lpObject, lpFunction, lpParams);
+        return;
+    }
+
     lpHookData->OriginalFn(lpObject, lpFunction, lpParams);
     if (nullptr == lpObject || nullptr == lpFunction) {
         return;

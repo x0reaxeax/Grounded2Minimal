@@ -1018,6 +1018,48 @@ namespace Interpreter {
         );
     }
 
+    static void HandleCullItemSetOwner(void) {
+        int32_t iItemIndex = ReadIntegerInput(
+            "[Culling] Enter item index to set owner: ",
+            -1
+        );
+
+        if (iItemIndex < 0) {
+            LogError(
+                "Culling",
+                "Invalid item index, must be non-negative"
+            );
+            return;
+        }
+
+        int32_t iNewOwnerId = ReadIntegerInput(
+            "[Culling] Enter new owner player ID: ",
+            INVALID_PLAYER_ID
+        );
+
+        SDK::ASurvivalCharacter* lpGetNewOwnerPlayer = \
+            UnrealUtils::GetSurvivalPlayerCharacterById(iNewOwnerId);
+
+        if (nullptr == lpGetNewOwnerPlayer) {
+            LogError(
+                "Culling",
+                "Invalid new owner player ID, no such player found"
+            );
+            return;
+        }
+
+        LogMessage(
+            "Culling",
+            "Setting owner of item ID " + std::to_string(iItemIndex) +
+            " to player ID " + std::to_string(iNewOwnerId) + "..."
+        );
+
+        CheatManager::Culling::SetCulledItemOwnerByItemIndex(
+            iItemIndex,
+            lpGetNewOwnerPlayer
+        );
+    }
+
     static void HandleBuildAllStructures(void) {
         if (!g_G2MOptions.bIsClientHost) {
             LogError(
@@ -1389,6 +1431,7 @@ namespace Interpreter {
         { "help", "Show available commands", PrintAvailableCommands },
         { "C_CullItemInstance", "Cull item by instance ID", HandleCullItemByIndex},
         { "C_CullItemType", "Cullall items of set type", HandleCullItemType },
+        { "C_CullItemSetOwner", "Set item new owner", HandleCullItemSetOwner },
         { "F_DataTableNeedle", "Search for DataTable", HandleDataTableSearch },
         { "F_EntryDump", "Dump DataTable entries", HandleItemDump },
         { "F_FindItemTable", "Find DataTable for item", HandleFindItemTable },
@@ -1419,6 +1462,13 @@ namespace Interpreter {
             }
         },
         { "X_DebugFilter", "Set debug function filter", HandleSetDebugFilter },
+        { "X??_SecretDebugFlag", "Toggle super secret debug flag", []() {
+            g_G2MOptions.bSuperSecretDebugFlag.fetch_xor(1, std::memory_order_acq_rel);
+            LogMessage(
+                "Debug",
+                "Super secret debug flag " + std::string(g_G2MOptions.bSuperSecretDebugFlag.load() ? "enabled" : "disabled")
+            );
+        }},
         { "X_ReloadBinds", "Reload key binds from config file", []() {
             if (KeyBinds::ReloadKeyBinds()) {
                 LogMessage("KeyBinds", "Key binds reloaded successfully");

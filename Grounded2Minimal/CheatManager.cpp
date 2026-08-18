@@ -646,6 +646,49 @@ namespace CheatManager {
             lpItemToCull->SetLifeSpan(0.01f);
         }
 
+        void __gamethread SetCulledItemOwner(
+            SDK::ASpawnedItem* lpTargetItem,
+            SDK::ASurvivalCharacter* lpNewOwner
+        ) {
+            SDK::UItem* lpNewInventoryItem = lpTargetItem->GetItem();
+
+            if (nullptr == lpNewInventoryItem) {
+                return;
+            }
+
+            if (!lpNewOwner->InventoryComponent->CanAddItem(lpNewInventoryItem)) {
+                return;
+            }
+
+            lpNewOwner->InventoryComponent->ServerAddItem(lpNewInventoryItem, true);
+            lpTargetItem->SetLifeSpan(0.01f);
+        }
+
+        void SetCulledItemOwnerByItemIndex(
+            int32_t iItemIndex,
+            SDK::ASurvivalCharacter* lpNewOwner
+        ) {
+            SDK::ASpawnedItem* lpItemToCull = UnrealUtils::GetSpawnedItemByIndex(iItemIndex);
+            if (nullptr == lpItemToCull) {
+                LogError("SetCulledItemOwner", "Invalid item index: " + std::to_string(iItemIndex));
+                return;
+            }
+            if (lpItemToCull->bActorIsBeingDestroyed) {
+                LogError("SetCulledItemOwner", "Item is being destroyed: " + lpItemToCull->GetName());
+                return; // Item is already being destroyed
+            }
+
+            BufferParamsSetItemOwner *lpParams = new BufferParamsSetItemOwner{
+                .lpItemInstance = lpItemToCull,
+                .lpNewOwner = lpNewOwner
+            };
+
+            Command::SubmitTypedCommand(
+                Command::CommandId::CmdIdSetCulledItemOwner,
+                lpParams
+            );
+        }
+
         void CullItemByItemIndex(
             int32_t iItemIndex
         ) {

@@ -55,6 +55,7 @@ namespace Command {
         CmdIdEnableCheats,
         CmdIdUnlockAchievement,
         CmdIdSetCollision,
+        CmdIdSetCulledItemOwner,
         CmdIdManualBuildingAdjustment,
         CmdIdSetGameMode,
         CmdIdDebugEvent,

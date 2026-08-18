@@ -110,10 +110,10 @@ namespace Command {
                 //LogMessage("ProcessEvent", "Command: Cull Item");
                 
                 CheatManager::Culling::BufferParamsCullItemInstance *lpParams =
-                    static_cast<CheatManager::Culling::BufferParamsCullItemInstance*>(localBuffer.Params);
+                    reinterpret_cast<CheatManager::Culling::BufferParamsCullItemInstance*>(localBuffer.Params);
 
                 if (nullptr == lpParams->lpItemInstance) {
-                    //LogError("ProcessEvent", "CmdIdCullItemInstance: ItemInstance is null");
+                    LogError("ProcessEvent", "CmdIdCullItemInstance: ItemInstance is null");
                     break;
                 }
 
@@ -123,6 +123,34 @@ namespace Command {
 
                 break;
 
+            }
+
+            case CommandId::CmdIdSetCulledItemOwner: {
+                LogMessage("ProcessEvent", "Command: Set Culled Item Owner");
+                if (nullptr == localBuffer.Params) {
+                    LogError("ProcessEvent", "CmdIdSetCulledItemOwner: Params are null");
+                    break;
+                }
+                
+                CheatManager::Culling::BufferParamsSetItemOwner *lpParams = 
+                    reinterpret_cast<CheatManager::Culling::BufferParamsSetItemOwner*>(localBuffer.Params);
+
+                if (nullptr == lpParams->lpItemInstance) {
+                    LogError("ProcessEvent", "CmdIdSetCulledItemOwner: ItemInstance is null");
+                    break;
+                }
+
+                if (nullptr == lpParams->lpNewOwner) {
+                    LogError("ProcessEvent", "CmdIdSetCulledItemOwner: NewOwner is null");
+                    break;
+                }
+
+                CheatManager::Culling::SetCulledItemOwner(
+                    lpParams->lpItemInstance,
+                    lpParams->lpNewOwner
+                );
+
+                break;
             }
 
             case CommandId::CmdIdCheatManagerExecute: {

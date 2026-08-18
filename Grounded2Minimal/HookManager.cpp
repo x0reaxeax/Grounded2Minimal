@@ -167,6 +167,14 @@ namespace HookManager {
 
         std::lock_guard<std::mutex> lockGuard(s_HookMutex);
 
+        if (s_Restoring.load(std::memory_order_acquire)) {
+            LogError(
+                "HookManager",
+                "Cannot install ProcessEvent hook while restoration is in progress"
+            );
+            return false;
+        }
+
         void** lpVTable = *reinterpret_cast<void***>(lpObject);
         if (nullptr == lpVTable) {
             return false;
@@ -250,7 +258,13 @@ namespace HookManager {
     }
 
     void ProcessEventHooker::RestoreHooks(void) {
-        //ClearAllDebugFilters();
+        s_Restoring.store(true, std::memory_order_release);
+
+        // Let callbacks that entered before restoration started finish (hopefully xD)
+        while (s_InFlight.load(std::memory_order_acquire) != 0) {
+            Sleep(15);
+        }
+
         std::lock_guard<std::mutex> lockGuard(s_HookMutex);
 
         for (const auto& [lpObject, hookInfo] : s_Hooks) {
