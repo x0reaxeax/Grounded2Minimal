@@ -103,4 +103,6 @@ void ShowConsole(
     void
 );
 
+bool IsReloadInProgress(void);
+
 #endif // _GROUNDED2_MINIMAL_HPP

@@ -12,6 +12,9 @@
 
 namespace UnrealUtils {
 
+    bool IsReadableMemory(const void* lpAddress, size_t qwSize);
+    bool IsValidUObject(const SDK::UObject* lpObject);
+
     // Structured data for DataTable information
     struct DataTableInfo {
         std::string szTableName;

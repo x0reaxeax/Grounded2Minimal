@@ -1,7 +1,7 @@
 #include "PlayerCache.hpp"
 #include "UnrealUtils.hpp"
 
-#include <thread>
+#include <algorithm>
 
 namespace PlayerCache {
     struct CachedData g_CachedData{};
@@ -44,31 +44,34 @@ namespace PlayerCache {
             return nullptr;
         }
         
-        int32_t iMaxRetries = 20;
-
-        do {
+        bool bUpdated = false;
+        if (!UnrealUtils::IsValidUObject(lpCachedPlayer->AssociatedPartyComponent)) {
+            lpCachedPlayer->AssociatedPartyComponent = nullptr;
             lpCachedPlayer->AssociatedPartyComponent = UnrealUtils::FindLocalPlayerParty(
                 lpPlayerState->PlayerId
             );
+            bUpdated = true;
+        }
+
+        if (
+            UnrealUtils::IsValidUObject(lpCachedPlayer->AssociatedPartyComponent)
+            && !UnrealUtils::IsValidUObject(lpCachedPlayer->SurvivalPlayerCharacter)
+        ) {
+            lpCachedPlayer->SurvivalPlayerCharacter = nullptr;
             lpCachedPlayer->SurvivalPlayerCharacter = UnrealUtils::GetSurvivalPlayerCharacterById(
                 lpPlayerState->PlayerId
             );
-            std::this_thread::sleep_for(std::chrono::milliseconds(250));
-        } while (
-            (
-                nullptr == lpCachedPlayer->AssociatedPartyComponent
-                || 
-                nullptr == lpCachedPlayer->SurvivalPlayerCharacter
-            ) 
-            && --iMaxRetries > 0
-        );
+            bUpdated = true;
+        }
 
-        LogMessage(
-            "PlayerCache",
-            "Attached cached data for player ID "
-            + std::to_string(lpPlayerState->PlayerId),
-            true
-        );
+        if (bUpdated) {
+            LogMessage(
+                "PlayerCache",
+                "Refreshed cached data for player ID "
+                + std::to_string(lpPlayerState->PlayerId),
+                true
+            );
+        }
 
         return lpCachedPlayer;
     }
@@ -126,10 +129,24 @@ namespace PlayerCache {
     }
 
     void BuildPlayerCache(void) {
-        g_CachedData.CachedPlayers.clear();
+        auto& map = g_CachedData.CachedPlayers;
+        for (auto it = map.begin(); it != map.end();) {
+            if (
+                !UnrealUtils::IsValidUObject(it->first)
+                || std::find(
+                    g_CachedData.Players.begin(),
+                    g_CachedData.Players.end(),
+                    it->first
+                ) == g_CachedData.Players.end()
+            ) {
+                it = map.erase(it);
+            } else {
+                ++it;
+            }
+        }
 
         for (auto* lpPlayerState : g_CachedData.Players) {
-            if (nullptr == lpPlayerState) {
+            if (!UnrealUtils::IsValidUObject(lpPlayerState)) {
                 continue;
             }
 
@@ -142,7 +159,8 @@ namespace PlayerCache {
 
         LogMessage(
             "CacheControl",
-            "Built player cache for " + std::to_string(g_CachedData.Players.size()) + " players"
+            "Refreshed player cache for " + std::to_string(g_CachedData.Players.size()) + " players",
+            true
         );
     }
 
@@ -154,12 +172,15 @@ namespace PlayerCache {
         }
 
         if (vPlayerStates->empty()) {
+            g_CachedData.Players.clear();
+            ClearPlayerCache();
             return;
         }
 
         LogMessage(
             "CacheControl",
-            "Building player cache from existing player states"
+            "Refreshing player cache from existing player states",
+            true
         );
 
         g_CachedData.Players = *vPlayerStates;
@@ -193,6 +214,7 @@ namespace PlayerCache {
 
     void InvalidateCache(void) {
         ClearPlayerCache();
+        g_CachedData.Players.clear();
         g_CachedData.LocalPlayerId = INVALID_PLAYER_ID;
         g_CachedData.WorldInstance = nullptr;
         

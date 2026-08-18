@@ -42,13 +42,19 @@ enum class ReloadState : uint8_t {
 std::atomic<ReloadState> g_ReloadState{ ReloadState::Idle };
 std::atomic<bool> g_ReloadWorkerRunning{ false };
 std::atomic<SDK::UObject*> g_EndingController{ nullptr };
+std::atomic<SDK::UWorld*> g_EndingWorld{ nullptr };
 std::thread g_ReloadWorker;
+
+bool IsReloadInProgress(void) {
+    return ReloadState::Idle != g_ReloadState.load(std::memory_order_acquire);
+}
 
 static void RequestReload(
     SDK::UObject* lpEndingController,
     SDK::EEndPlayReason eEndPlayReason
 ) {
     g_EndingController.store(lpEndingController, std::memory_order_release);
+    g_EndingWorld.store(SDK::UWorld::GetWorld(), std::memory_order_release);
 
     ReloadState eExpected = ReloadState::Idle;
     if (!g_ReloadState.compare_exchange_strong(
@@ -59,11 +65,17 @@ static void RequestReload(
         return;
     }
 
+    Command::DiscardPendingCommand();
+    if (g_G2MOptions.bIsClientHost) {
+        CheatManager::Destroy();
+    }
+
     LogMessage(
         "Reload",
         "Local SurvivalPlayerController received ReceiveEndPlay (reason "
         + std::to_string(static_cast<uint8_t>(eEndPlayReason))
-        + "); scheduling hook reload"
+        + "); scheduling hook reload",
+        true
     );
 }
 
@@ -851,19 +863,31 @@ static bool InitializeRuntimeState(void) {
     return true;
 }
 
-static bool WaitForReplacementWorld(SDK::UObject* lpEndingController) {
-    constexpr int32_t MaxAttempts = 120;
+static bool WaitForReplacementWorld(
+    SDK::UObject* lpEndingController,
+    SDK::UWorld* lpEndingWorld
+) {
+    int32_t iAttempt = 0;
+    while (g_ReloadWorkerRunning.load(std::memory_order_acquire)) {
+        if (0 == (++iAttempt % 120)) {
+            LogMessage("Reload", "Still waiting for a replacement playable world", true);
+        }
 
-    for (
-        int32_t iAttempt = 0;
-        iAttempt < MaxAttempts && g_ReloadWorkerRunning.load(std::memory_order_acquire);
-        ++iAttempt
-    ) {
+        SDK::UWorld* lpCurrentWorld = SDK::UWorld::GetWorld();
+        if (
+            nullptr == lpCurrentWorld
+            || 
+            (nullptr != lpEndingWorld && lpCurrentWorld == lpEndingWorld)
+        ) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(500));
+            continue;
+        }
+
         SDK::ASurvivalPlayerController* lpLocalSPC = UnrealUtils::GetLocalSurvivalPlayerControllerFast();
         if (
             nullptr != lpLocalSPC
-            && lpLocalSPC != lpEndingController
-            && nullptr != UnrealUtils::GetLocalPawn()
+            && 
+            lpLocalSPC != lpEndingController
         ) {
             return true;
         }
@@ -875,30 +899,21 @@ static bool WaitForReplacementWorld(SDK::UObject* lpEndingController) {
 }
 
 static void ReloadRuntimeState(void) {
-    LogMessage("Reload", "Restoring hooks for world reload");
-
-    if (g_G2MOptions.bIsClientHost) {
-        CheatManager::Destroy();
+    SDK::UObject* lpEndingController = g_EndingController.load(std::memory_order_acquire);
+    SDK::UWorld* lpEndingWorld = g_EndingWorld.load(std::memory_order_acquire);
+    if (!WaitForReplacementWorld(lpEndingController, lpEndingWorld)) {
+        return;
     }
+
+    LogMessage("Reload", "Restoring hooks for replacement world", true);
 
     PlayerCache::InvalidateCache();
     HookManager::ProcessEventHooker::RestoreHooks();
     HookManager::NativeHooker::RestoreAll();
 
-    SDK::UObject* lpEndingController = g_EndingController.load(std::memory_order_acquire);
-    if (!WaitForReplacementWorld(lpEndingController)) {
-        LogError(
-            "Reload", 
-            "Timed out waiting for a replacement playable world; hooks remain restored"
-        );
-        g_ReloadState.store(ReloadState::Failed, std::memory_order_release);
-        return;
-    }
-
     if (
         !HookManager::ProcessEventHooker::CompleteRestore()
-        || 
-        !HookManager::NativeHooker::CompleteRestore()
+        || !HookManager::NativeHooker::CompleteRestore()
     ) {
         LogError(
             "Reload", 
@@ -918,8 +933,9 @@ static void ReloadRuntimeState(void) {
     }
 
     g_EndingController.store(nullptr, std::memory_order_release);
+    g_EndingWorld.store(nullptr, std::memory_order_release);
     g_ReloadState.store(ReloadState::Idle, std::memory_order_release);
-    LogMessage("Reload", "Hook reload completed");
+    LogMessage("Reload", "Hook reload completed", true);
 }
 
 static void ReloadWorkerLoop(void) {
@@ -1046,7 +1062,7 @@ DWORD WINAPI ThreadEntry(
     // GUI initialization
     LogMessage("Init", "Grounded2Minimal: Launching GUI thread...");
 
-    if (!WinGUI::Initialize()) {
+    if (!WinGUI::Initialize(hLocalModule)) {
         LogError("Init", "Grounded2Minimal: Failed to initialize GUI");
         goto _RYUJI;
     }
@@ -1079,6 +1095,7 @@ DWORD WINAPI ThreadEntry(
     iRet = EXIT_SUCCESS;
 
     WinGUI::Stop();
+    Command::DiscardPendingCommand();
     Interpreter::KeyBinds::Shutdown();
 
     /////// Cleanup ///////

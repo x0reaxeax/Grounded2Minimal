@@ -8,16 +8,74 @@
 #include <thread>
 
 namespace UnrealUtils {
+    bool IsReadableMemory(const void* lpAddress, size_t qwSize) {
+        if (nullptr == lpAddress || 0 == qwSize) {
+            return false;
+        }
+
+        MEMORY_BASIC_INFORMATION memoryInfo{};
+        if (0 == VirtualQuery(lpAddress, &memoryInfo, sizeof(memoryInfo))) {
+            return false;
+        }
+
+        if (
+            MEM_COMMIT != memoryInfo.State
+            || 0 != (memoryInfo.Protect & (PAGE_GUARD | PAGE_NOACCESS))
+        ) {
+            return false;
+        }
+
+        const auto* lpRegionEnd = static_cast<const uint8_t*>(memoryInfo.BaseAddress) + memoryInfo.RegionSize;
+        return static_cast<const uint8_t*>(lpAddress) + qwSize <= lpRegionEnd;
+    }
+
+    bool IsValidUObject(const SDK::UObject* lpObject) {
+        if (nullptr == lpObject) {
+            return false;
+        }
+
+        if (!IsReadableMemory(lpObject, sizeof(*lpObject))) {
+            return false;
+        }
+
+        if (!IsReadableMemory(lpObject->VTable, sizeof(void*))) {
+            return false;
+        }
+
+        if (
+            lpObject->Flags & SDK::EObjectFlags::BeginDestroyed
+            || lpObject->Flags & SDK::EObjectFlags::FinishDestroyed
+        ) {
+            return false;
+        }
+
+        const int32_t iObjectCount = SDK::UObject::GObjects->Num();
+        if (lpObject->Index < 0 || lpObject->Index >= iObjectCount) {
+            return false;
+        }
+
+        return SDK::UObject::GObjects->GetByIndex(lpObject->Index) == lpObject;
+    }
+
     SDK::UWorld *GetWorld(bool bCached) {
-        if (bCached && PlayerCache::g_CachedData.WorldInstance != nullptr) {
-            return PlayerCache::g_CachedData.WorldInstance;
+        if (bCached && nullptr != PlayerCache::g_CachedData.WorldInstance) {
+            SDK::UWorld* lpCurrentWorld = SDK::UWorld::GetWorld();
+            if (
+                PlayerCache::g_CachedData.WorldInstance == lpCurrentWorld
+                && IsValidUObject(lpCurrentWorld)
+            ) {
+                return lpCurrentWorld;
+            }
+
+            PlayerCache::g_CachedData.WorldInstance = nullptr;
         }
         int32_t iRetryCount = 0;
         const int32_t iMaxRetries = 20;
         SDK::UWorld *lpWorld = nullptr;
         do {
             lpWorld = SDK::UWorld::GetWorld();
-            if (nullptr == lpWorld) {
+            if (!IsValidUObject(lpWorld)) {
+                lpWorld = nullptr;
                 std::this_thread::sleep_for(std::chrono::milliseconds(250));
                 if (++iRetryCount >= iMaxRetries) {
                     LogError(
@@ -258,19 +316,37 @@ namespace UnrealUtils {
         bool bHideOutput
     ) {
         SDK::UWorld *lpWorld = GetWorld();
-        if (nullptr == lpWorld) {
+        if (!IsValidUObject(lpWorld)) {
             return;
         }
 
         SDK::AGameStateBase *lpGameStateBase = lpWorld->GameState;
-        if (nullptr == lpGameStateBase) {
+        if (!IsValidUObject(lpGameStateBase)) {
             LogError("PlayerInfo", "Unable to get GameStateBase");
             return;
         }
 
-        for (int32_t i = 0; i < lpGameStateBase->PlayerArray.Num(); i++) {
-            SDK::APlayerState *lpPlayerState = lpGameStateBase->PlayerArray[i];
-            if (nullptr == lpPlayerState) {
+        const auto& playerArray = lpGameStateBase->PlayerArray;
+        const int32_t iPlayerCount = playerArray.Num();
+        if (
+            iPlayerCount < 0
+            || iPlayerCount > playerArray.Max()
+            || iPlayerCount > 256
+            || (
+                iPlayerCount > 0
+                && !IsReadableMemory(
+                    playerArray.GetDataPtr(),
+                    sizeof(SDK::APlayerState*) * static_cast<size_t>(iPlayerCount)
+                )
+            )
+        ) {
+            LogError("PlayerInfo", "PlayerArray is unavailable");
+            return;
+        }
+
+        for (int32_t i = 0; i < iPlayerCount; i++) {
+            SDK::APlayerState *lpPlayerState = playerArray[i];
+            if (!IsValidUObject(lpPlayerState)) {
                 continue;
             }
 
@@ -672,26 +748,42 @@ namespace UnrealUtils {
             return PlayerCache::g_CachedData.LocalPlayerId;
         }
         SDK::UWorld *lpWorld = GetWorld();
-        if (nullptr == lpWorld) {
+        if (!IsValidUObject(lpWorld)) {
             LogError("LocalPlayerIdLookup", "UWorld is NULL");
             return INVALID_PLAYER_ID;
         }
 
         // WARN: This might fail on non-host clients, verify and check for altenatives if needed
         SDK::UGameInstance *lpOwningGameInstance = lpWorld->OwningGameInstance;
-        if (nullptr == lpOwningGameInstance) {
+        if (!IsValidUObject(lpOwningGameInstance)) {
             LogError("LocalPlayerIdLookup", "OwningGameInstance is NULL");
             return INVALID_PLAYER_ID;
         }
 
-        SDK::ULocalPlayer *lpLocalPlayer = lpOwningGameInstance->LocalPlayers[0];
-        if (nullptr == lpLocalPlayer) {
+        const auto& localPlayers = lpOwningGameInstance->LocalPlayers;
+        if (
+            localPlayers.Num() < 1
+            || localPlayers.Num() > localPlayers.Max()
+            || !IsReadableMemory(localPlayers.GetDataPtr(), sizeof(SDK::ULocalPlayer*))
+        ) {
+            LogError("LocalPlayerIdLookup", "No LocalPlayers found in OwningGameInstance");
+            return INVALID_PLAYER_ID;
+        }
+
+        SDK::ULocalPlayer *lpLocalPlayer = localPlayers[0];
+        if (!IsValidUObject(lpLocalPlayer)) {
             LogError("LocalPlayerIdLookup", "LocalPlayer is NULL");
             return INVALID_PLAYER_ID;
         }
 
-        SDK::APlayerState *lpPlayerState = lpLocalPlayer->PlayerController->PlayerState;
-        if (nullptr == lpPlayerState) {
+        SDK::APlayerController* lpPlayerController = lpLocalPlayer->PlayerController;
+        if (!IsValidUObject(lpPlayerController)) {
+            LogError("LocalPlayerIdLookup", "PlayerController is NULL for local player");
+            return INVALID_PLAYER_ID;
+        }
+
+        SDK::APlayerState *lpPlayerState = lpPlayerController->PlayerState;
+        if (!IsValidUObject(lpPlayerState)) {
             LogError("LocalPlayerIdLookup", "PlayerState is NULL for local player");
             return INVALID_PLAYER_ID;
         }
@@ -878,30 +970,43 @@ namespace UnrealUtils {
 
     SDK::ASurvivalPlayerController* GetLocalSurvivalPlayerControllerFast(void) {
         SDK::UWorld* lpWorld = GetWorld();
-        if (nullptr == lpWorld) {
+        if (!IsValidUObject(lpWorld)) {
             LogError("FindLocalSPC", "Failed to get UWorld instance");
             return nullptr;
         }
 
         SDK::UGameInstance *lpOwningGameInstance = lpWorld->OwningGameInstance;
-        if (nullptr == lpOwningGameInstance) {
+        if (
+            nullptr == lpOwningGameInstance
+            || 
+            !IsValidUObject(lpOwningGameInstance)
+        ) {
             LogError("FindLocalSPC", "OwningGameInstance is NULL");
             return nullptr;
         }
 
-        if (lpOwningGameInstance->LocalPlayers.Num() < 1) {
+        const auto& localPlayers = lpOwningGameInstance->LocalPlayers;
+        if (
+            !localPlayers.IsValid()
+            || 
+            !IsReadableMemory(localPlayers.GetDataPtr(), sizeof(SDK::ULocalPlayer*))
+        ) {
             LogError("FindLocalSPC", "No LocalPlayers found in OwningGameInstance");
             return nullptr;
         }
 
-        SDK::ULocalPlayer* lpLocalPlayer = lpOwningGameInstance->LocalPlayers[0];
-        if (nullptr == lpLocalPlayer) {
+        SDK::ULocalPlayer* lpLocalPlayer = localPlayers[0];
+        if (!IsValidUObject(lpLocalPlayer)) {
             LogError("FindLocalSPC", "LocalPlayer is NULL");
             return nullptr;
         }
 
         SDK::APlayerController* lpPlayerController = lpLocalPlayer->PlayerController;
-        if (nullptr == lpPlayerController) {
+        if (
+            nullptr == lpPlayerController
+            || 
+            !IsValidUObject(lpPlayerController)
+        ) {
             LogError("FindLocalSPC", "PlayerController is NULL");
             return nullptr;
         }
@@ -914,7 +1019,11 @@ namespace UnrealUtils {
         SDK::ASurvivalPlayerController* lpSurvivalPlayerController = 
             static_cast<SDK::ASurvivalPlayerController*>(lpPlayerController);
 
-        if (nullptr == lpSurvivalPlayerController->PlayerState) {
+        if (
+            nullptr == lpSurvivalPlayerController->PlayerState
+            || 
+            !IsValidUObject(lpSurvivalPlayerController->PlayerState)
+        ) {
             LogError("FindLocalSPC", "PlayerState is NULL for SurvivalPlayerController");
             return nullptr;
         }
@@ -1279,7 +1388,8 @@ namespace UnrealUtils {
         if (nullptr == lpSurvivalModeManager) {
             LogError(
                 "SurvivalGameModeSettings",
-                "Failed to get SurvivalModeManagerComponent"
+                "Failed to get SurvivalModeManagerComponent",
+                true
             );
             return nullptr;
         }
@@ -1287,7 +1397,8 @@ namespace UnrealUtils {
         if (nullptr == lpSurvivalModeManager->GameModeSettings) {
             LogError(
                 "SurvivalGameModeSettings",
-                "GameModeSettings is NULL in SurvivalModeManagerComponent"
+                "GameModeSettings is NULL in SurvivalModeManagerComponent",
+                true
             );
         }
         return lpSurvivalModeManager->GameModeSettings;

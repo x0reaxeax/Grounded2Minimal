@@ -9,10 +9,98 @@
 #include <sstream>
 
 #include "SDK/BP_SurvivalGameMode_classes.hpp"
+#include "SDK/BP_SurvivalGameMode_parameters.hpp"
+
 
 namespace ItemSpawner {
     // Allows everyone (not just host) to utilize the host to spawn them items.
     std::atomic<bool> GlobalCheatMode{ false };
+
+    SDK::ABP_SurvivalPlayerCharacter_C* ResolveCurrentPlayerCharacter(
+        SDK::APlayerState* lpPlayerState
+    ) {
+        SDK::AController* lpController = nullptr;
+        SDK::APawn* lpPawn = nullptr;
+        bool bLocalPlayer = false;
+
+        SDK::ASurvivalPlayerController* lpLocalController =
+            UnrealUtils::GetLocalSurvivalPlayerControllerFast();
+
+        if (
+            UnrealUtils::IsValidUObject(lpLocalController)
+            && UnrealUtils::IsValidUObject(lpLocalController->PlayerState)
+            && lpLocalController->PlayerState->PlayerId == lpPlayerState->PlayerId
+        ) {
+            bLocalPlayer = true;
+            lpController = lpLocalController;
+            lpPawn = lpLocalController->Pawn;
+        } else {
+            lpPawn = lpPlayerState->PawnPrivate;
+            if (UnrealUtils::IsValidUObject(lpPawn)) {
+                lpController = lpPawn->Controller;
+            }
+        }
+
+        if (
+            !UnrealUtils::IsValidUObject(lpController)
+            || !UnrealUtils::IsValidUObject(lpPawn)
+            || lpController->Pawn != lpPawn
+            || (
+                bLocalPlayer
+                ? (
+                    !UnrealUtils::IsValidUObject(lpController->PlayerState)
+                    || 
+                    lpController->PlayerState->PlayerId != lpPlayerState->PlayerId
+                )
+                : lpController->PlayerState != lpPlayerState
+            )
+        ) {
+            return nullptr;
+        }
+
+        if (!lpPawn->IsA(SDK::ABP_SurvivalPlayerCharacter_C::StaticClass())) {
+            return nullptr;
+        }
+
+        return static_cast<SDK::ABP_SurvivalPlayerCharacter_C*>(lpPawn);
+    }
+
+    bool GrantItemsToCurrentPlayer(
+        SDK::ABP_SurvivalGameMode_C* lpSurvivalGameMode,
+        SDK::ABP_SurvivalPlayerCharacter_C* lpPlayerCharacter,
+        const SDK::FDataTableRowHandle& ItemRowHandle,
+        int32_t iItemCount
+    ) {
+        if (iItemCount <= 0) {
+            // no takze vy nic nechcete, idem dopice odtialto
+            return false;
+        }
+
+        if (
+            !UnrealUtils::IsValidUObject(lpSurvivalGameMode)
+            || !UnrealUtils::IsValidUObject(lpSurvivalGameMode->Class)
+            || !UnrealUtils::IsValidUObject(lpPlayerCharacter)
+        ) {
+            return false;
+        }
+
+        SDK::UFunction* lpGrantItemsFunction = lpSurvivalGameMode->Class->GetFunction(
+            "BP_SurvivalGameMode_C",
+            "GrantItemsToPlayer"
+        );
+        if (!UnrealUtils::IsValidUObject(lpGrantItemsFunction)) {
+            LogError("ItemSpawner", "Unable to resolve the current GrantItemsToPlayer function");
+            return false;
+        }
+
+        SDK::Params::BP_SurvivalGameMode_C_GrantItemsToPlayer Params{};
+        Params.SurvivalPlayer = lpPlayerCharacter;
+        Params.ItemData = ItemRowHandle;
+        Params.Count = iItemCount;
+
+        lpSurvivalGameMode->ProcessEvent(lpGrantItemsFunction, &Params);
+        return true;
+    }
 
     bool __gamethread GiveItemToPlayer(
         int32_t iPlayerId,
@@ -20,36 +108,78 @@ namespace ItemSpawner {
         const std::string& szDataTableName,
         int32_t iItemCount // No default argument here
     ) {
-        SDK::UWorld *lpWorld = UnrealUtils::GetWorld(true);
-        if (nullptr == lpWorld) {
-            LogError("ItemSpawner", "UWorld is NULL");
+        if (iItemCount <= 0) {
+            LogError("ItemSpawner", "Item count must be greater than zero");
             return false;
         }
 
-        if (nullptr == lpWorld->AuthorityGameMode) {
+        if (szItemName.empty()) {
+            LogError("ItemSpawner", "Item name cannot be empty");
+            return false;
+        }
+
+        if (IsReloadInProgress()) {
+            LogError(
+                "ItemSpawner", 
+                "Cannot spawn items while runtime reload is in progress"
+            );
+            return false;
+        }
+
+        SDK::UWorld *lpWorld = SDK::UWorld::GetWorld();
+        if (!UnrealUtils::IsValidUObject(lpWorld)) {
+            LogError("ItemSpawner", "Current UWorld is unavailable");
+            return false;
+        }
+
+        SDK::AGameModeBase* lpAuthorityGameMode = lpWorld->AuthorityGameMode;
+        if (!UnrealUtils::IsValidUObject(lpAuthorityGameMode)) {
             LogError("ItemSpawner", "Client has no host authority");
             return false;
         }
 
-        SDK::ABP_SurvivalGameMode_C* lpSurvivalGameMode = static_cast<SDK::ABP_SurvivalGameMode_C*>(lpWorld->AuthorityGameMode);
-        if (nullptr == lpSurvivalGameMode) {
+        if (!lpAuthorityGameMode->IsA(SDK::ABP_SurvivalGameMode_C::StaticClass())) {
             LogError("ItemSpawner", "AuthorityGameMode is not of type ABP_SurvivalGameMode_C");
             return false;
         }
 
+        SDK::ABP_SurvivalGameMode_C* lpSurvivalGameMode =
+            static_cast<SDK::ABP_SurvivalGameMode_C*>(lpAuthorityGameMode);
+
         SDK::AGameStateBase *lpGameStateBase = lpWorld->GameState;
-        if (nullptr == lpGameStateBase) {
+        if (!UnrealUtils::IsValidUObject(lpGameStateBase)) {
             LogError("PlayerInfo", "Unable to get GameStateBase");
+            return false;
+        }
+
+        if (lpSurvivalGameMode->GameState != lpGameStateBase) {
+            LogError("ItemSpawner", "GameMode does not belong to the current GameState");
             return false;
         }
 
         auto& players = lpGameStateBase->PlayerArray;
         const int32_t iTotalPlayers = players.Num();
+        if (
+            iTotalPlayers < 0
+            || iTotalPlayers > players.Max()
+            || iTotalPlayers > 256
+            || (
+                iTotalPlayers > 0
+                && !UnrealUtils::IsReadableMemory(
+                    players.GetDataPtr(),
+                    sizeof(SDK::APlayerState*) * static_cast<size_t>(iTotalPlayers)
+                )
+            )
+        ) {
+            LogError("ItemSpawner", "PlayerArray is unavailable");
+            return false;
+        }
+
         LogMessage("ItemSpawner", "Total players in game: " + std::to_string(iTotalPlayers));
 
         for (int32_t i = 0; i < iTotalPlayers; ++i) {
             SDK::APlayerState *lpPlayerState = players[i];
-            if (nullptr == lpPlayerState) {
+            if (!UnrealUtils::IsValidUObject(lpPlayerState)) {
                 continue;
             }
 
@@ -63,20 +193,23 @@ namespace ItemSpawner {
                 "Found player: " + szPlayerName + " (ID: " + std::to_string(iPlayerId) + ")"
             );
 
-            SDK::APawn *lpPawn = lpPlayerState->PawnPrivate;
-            if (nullptr == lpPawn) {
-                LogError("ItemSpawner", "No Pawn found for player: " + szPlayerName);
-                continue;
-            }
+            SDK::ABP_SurvivalPlayerCharacter_C *lpPlayerCharacter =
+                ResolveCurrentPlayerCharacter(lpPlayerState);
 
-            SDK::ABP_SurvivalPlayerCharacter_C *lpPlayerCharacter = static_cast<SDK::ABP_SurvivalPlayerCharacter_C*>(lpPawn);
             if (nullptr == lpPlayerCharacter) {
-                LogError("ItemSpawner", "No player character found for player: " + szPlayerName);
+                LogError(
+                    "ItemSpawner",
+                    "Player controller, state, and possessed pawn are not synchronized for: "
+                    + szPlayerName
+                );
                 continue;
             }
 
-            SDK::UDataTable* lpDataTable = UnrealUtils::GetDataTablePointer(szDataTableName);
-            if (nullptr == lpDataTable) {
+            SDK::UDataTable* lpDataTable = UnrealUtils::GetDataTablePointer(
+                (szDataTableName.empty()) ? "Table_AllItems" : szDataTableName
+            );
+
+            if (!UnrealUtils::IsValidUObject(lpDataTable)) {
                 LogError("ItemSpawner", "DataTable not found: " + szDataTableName);
                 return false; // what the fok are you spawning bro
             }
@@ -89,15 +222,30 @@ namespace ItemSpawner {
                 return false;
             }
 
-            lpSurvivalGameMode->GrantItemsToPlayer(
+            if (
+                SDK::UWorld::GetWorld() != lpWorld
+                || !UnrealUtils::IsValidUObject(lpSurvivalGameMode)
+                || !UnrealUtils::IsValidUObject(lpPlayerCharacter)
+                || lpWorld->AuthorityGameMode != lpSurvivalGameMode
+                || lpWorld->GameState != lpGameStateBase
+                || lpSurvivalGameMode->GameState != lpGameStateBase
+            ) {
+                LogError("ItemSpawner", "World changed while preparing the spawn command");
+                return false;
+            }
+
+            return GrantItemsToCurrentPlayer(
+                lpSurvivalGameMode,
                 lpPlayerCharacter,
                 ItemRowHandle,
                 iItemCount
             );
-            return true;
         }
 
-        LogError("ItemSpawner", "Player ID " + std::to_string(iPlayerId) + " not found");
+        LogError(
+            "ItemSpawner", 
+            "Player ID " + std::to_string(iPlayerId) + " not found"
+        );
         return false;
     }
 

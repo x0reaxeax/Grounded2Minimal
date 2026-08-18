@@ -548,86 +548,48 @@ namespace CheatManager {
 
     namespace Summon {
         void SummonClass(
-        const std::string& szClassName
+            const std::string& szClassName
         ) {
             if (szClassName.empty()) {
                 LogError("Summon", "Class name is empty");
                 return;
             }
 
-            SDK::UWorld *lpWorld = UnrealUtils::GetWorld(true);
-            if (nullptr == lpWorld) {
-                LogError("Summon", "Failed to get UWorld instance");
-                return;
-            }
-
-            SDK::UGameInstance *lpOwningGameInstance = lpWorld->OwningGameInstance;
-            if (nullptr == lpOwningGameInstance) {
-                LogError("Summon", "Failed to get UGameInstance instance");
-                return;
-            }
-
-            int32_t iLocalPlayerId = UnrealUtils::GetLocalPlayerId();
-            for (int32_t i = 0; i < lpOwningGameInstance->LocalPlayers.Num(); i++) {
-                SDK::ULocalPlayer *lpLocalPlayer = lpOwningGameInstance->LocalPlayers[i];
-                if (nullptr == lpLocalPlayer) {
-                    continue;
-                }
-
-                SDK::APlayerController *lpLocalPlayerController = lpLocalPlayer->PlayerController;
-                if (nullptr == lpLocalPlayerController) {
-                    continue;
-                }
-
-                SDK::APlayerState *lpPlayerState = lpLocalPlayerController->PlayerState;
-                if (nullptr == lpPlayerState) {
-                    continue;
-                }
-
-                if (iLocalPlayerId != lpPlayerState->PlayerId) {
-                    continue;
-                }
-
-                if (!lpPlayerState->HasAuthority()) {
-                    LogError("Summon", "Local player does not have authority to summon classes");
-                    return;
-                }
-
-                std::wstring wszClassName;
-                if (!CoreUtils::Utf8ToWideString(
-                    szClassName,
-                    wszClassName
-                )) {
-                    LogError("Summon", "Failed to convert class name to wide string");
-                    return;
-                }
-
-                if (wszClassName.size() > 256) {
-                    LogError(
-                        "Summon", 
-                        "Class name is too long, aborting due to probable corruption.."
-                    );
-                    return;
-                }
-
-                SDK::FString fszTargetClassName(wszClassName.c_str());
-
-                auto* lpParams = new (std::nothrow) BufferParamsSummon{
-                    .iPlayerId = iLocalPlayerId,
-                    .fszClassName = fszTargetClassName,
-                    .lpLocalPlayerController = lpLocalPlayerController
-                };
-
-                if (nullptr == lpParams) {
-                    LogError("Summon", "Failed to allocate memory for BufferParamsSummon");
-                    return;
-                }
-
-                Command::SubmitTypedCommand(
-                    Command::CommandId::CmdIdSummon,
-                    lpParams
+            if (IsReloadInProgress()) {
+                LogError(
+                    "Summon", 
+                    "Cannot summon while runtime reload is in progress"
                 );
+                return;
             }
+
+            std::wstring wszClassName;
+            if (!CoreUtils::Utf8ToWideString(szClassName, wszClassName)) {
+                LogError("Summon", "Failed to convert class name to wide string");
+                return;
+            }
+
+            if (wszClassName.size() > 256) {
+                LogError(
+                    "Summon",
+                    "Class name is too long, aborting due to probable corruption.."
+                );
+                return;
+            }
+
+            auto* lpParams = new (std::nothrow) BufferParamsSummon{
+                .wszClassName = std::move(wszClassName)
+            };
+
+            if (nullptr == lpParams) {
+                LogError("Summon", "Failed to allocate memory for BufferParamsSummon");
+                return;
+            }
+
+            Command::SubmitTypedCommand(
+                Command::CommandId::CmdIdSummon,
+                lpParams
+            );
         }
     }
 
@@ -847,7 +809,7 @@ namespace CheatManager {
     static SDK::USurvivalCheatManager *SurvivalCheatManager = nullptr;
 
     bool IsSurvivalCheatManagerInitialized(void) {
-        if (nullptr == SurvivalCheatManager) {
+        if (!UnrealUtils::IsValidUObject(SurvivalCheatManager)) {
             LogError(
                 "CheatManager", 
                 "SurvivalCheatManager is not initialized", 
@@ -856,7 +818,7 @@ namespace CheatManager {
             return false;
         }
 
-        if (nullptr == SurvivalCheatManager->Outer) {
+        if (!UnrealUtils::IsValidUObject(SurvivalCheatManager->Outer)) {
             LogError(
                 "CheatManager", 
                 "SurvivalCheatManager Outer is NULL", 
@@ -869,84 +831,80 @@ namespace CheatManager {
     }
 
     void Destroy(void) {
-        if (nullptr != SurvivalCheatManager) {
-            SDK::APlayerController *lpPlayerController = 
-                static_cast<SDK::APlayerController*>(SurvivalCheatManager->Outer);
+        SDK::USurvivalCheatManager* lpCheatManager = SurvivalCheatManager;
+        SurvivalCheatManager = nullptr;
 
-            if (
-                nullptr != lpPlayerController 
-                && 
-                lpPlayerController->CheatManager == SurvivalCheatManager
-            ) {
-                LogMessage(
-                    "CheatManager",
-                    "Destroying SurvivalCheatManager instance: "
-                    + CoreUtils::HexConvert(
-                        reinterpret_cast<uintptr_t>(SurvivalCheatManager)
-                    ) + " for player id: " + std::to_string(
-                        lpPlayerController->PlayerState->PlayerId
-                    ),
-                    true
-                );
-                lpPlayerController->CheatManager = nullptr;
+        if (!UnrealUtils::IsValidUObject(lpCheatManager)) {
+            LogMessage(
+                "CheatManager",
+                "Discarded stale SurvivalCheatManager reference",
+                true
+            );
+            return;
+        }
 
-                if (lpPlayerController->CheatClass == SDK::USurvivalCheatManager::StaticClass()) {
-                    LogMessage(
-                        "CheatManager",
-                        "Clearing CheatClass for player controller: "
-                        + CoreUtils::HexConvert(
-                            reinterpret_cast<uintptr_t>(lpPlayerController)
-                        ),
-                        true
-                    );
-                    lpPlayerController->CheatClass = nullptr;
-                }
+        SDK::UObject* lpOuter = lpCheatManager->Outer;
+        SDK::APlayerController* lpPlayerController = nullptr;
+        if (
+            UnrealUtils::IsValidUObject(lpOuter)
+            && lpOuter->IsA(SDK::APlayerController::StaticClass())
+        ) {
+            lpPlayerController = static_cast<SDK::APlayerController*>(lpOuter);
+        }
+
+        if (
+            nullptr != lpPlayerController
+            && lpPlayerController->CheatManager == lpCheatManager
+        ) {
+            int32_t iPlayerId = INVALID_PLAYER_ID;
+            if (UnrealUtils::IsValidUObject(lpPlayerController->PlayerState)) {
+                iPlayerId = lpPlayerController->PlayerState->PlayerId;
             }
 
             LogMessage(
                 "CheatManager",
-                "Cleaning up SurvivalCheatManager pointers...",
+                "Detaching SurvivalCheatManager instance: "
+                + CoreUtils::HexConvert(reinterpret_cast<uintptr_t>(lpCheatManager))
+                + " for player id: " + std::to_string(iPlayerId),
                 true
             );
+            lpPlayerController->CheatManager = nullptr;
 
-            SurvivalCheatManager->Outer = nullptr;
-            SurvivalCheatManager = nullptr;
-
-            LogMessage(
-                "CheatManager",
-                "Cleanup successful",
-                true
-            );
-        } else {
-            LogMessage(
-                "CheatManager",
-                "No SurvivalCheatManager instance to destroy",
-                true
-            );
+            if (lpPlayerController->CheatClass == SDK::USurvivalCheatManager::StaticClass()) {
+                lpPlayerController->CheatClass = nullptr;
+            }
         }
+
+        LogMessage("CheatManager", "Cleanup successful", true);
     }
 
     bool ManualInitialize(void) {
         if (!g_G2MOptions.bIsClientHost) {
             LogError(
-                "CheatManager",
+                "CheatManagerInit",
                 "Cannot initialize CheatManager without host authority"
             );
             return false;
         }
 
-        SDK::APlayerController *lpLocalPlayerController = UnrealUtils::GetLocalPlayerController();
-        if (nullptr == lpLocalPlayerController) {
-            LogError("CheatManager", "Failed to get local player controller");
+        SDK::ASurvivalPlayerController* lpLocalPlayerController =
+            UnrealUtils::GetLocalSurvivalPlayerControllerFast();
+
+        if (!UnrealUtils::IsValidUObject(lpLocalPlayerController)) {
+            LogError("CheatManagerInit", "Failed to get local player controller");
             return false;
         }
 
         if (
             nullptr != lpLocalPlayerController->CheatManager 
             && 
+            UnrealUtils::IsValidUObject(lpLocalPlayerController->CheatManager)
+            && 
             lpLocalPlayerController->CheatManager->IsA(
                 SDK::USurvivalCheatManager::StaticClass()
             )
+            && 
+            lpLocalPlayerController->CheatManager->Outer == lpLocalPlayerController
         ) {
             LogMessage(
                 "CheatManagerInit",
@@ -956,17 +914,18 @@ namespace CheatManager {
                 )
             );
             SurvivalCheatManager = static_cast<SDK::USurvivalCheatManager*>(lpLocalPlayerController->CheatManager);
+            lpLocalPlayerController->CheatClass = SDK::USurvivalCheatManager::StaticClass();
             return true;
         }
 
-        SDK::UWorld *lpWorld = UnrealUtils::GetWorld();
-        if (nullptr == lpWorld) {
-            LogError("ItemSpawner", "UWorld is NULL");
+        SDK::UWorld *lpWorld = SDK::UWorld::GetWorld();
+        if (!UnrealUtils::IsValidUObject(lpWorld)) {
+            LogError("CheatManagerInit", "UWorld is NULL");
             return false;
         }
 
-        if (nullptr == lpWorld->AuthorityGameMode) {
-            LogError("ItemSpawner", "Client has no host authority");
+        if (!UnrealUtils::IsValidUObject(lpWorld->AuthorityGameMode)) {
+            LogError("CheatManagerInit", "Client has no host authority");
             return false;
         }
 
@@ -992,8 +951,13 @@ namespace CheatManager {
             )
         );
 
-        if (nullptr == lpNewCheatManager) {
+        if (!UnrealUtils::IsValidUObject(lpNewCheatManager)) {
             LogError("CheatManagerInit", "Failed to create CheatManager instance");
+            return false;
+        }
+
+        if (lpNewCheatManager->Outer != lpLocalPlayerController) {
+            LogError("CheatManagerInit", "New CheatManager has an unexpected outer object");
             return false;
         }
 
@@ -1005,10 +969,6 @@ namespace CheatManager {
                 reinterpret_cast<uintptr_t>(lpLocalPlayerController->CheatManager)
             )
         );
-
-        if (nullptr == lpLocalPlayerController->CheatManager->Outer) {
-            lpLocalPlayerController->CheatManager->Outer = lpLocalPlayerController;
-        }
 
         SurvivalCheatManager = static_cast<SDK::USurvivalCheatManager*>(lpLocalPlayerController->CheatManager);
 
@@ -1039,7 +999,7 @@ namespace CheatManager {
         SDK::APlayerController *lpPlayerController = 
             UnrealUtils::GetPlayerControllerById(iPlayerId);
 
-        if (nullptr != lpPlayerController) {
+        if (UnrealUtils::IsValidUObject(lpPlayerController)) {
             return lpPlayerController->CheatManager;
         }
         
@@ -1050,13 +1010,14 @@ namespace CheatManager {
         int32_t iPlayerId
     ) {
         SDK::UCheatManager *lpCheatManager = GetPlayersCheatManager(iPlayerId);
-        if (nullptr == lpCheatManager) {
+        if (!UnrealUtils::IsValidUObject(lpCheatManager)) {
             LogError(
                 "CheatManager",
                 "Failed to get CheatManager for player id: " + std::to_string(iPlayerId)
             );
             return nullptr;
         }
+
         if (!lpCheatManager->IsA(SDK::USurvivalCheatManager::StaticClass())) {
             LogError(
                 "CheatManager",
@@ -1065,6 +1026,7 @@ namespace CheatManager {
             );
             return nullptr;
         }
+
         return static_cast<SDK::USurvivalCheatManager*>(lpCheatManager);
     }
 
@@ -1075,17 +1037,20 @@ namespace CheatManager {
             LogError("CheatManager", "Params are NULL");
             return;
         }
+
         SDK::APlayerController *lpLocalPlayerController = lpParams->lpLocalPlayerController;
-        if (nullptr == lpLocalPlayerController) {
+        if (!UnrealUtils::IsValidUObject(lpLocalPlayerController)) {
             LogError("CheatManager", "Local player controller is NULL");
             return;
         }
+
         LogMessage(
             "CheatManager",
             "Enabling cheats for local player controller: "
             + std::to_string(reinterpret_cast<uintptr_t>(lpLocalPlayerController)),
             true
         );
+
         lpLocalPlayerController->EnableCheats();
         LogMessage(
             "CheatManager",
@@ -1102,13 +1067,16 @@ namespace CheatManager {
             LogError("CheatManager", "Local player controller is NULL");
             return;
         }
+
         auto* lpParams = new (std::nothrow) CheatManagerEnableParams{
             .lpLocalPlayerController = lpLocalPlayerController
         };
+
         if (nullptr == lpParams) {
             LogError("CheatManager", "Failed to allocate memory for CheatManagerEnableParams");
             return;
         }
+
         Command::SubmitTypedCommand(
             Command::CommandId::CmdIdEnableCheats,
             lpParams
@@ -1118,11 +1086,12 @@ namespace CheatManager {
     void __gamethread CheatManagerExecute(
         const CheatManagerParams *lpParams
     ) {
-        if (nullptr == SurvivalCheatManager) {
+        if (!UnrealUtils::IsValidUObject(SurvivalCheatManager)) {
             LogError(
                 "CheatManager",
-                "Target SurvivalCheatManager is NULL, cannot execute cheat"
+                "Target SurvivalCheatManager is unavailable, cannot execute cheat"
             );
+            SurvivalCheatManager = nullptr;
             return;
         }
 
@@ -1140,10 +1109,6 @@ namespace CheatManager {
 
         const uint64_t *alpqwParams = lpParams->FunctionParams;
         switch (fdwFunctionId) {
-            if (nullptr == SurvivalCheatManager) {
-                LogError("CheatManager", "SurvivalCheatManager is NULL, cannot execute cheat");
-                return;
-            }
             case CheatManagerFunctionId::AddGoldMolars: {
                 if (nullptr == alpqwParams) {
                     LogError("CheatManager", "Params are NULL for AddGoldMolars");

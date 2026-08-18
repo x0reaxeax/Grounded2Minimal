@@ -20,7 +20,7 @@ namespace WinGUI {
     // Called when Summon button is clicked with selected class name
     extern std::function<void(const std::string& /*szClassName*/)> fnSummonCallback;
 
-    bool Initialize(void);
+    bool Initialize(HMODULE hModule);
     void Stop(void);
 }
 

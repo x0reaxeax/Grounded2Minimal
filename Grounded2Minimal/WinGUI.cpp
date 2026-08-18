@@ -66,8 +66,9 @@
 #define IDC_STATIC_VERSION                      604
 #define IDC_STATIC_GITHUB                       605
 
-#define GUI_WINDOW_HEIGHT         800
-#define GUI_WINDOW_WIDTH          800
+#define GUI_WINDOW_HEIGHT                       800
+#define GUI_WINDOW_WIDTH                        800
+#define WM_GUI_SHUTDOWN                         (WM_APP + 1)
 
 namespace WinGUI {
     struct CheatButtonDefinition {
@@ -254,9 +255,21 @@ namespace WinGUI {
 
     std::vector<std::string> g_vAllClassNames;
     std::vector<std::string> g_vCurrentFilteredClassNames;
+    static std::vector<Command::Params::PlayerListEntry> g_vDisplayedPlayers;
 
-    static bool g_bGuiInitialized = false;
+    enum class GuiThreadState : uint32_t {
+        Stopped,
+        Starting,
+        Running
+    };
+
+    static std::atomic<bool> g_bGuiInitialized = false;
+    static std::atomic<bool> g_bGuiStopRequested = false;
+    static std::atomic<GuiThreadState> g_GuiThreadState = GuiThreadState::Stopped;
+    static std::thread g_GuiThread;
     static bool g_bConsoleVisible = true;
+
+    static HBRUSH g_hEditBackgroundBrush = nullptr;
 
     static HWND g_hMainWnd = nullptr;
     static HWND g_hListPlayers = nullptr;
@@ -288,6 +301,41 @@ namespace WinGUI {
     static HWND g_hButtonToggleHandyGnat = nullptr;
     static HWND g_hButtonToggleBuildingIntegrity = nullptr;
     static HWND g_hButtonToggleAutoCompleteBuildings = nullptr;
+
+    static void ClearWindowHandles(void) {
+        g_hMainWnd = nullptr;
+        g_hListPlayers = nullptr;
+        g_hListDataTables = nullptr;
+        g_hListItemNames = nullptr;
+        g_hListClassNames = nullptr;
+        g_hEditItemCount = nullptr;
+        g_hEditItemSearch = nullptr;
+        g_hEditMutationsCount = nullptr;
+        g_hEditCozinessLevel = nullptr;
+        g_hBuildAllStructures = nullptr;
+        g_hEditNearbyStorageRadius = nullptr;
+        g_hEditChillRateMultiplier = nullptr;
+        g_hEditSizzleRateMultiplier = nullptr;
+        g_hEditPerfectBlockWindow = nullptr;
+        g_hEditDodgeDistance = nullptr;
+        g_hEditCurrentFoodLevel = nullptr;
+        g_hEditCurrentWaterLevel = nullptr;
+        g_hStaticItemSearch = nullptr;
+        g_hEditClassSearch = nullptr;
+        g_hStaticClassSearch = nullptr;
+        g_hStaticVersion = nullptr;
+        g_hStaticGithub = nullptr;
+        g_hCheckShowConsole = nullptr;
+        g_hCheckGlobalCheat = nullptr;
+        g_hButtonToggleBuildAnywhere = nullptr;
+        g_hButtonToggleHandyGnat = nullptr;
+        g_hButtonToggleBuildingIntegrity = nullptr;
+        g_hButtonToggleAutoCompleteBuildings = nullptr;
+
+        for (CheatButtonDefinition& CheatButton : g_CheatButtons) {
+            CheatButton.ButtonHandle = nullptr;
+        }
+    }
 
     ///////////////////////////////////////////////////////
     /// Forward declarations
@@ -390,8 +438,11 @@ namespace WinGUI {
     }
 
     // TODO: make foking defines for location and size
-    static void LaunchGUIThread(void) {
-        std::thread([]() {
+    static void LaunchGUIThread(HMODULE hModule) {
+        g_bGuiStopRequested.store(false, std::memory_order_release);
+        g_GuiThreadState.store(GuiThreadState::Starting, std::memory_order_release);
+
+        g_GuiThread = std::thread([hModule]() {
             // Initialize common controls
             INITCOMMONCONTROLSEX icexControls = {
                 sizeof(icexControls), ICC_LISTVIEW_CLASSES
@@ -404,11 +455,32 @@ namespace WinGUI {
             };
             wcWindowClass.style = CS_HREDRAW | CS_VREDRAW;
             wcWindowClass.lpfnWndProc = WndProc;
-            wcWindowClass.hInstance = GetModuleHandle(NULL);
+            wcWindowClass.hInstance = hModule;
             wcWindowClass.lpszClassName = L"GroundedInternalGUI";
             wcWindowClass.hbrBackground = CreateSolidBrush(RGB(45, 45, 48)); // no flashbangs
 
-            RegisterClassEx(&wcWindowClass);
+            g_hEditBackgroundBrush = CreateSolidBrush(RGB(60, 60, 63));
+            if (nullptr == wcWindowClass.hbrBackground || nullptr == g_hEditBackgroundBrush) {
+                LogError("WinGUI", "Failed to create GUI background brushes");
+                if (nullptr != wcWindowClass.hbrBackground) {
+                    DeleteObject(wcWindowClass.hbrBackground);
+                }
+                if (nullptr != g_hEditBackgroundBrush) {
+                    DeleteObject(g_hEditBackgroundBrush);
+                    g_hEditBackgroundBrush = nullptr;
+                }
+                g_GuiThreadState.store(GuiThreadState::Stopped, std::memory_order_release);
+                return;
+            }
+
+            if (0 == RegisterClassEx(&wcWindowClass)) {
+                LogError("WinGUI", "Failed to register GUI window class");
+                DeleteObject(g_hEditBackgroundBrush);
+                DeleteObject(wcWindowClass.hbrBackground);
+                g_hEditBackgroundBrush = nullptr;
+                g_GuiThreadState.store(GuiThreadState::Stopped, std::memory_order_release);
+                return;
+            }
 
             ///////////////////////////////////////////////////////
             /// Create main window
@@ -429,6 +501,11 @@ namespace WinGUI {
 
             if (nullptr == g_hMainWnd) {
                 LogError("WinGUI", "Failed to create main window");
+                UnregisterClass(wcWindowClass.lpszClassName, wcWindowClass.hInstance);
+                DeleteObject(g_hEditBackgroundBrush);
+                DeleteObject(wcWindowClass.hbrBackground);
+                g_hEditBackgroundBrush = nullptr;
+                g_GuiThreadState.store(GuiThreadState::Stopped, std::memory_order_release);
                 return;
             }
 
@@ -855,18 +932,36 @@ namespace WinGUI {
             // Set up timer for periodic player list updates (every 5 seconds)
             SetTimer(g_hMainWnd, IDC_TIMER_PLAYER_UPDATE, 5000, NULL);
 
-            g_bGuiInitialized = true; // Set this BEFORE the message loop
+            if (g_bGuiStopRequested.load(std::memory_order_acquire)) {
+                DestroyWindow(g_hMainWnd);
+            } else {
+                g_bGuiInitialized.store(true, std::memory_order_release);
+                g_GuiThreadState.store(GuiThreadState::Running, std::memory_order_release);
+            }
 
             // Message loop
-            MSG msgMessage;
-            while (GetMessage(&msgMessage, nullptr, 0, 0)) {
+            MSG msgMessage = {};
+            int32_t iMessageResult = 0;
+            while ((iMessageResult = GetMessage(&msgMessage, nullptr, 0, 0)) > 0) {
                 TranslateMessage(&msgMessage);
                 DispatchMessage(&msgMessage);
             }
 
-            // Clean up timer when message loop exits
-            KillTimer(g_hMainWnd, IDC_TIMER_PLAYER_UPDATE);
-        }).detach();
+            if (-1 == iMessageResult) {
+                LogError("WinGUI", "GUI message loop failed");
+            }
+
+            g_bGuiInitialized.store(false, std::memory_order_release);
+
+            if (!UnregisterClass(wcWindowClass.lpszClassName, wcWindowClass.hInstance)) {
+                LogError("WinGUI", "Failed to unregister GUI window class");
+            }
+
+            DeleteObject(g_hEditBackgroundBrush);
+            DeleteObject(wcWindowClass.hbrBackground);
+            g_hEditBackgroundBrush = nullptr;
+            g_GuiThreadState.store(GuiThreadState::Stopped, std::memory_order_release);
+        });
     }
 
     // Helper function to get item count from edit control
@@ -1080,12 +1175,29 @@ namespace WinGUI {
             LogMessage("WinGUI", "GUI not initialized, skipping player list update");
             return;
         }
-        
-        // Get fresh player data, so fresh omg
-        std::vector<SDK::APlayerState*> vNewPlayers;
-        UnrealUtils::DumpConnectedPlayers(&vNewPlayers, (bool) g_G2MOptions.bHideAutoPlayerDbgInfo.load());
 
-        if (vNewPlayers.empty()) {
+        if (IsReloadInProgress()) {
+            LogMessage("WinGUI", "Reload in progress, skipping player list update", true);
+            return;
+        }
+        
+        auto vNewPlayers = std::make_shared<std::vector<Command::Params::PlayerListEntry>>();
+        if (!Command::TrySubmitTypedCommand(
+            Command::CommandId::CmdIdEnumPlayers,
+            new Command::Params::EnumPlayers{
+                .Results = vNewPlayers,
+                .bHideOutput = static_cast<bool>(g_G2MOptions.bHideAutoPlayerDbgInfo.load())
+            }
+        )) {
+            return;
+        }
+
+        if (!Command::WaitForCommandBufferReady(1000)) {
+            LogError("WinGUI", "Timed out waiting for game-thread player enumeration");
+            return;
+        }
+
+        if (vNewPlayers->empty()) {
             LogMessage(
                 "WinGUI",
                 "No players connected, skipping player list update",
@@ -1096,13 +1208,16 @@ namespace WinGUI {
 
         // Check if the player list actually changed lol
         bool bPlayersChanged = false;
-        if (vNewPlayers.size() != PlayerCache::g_CachedData.Players.size()) {
+        if (vNewPlayers->size() != g_vDisplayedPlayers.size()) {
             bPlayersChanged = true;
         } else {
             // Compare player IDs to see if the list changed
-            for (size_t i = 0; i < vNewPlayers.size(); ++i) {
-                if (nullptr == vNewPlayers[i] || nullptr == PlayerCache::g_CachedData.Players[i] ||
-                    vNewPlayers[i]->PlayerId != PlayerCache::g_CachedData.Players[i]->PlayerId) {
+            for (size_t i = 0; i < vNewPlayers->size(); ++i) {
+                if (
+                    (*vNewPlayers)[i].iPlayerId != g_vDisplayedPlayers[i].iPlayerId
+                    || (*vNewPlayers)[i].wszPlayerName != g_vDisplayedPlayers[i].wszPlayerName
+                    || (*vNewPlayers)[i].bHostAuthority != g_vDisplayedPlayers[i].bHostAuthority
+                ) {
                     bPlayersChanged = true;
                     break;
                 }
@@ -1125,23 +1240,14 @@ namespace WinGUI {
             }
         }
 
-        // Update the global player list
-        //PlayerCache::g_CachedData.Players = vNewPlayers;
-        PlayerCache::BuildPlayerCache(&vNewPlayers);
+        g_vDisplayedPlayers = std::move(*vNewPlayers);
         
         // Clear and repepopopulate the ListView
         ClearPlayerTable();
         
         int iNewSelectionIndex = -1; // Track where to restore selection
-        for (const auto& lpPlayerState : PlayerCache::g_CachedData.Players) {
-            if (nullptr == lpPlayerState) {
-                continue;
-            }
-
-            SDK::FString fszPlayerName = lpPlayerState->GetPlayerName();
-            int32_t iPlayerId = lpPlayerState->PlayerId;
-            bool bHostAuthority = lpPlayerState->HasAuthority();
-            std::wstring fszPlayerNameW;
+        for (const Command::Params::PlayerListEntry& Player : g_vDisplayedPlayers) {
+            int32_t iPlayerId = Player.iPlayerId;
 
             if (iPlayerId < 0) {
                 LogError(
@@ -1151,13 +1257,7 @@ namespace WinGUI {
                 continue; // Skip invalid players
             }
 
-            if (!CoreUtils::Utf8ToWideString(fszPlayerName.ToString(), fszPlayerNameW)) {
-                LogError("WinGUI", "Failed to convert player name to wide string");
-                fszPlayerNameW = L"Unknown Player";
-                //continue;
-            }
-
-            AddPlayerRow(fszPlayerNameW, iPlayerId, bHostAuthority);
+            AddPlayerRow(Player.wszPlayerName, iPlayerId, Player.bHostAuthority);
             
             // Check if this is the previously selected player
             if (
@@ -1670,12 +1770,17 @@ namespace WinGUI {
                     // Use solid background for edit controls to prevent text overlap
                     SetTextColor(hDeviceContext, RGB(230, 230, 230));
                     SetBkColor(hDeviceContext, RGB(60, 60, 63)); // Slightly lighter than window background
-                    return (LRESULT) CreateSolidBrush(RGB(60, 60, 63));
+                    return (LRESULT) g_hEditBackgroundBrush;
                 }
                 
                 SetTextColor(hDeviceContext, RGB(230, 230, 230));
                 SetBkMode(hDeviceContext, TRANSPARENT);
                 return (LRESULT) GetStockObject(NULL_BRUSH);
+            }
+
+            case WM_GUI_SHUTDOWN: {
+                DestroyWindow(hWnd);
+                return 0;
             }
 
             case WM_DESTROY: {
@@ -1692,16 +1797,28 @@ namespace WinGUI {
     }
 
     void Stop(void) {
-        // Post a WM_DESTROY message to the main window to clean up
-        if (nullptr != g_hMainWnd) {
-            PostMessage(g_hMainWnd, WM_DESTROY, 0, 0);
-            g_hMainWnd = nullptr;
+        g_bGuiInitialized.store(false, std::memory_order_release);
+        g_bGuiStopRequested.store(true, std::memory_order_release);
+
+        if (
+            GuiThreadState::Running == g_GuiThreadState.load(std::memory_order_acquire)
+            &&
+            nullptr != g_hMainWnd
+        ) {
+            if (!PostMessage(g_hMainWnd, WM_GUI_SHUTDOWN, 0, 0)) {
+                LogError("WinGUI", "Failed to post GUI shutdown message");
+            }
         }
-        g_bGuiInitialized = false; // Reset initialization flag
+
+        if (g_GuiThread.joinable()) {
+            g_GuiThread.join();
+        }
+
+        ClearWindowHandles();
         LogMessage("WinGUI", "WinGUI stopped and cleaned up");
     }
 
-    bool Initialize(void) {
+    bool Initialize(HMODULE hModule) {
         LogMessage("WinGUI", "Initializing WinGUI...");
         _snwprintf_s(
             g_szVersionString,
@@ -1841,17 +1958,22 @@ namespace WinGUI {
             EnableGlobalOutput();
         };
 
-        LaunchGUIThread();
+        LaunchGUIThread(hModule);
 
         int32_t iWaitCount = 0;
         const int32_t iMaxWaitCycles = 100; // 10 seconds max
-        while (!g_bGuiInitialized && iWaitCount < iMaxWaitCycles) {
+        while (
+            GuiThreadState::Starting == g_GuiThreadState.load(std::memory_order_acquire)
+            &&
+            iWaitCount < iMaxWaitCycles
+        ) {
             std::this_thread::sleep_for(std::chrono::milliseconds(100));
             iWaitCount++;
         }
 
-        if (!g_bGuiInitialized) {
+        if (!g_bGuiInitialized.load(std::memory_order_acquire)) {
             LogError("WinGUI", "GUI failed to initialize within timeout period");
+            Stop();
             return false;
         }
 
@@ -1862,7 +1984,7 @@ namespace WinGUI {
             LogMessage("WinGUI", "Populating player list...");
             PopulatePlayerList();
             std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-        } while (PlayerCache::g_CachedData.Players.empty());
+        } while (g_vDisplayedPlayers.empty());
 
         // Populate DataTable list (TODO: wrap this one too)
         ClearDataTableList();

@@ -70,9 +70,7 @@ namespace CheatManager {
 
     namespace Summon {
         struct BufferParamsSummon {
-            int32_t iPlayerId;
-            SDK::FString fszClassName;                          // Name of the class to summon
-            SDK::APlayerController *lpLocalPlayerController;    // Pointer to the local player controller
+            std::wstring wszClassName;
         };
 
         void SummonClass(

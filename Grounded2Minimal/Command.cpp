@@ -4,14 +4,17 @@
 #include "CheatManager.hpp"
 #include "UnrealUtils.hpp"
 #include "ItemSpawner.hpp"
+#include "PlayerCache.hpp"
 #include "CoreUtils.hpp"
 #include "Command.hpp"
+
+#include <chrono>
 #include <iostream>
 
 namespace Command {
     std::mutex CommandBufferMutex = {};
     std::condition_variable CommandBufferCondition = {};
-    std::atomic<bool> CommandBufferCookedForExecution{ false }; // Atomic variable
+    std::atomic<bool> CommandBufferCookedForExecution{ false };
 
     CommandBuffer GameCommandBuffer = {
         .Id = CommandId::CmdIdNone,
@@ -21,8 +24,36 @@ namespace Command {
     void WaitForCommandBufferReady(void) {
         std::unique_lock<std::mutex> lock(CommandBufferMutex);
         CommandBufferCondition.wait(lock, []() {
-            return !CommandBufferCookedForExecution.load();
+            return !CommandBufferCookedForExecution.load() || IsReloadInProgress();
         });
+    }
+
+    bool WaitForCommandBufferReady(uint32_t dwTimeoutMilliseconds) {
+        std::unique_lock<std::mutex> lock(CommandBufferMutex);
+        return CommandBufferCondition.wait_for(
+            lock,
+            std::chrono::milliseconds(dwTimeoutMilliseconds),
+            []() {
+                return !CommandBufferCookedForExecution.load() || IsReloadInProgress();
+            }
+        );
+    }
+
+    void DiscardPendingCommand(void) {
+        std::unique_lock<std::mutex> lock(CommandBufferMutex);
+
+        // fuck it off
+        if (nullptr != GameCommandBuffer.Deleter && nullptr != GameCommandBuffer.Params) {
+            GameCommandBuffer.Deleter(GameCommandBuffer.Params);
+        }
+
+        GameCommandBuffer.Id = CommandId::CmdIdNone;
+        GameCommandBuffer.Params = nullptr;
+        GameCommandBuffer.Deleter = nullptr;
+        CommandBufferCookedForExecution.store(false);
+
+        lock.unlock();
+        CommandBufferCondition.notify_all();
     }
 
     void __gamethread ProcessCommands(void) {
@@ -41,6 +72,8 @@ namespace Command {
         GameCommandBuffer.Deleter = nullptr;
 
         // Process command without holding lock
+        lockUnique.unlock();
+
         switch (localBuffer.Id) {
             case CommandId::CmdIdSpawnItem: {
                 LogMessage("ProcessEvent", "Command: Spawn Item");
@@ -58,10 +91,45 @@ namespace Command {
                     lpParams->iCount
                 );
 
+                // ig this is more valid than just smacking "success (source: trust me bro)"
                 LogMessage(
                     "ProcessEvent",
-                    "ItemSpawn - " + std::string(bRet ? "Success" : "Failure")
+                    "ItemSpawn - " + std::string(bRet ? "Dispatched" : "Rejected")
                 );
+                break;
+            }
+
+            case CommandId::CmdIdEnumPlayers: {
+                if (nullptr == localBuffer.Params) {
+                    LogError("ProcessEvent", "CmdIdEnumPlayers: Params are null");
+                    break;
+                }
+
+                Params::EnumPlayers* lpParams =
+                    static_cast<Params::EnumPlayers*>(localBuffer.Params);
+                
+                if (nullptr == lpParams->Results) {
+                    LogError("ProcessEvent", "CmdIdEnumPlayers: Result storage is null");
+                    break;
+                }
+
+                std::vector<SDK::APlayerState*> vPlayerStates;
+                UnrealUtils::DumpConnectedPlayers(&vPlayerStates, lpParams->bHideOutput);
+                PlayerCache::BuildPlayerCache(&vPlayerStates);
+
+                lpParams->Results->clear();
+                lpParams->Results->reserve(vPlayerStates.size());
+                for (SDK::APlayerState* lpPlayerState : vPlayerStates) {
+                    if (!UnrealUtils::IsValidUObject(lpPlayerState)) {
+                        continue;
+                    }
+
+                    lpParams->Results->push_back(Params::PlayerListEntry{
+                        .iPlayerId = lpPlayerState->PlayerId,
+                        .wszPlayerName = lpPlayerState->GetPlayerName().ToWString(),
+                        .bHostAuthority = lpPlayerState->HasAuthority()
+                    });
+                }
                 break;
             }
 
@@ -75,16 +143,39 @@ namespace Command {
 
                 CheatManager::Summon::BufferParamsSummon* lpParams = 
                     static_cast<CheatManager::Summon::BufferParamsSummon*>(localBuffer.Params);
-                
-                if (nullptr == lpParams->lpLocalPlayerController) {
-                    LogError("ProcessEvent", "CmdIdSummon: LocalPlayerController is null");
+
+                if (lpParams->wszClassName.empty()) {
+                    LogError("ProcessEvent", "CmdIdSummon: Class name is empty");
                     break;
                 }
 
-                lpParams->lpLocalPlayerController->EnableCheats();
+                SDK::ASurvivalPlayerController* lpLocalPlayerController =
+                    UnrealUtils::GetLocalSurvivalPlayerControllerFast();
+                if (
+                    nullptr == lpLocalPlayerController
+                    || !UnrealUtils::IsValidUObject(lpLocalPlayerController)
+                ) {
+                    LogError("ProcessEvent", "CmdIdSummon: LocalPlayerController is unavailable");
+                    break;
+                }
 
-                SDK::UCheatManager *lpCheatManager = lpParams->lpLocalPlayerController->CheatManager;
-                if (nullptr == lpCheatManager) {
+                SDK::APlayerState* lpPlayerState = lpLocalPlayerController->PlayerState;
+                if (
+                    nullptr == lpPlayerState
+                    || !UnrealUtils::IsValidUObject(lpPlayerState)
+                    || !lpPlayerState->HasAuthority()
+                ) {
+                    LogError("ProcessEvent", "CmdIdSummon: Local player has no summon authority");
+                    break;
+                }
+
+                lpLocalPlayerController->EnableCheats();
+
+                SDK::UCheatManager *lpCheatManager = lpLocalPlayerController->CheatManager;
+                if (
+                    nullptr == lpCheatManager
+                    || !UnrealUtils::IsValidUObject(lpCheatManager)
+                ) {
                     LogError(
                         "ProcessEvent",
                         "CmdIdSummon: CheatManager is not initialized, aborting.."
@@ -92,15 +183,20 @@ namespace Command {
                     break;
                 }
                 
+                std::string szClassName;
+                if (!CoreUtils::WideStringToUtf8(lpParams->wszClassName, szClassName)) {
+                    LogError("ProcessEvent", "CmdIdSummon: Failed to encode class name for logging");
+                    break;
+                }
+
                 LogMessage(
                     "ProcessEvent",
-                    "Summon - Player ID: " + std::to_string(lpParams->iPlayerId) +
-                    ", Class: " + lpParams->fszClassName.ToString()
+                    "Summon - Player ID: " + std::to_string(lpPlayerState->PlayerId) +
+                    ", Class: " + szClassName
                 );
 
-                lpCheatManager->Summon(
-                    lpParams->fszClassName
-                );
+                SDK::FString fszClassName(lpParams->wszClassName.c_str());
+                lpCheatManager->Summon(fszClassName);
 
                 break;
             }
@@ -292,7 +388,6 @@ namespace Command {
 
         CommandBufferCookedForExecution.store(false);
 
-        lockUnique.unlock();
         CommandBufferCondition.notify_all();
     }
 }
