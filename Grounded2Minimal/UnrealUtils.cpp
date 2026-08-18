@@ -1094,7 +1094,8 @@ namespace UnrealUtils {
         if (nullptr == lpPartyComponent) {
             LogError(
                 "SPCharacter", 
-                "Failed to find local player's party"
+                "Failed to find local player's party",
+                true
             );
             return nullptr;
         }

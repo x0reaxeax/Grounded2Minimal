@@ -298,6 +298,17 @@ namespace HookManager {
         s_HookedVTables.clear();
     }
 
+    bool ProcessEventHooker::CompleteRestore(void) {
+        std::lock_guard<std::mutex> lockGuard(s_HookMutex);
+        if (!s_Hooks.empty() || !s_HookedVTables.empty()) {
+            LogError("HookManager", "Cannot complete ProcessEvent restoration while hooks remain installed");
+            return false;
+        }
+
+        s_Restoring.store(false, std::memory_order_release);
+        return true;
+    }
+
     void ProcessEventHooker::ListActiveHooks(void) {
         HookTable::ListActiveHooks(
             s_Hooks,
@@ -580,10 +591,7 @@ namespace HookManager {
         s_Restoring.store(true, std::memory_order_release);
 
         // Wait for active hook invocations to finish (avoid tearing down while executing)
-        for (int i = 0; i < 200; ++i) { // ~2s at 10ms
-            if (s_InFlight.load(std::memory_order_acquire) == 0) {
-                break;
-            }
+        while (s_InFlight.load(std::memory_order_acquire) != 0) {
             Sleep(10);
         }
 
@@ -608,6 +616,17 @@ namespace HookManager {
             }
         }
         nh_Hooks.clear();
+    }
+
+    bool NativeHooker::CompleteRestore(void) {
+        std::lock_guard<std::mutex> lock(nh_Mutex);
+        if (!nh_Hooks.empty()) {
+            LogError("NativeHooker", "Cannot complete native restoration while hooks remain installed");
+            return false;
+        }
+
+        s_Restoring.store(false, std::memory_order_release);
+        return true;
     }
 
     NativeHooker::NativeFunc_t NativeHooker::GetOriginal(SDK::UFunction* lpTargetFunc) {

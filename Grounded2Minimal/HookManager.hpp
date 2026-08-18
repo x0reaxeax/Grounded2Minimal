@@ -80,6 +80,7 @@ namespace HookManager {
             const std::string &cszHookName
         );
         static void RestoreHooks(void);
+        static bool CompleteRestore(void);
         static void ListActiveHooks(void);
         static ProcessEvent_t GetHookOriginalFunctionById(int32_t iHookId);
         static HookData* GetHookById(int32_t iHookId);
@@ -160,6 +161,7 @@ namespace HookManager {
 
         static bool Restore(SDK::UFunction* lpTargetFunc);
         static void RestoreAll(void);
+        static bool CompleteRestore(void);
         static NativeFunc_t GetOriginal(SDK::UFunction* lpTargetFunc);
         static void ListActiveHooks(void);
         static HookEntry* GetHookById(int32_t iHookId);

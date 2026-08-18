@@ -14,6 +14,7 @@
 
 #include "SDK/UI_ChatLog_classes.hpp"
 #include "SDK/Maine_parameters.hpp"
+#include "SDK/BP_SurvivalPlayerController_Augusta_parameters.hpp"
 
 #define _RELEASE
 
@@ -30,6 +31,41 @@ VersionInfo GroundedMinimalVersionInfo = { 0 };
 
 // Game options
 GameOptions g_GameOptions;
+
+enum class ReloadState : uint8_t {
+    Idle,
+    Requested,
+    Reloading,
+    Failed
+};
+
+std::atomic<ReloadState> g_ReloadState{ ReloadState::Idle };
+std::atomic<bool> g_ReloadWorkerRunning{ false };
+std::atomic<SDK::UObject*> g_EndingController{ nullptr };
+std::thread g_ReloadWorker;
+
+static void RequestReload(
+    SDK::UObject* lpEndingController,
+    SDK::EEndPlayReason eEndPlayReason
+) {
+    g_EndingController.store(lpEndingController, std::memory_order_release);
+
+    ReloadState eExpected = ReloadState::Idle;
+    if (!g_ReloadState.compare_exchange_strong(
+        eExpected,
+        ReloadState::Requested,
+        std::memory_order_acq_rel
+    )) {
+        return;
+    }
+
+    LogMessage(
+        "Reload",
+        "Local SurvivalPlayerController received ReceiveEndPlay (reason "
+        + std::to_string(static_cast<uint8_t>(eEndPlayReason))
+        + "); scheduling hook reload"
+    );
+}
 
 void HideConsole(
     void
@@ -295,6 +331,15 @@ PROCESSEVENTHOOK _HookedSPCProcessEvent(
         // Invalidate player cache on client restart, as the player state will be recreated
         // as of right now, this is completely useless, cuz all hooks will still be present
         PlayerCache::InvalidateCache();
+    } else if (
+        lpFunction->GetName().contains("ReceiveEndPlay")
+        && ProcessEventHooker::GetHookByObject(lpObject) == lpHookData
+    ) {
+        SDK::Params::BP_SurvivalPlayerController_Augusta_C_ReceiveEndPlay* lpEndPlayParams =
+            static_cast<SDK::Params::BP_SurvivalPlayerController_Augusta_C_ReceiveEndPlay*>(lpParams);
+        if (nullptr != lpEndPlayParams) {
+            RequestReload(lpObject, lpEndPlayParams->EndPlayReason);
+        }
     } else { // Discard request cuz it might hold invalid pointers
         // Process pending commands before calling the original, to avoid
         // nested ProcessEvent re-entry while the flag is still set.
@@ -498,11 +543,6 @@ NATIVEHOOK _HookedUpdateCollisionStateChange(
 
     NativeHooker::InFlightGuard inFlight;
 
-    // If teardown is happening, don't do extra work.
-    if (NativeHooker::IsRestoring()) {
-        return;
-    }
-
     NativeHooker::HookEntry* lpHookData = NativeHooker::GetHookByHookedFunction(
         &_HookedUpdateCollisionStateChange
     );
@@ -510,6 +550,11 @@ NATIVEHOOK _HookedUpdateCollisionStateChange(
     if (nullptr == lpHookData) {
         // catastrophic cataclysmic shit
         //throw std::runtime_error("UpdateCollisionStateChange: Hook data not found");
+        return;
+    }
+
+    if (NativeHooker::IsRestoring()) {
+        lpHookData->OriginalFn(lpObj, lpFFrame, lpResult);
         return;
     }
 
@@ -563,15 +608,17 @@ NATIVEHOOK _HookedGetPlacementValid(
 ) {
     using namespace HookManager;
     NativeHooker::InFlightGuard inFlight;
-    if (NativeHooker::IsRestoring()) {
-        return;
-    }
     NativeHooker::HookEntry* lpHookData = NativeHooker::GetHookByHookedFunction(
         (NativeHooker::NativeFunc_t) &_HookedGetPlacementValid
     );
 
     if (nullptr == lpHookData) {
         // catastrophic cataclysmic 
+        return;
+    }
+
+    if (NativeHooker::IsRestoring()) {
+        lpHookData->OriginalFn(lpObj, lpFFrame, lpResult);
         return;
     }
 
@@ -601,9 +648,6 @@ NATIVEHOOK Maine_HealthComponent_OnRep_CurrentDamage(
 ) {
     using namespace HookManager;
     NativeHooker::InFlightGuard inFlight;
-    if (NativeHooker::IsRestoring()) {
-        return;
-    }
     NativeHooker::HookEntry* lpHookData = NativeHooker::GetHookByHookedFunction(
         (NativeHooker::NativeFunc_t) &Maine_HealthComponent_OnRep_CurrentDamage
     );
@@ -615,6 +659,11 @@ NATIVEHOOK Maine_HealthComponent_OnRep_CurrentDamage(
             true
         );
         // catastrophic cataclysmic 
+        return;
+    }
+
+    if (NativeHooker::IsRestoring()) {
+        lpHookData->OriginalFn(lpObj, lpFFrame, lpResult);
         return;
     }
 
@@ -731,6 +780,163 @@ void InitializeGameStatics(void) {
     );
 }
 
+static bool InitializeRuntimeState(void) {
+    g_G2MOptions.bIsClientHost = UnrealUtils::IsPlayerHostAuthority(
+        UnrealUtils::GetLocalPlayerId()
+    );
+
+    if (g_G2MOptions.bIsClientHost) {
+        SDK::ASurvivalPlayerController* lpLocalSPC = UnrealUtils::GetLocalSurvivalPlayerControllerFast();
+        if (nullptr == lpLocalSPC) {
+            lpLocalSPC = UnrealUtils::GetLocalSurvivalPlayerController();
+        }
+
+        if (nullptr == lpLocalSPC) {
+            LogError("Init", "Failed to get local SurvivalPlayerController for hooking");
+            return false;
+        }
+
+        if (!HookManager::ProcessEventHooker::InstallHook(
+            lpLocalSPC,
+            _HookedSPCProcessEvent,
+            "SPC_ProcessEvent"
+        )) {
+            LogError("Init", "Failed to hook SurvivalPlayerController ProcessEvent");
+            return false;
+        }
+
+        if (!HookManager::ProcessEventHooker::InstallHook(
+            SDK::UChatBoxWidget::GetDefaultObj(),
+            _HookedChatBoxProcessEvent,
+            "ChatBoxWidget_ProcessEvent"
+        )) {
+            LogError("Init", "Failed to hook ChatBoxWidget ProcessEvent");
+            return false;
+        }
+    }
+
+    if (!HookManager::ProcessEventHooker::InstallHook(
+        SDK::AGameModeBase::StaticClass(),
+        _HookedGameModeBaseProcessEvent,
+        "GameModeBase_ProcessEvent"
+    )) {
+        LogError("Init", "Failed to hook GameModeBase ProcessEvent");
+        return false;
+    }
+
+    if (nullptr == HookManager::NativeHooker::HookNativeFunction(
+        "UpdateCollisionStateChange",
+        &_HookedUpdateCollisionStateChange,
+        "UpdateCollisionStateChange_Native"
+    )) {
+        LogError("Init", "Failed to hook Building::UpdateCollisionStateChange");
+        return false;
+    }
+
+    if (nullptr == HookManager::NativeHooker::HookNativeFunction(
+        "GetPlacementValid",
+        &_HookedGetPlacementValid,
+        "GetPlacementValid_Native"
+    )) {
+        LogError("Init", "Failed to hook IPlaceable::GetPlacementValid");
+        return false;
+    }
+
+    if (g_G2MOptions.bIsClientHost && !CheatManager::ManualInitialize()) {
+        LogError("Init", "Failed to initialize CheatManager");
+        return false;
+    }
+
+    InitializeGameStatics();
+    return true;
+}
+
+static bool WaitForReplacementWorld(SDK::UObject* lpEndingController) {
+    constexpr int32_t MaxAttempts = 120;
+
+    for (
+        int32_t iAttempt = 0;
+        iAttempt < MaxAttempts && g_ReloadWorkerRunning.load(std::memory_order_acquire);
+        ++iAttempt
+    ) {
+        SDK::ASurvivalPlayerController* lpLocalSPC = UnrealUtils::GetLocalSurvivalPlayerControllerFast();
+        if (
+            nullptr != lpLocalSPC
+            && lpLocalSPC != lpEndingController
+            && nullptr != UnrealUtils::GetLocalPawn()
+        ) {
+            return true;
+        }
+
+        std::this_thread::sleep_for(std::chrono::milliseconds(500));
+    }
+
+    return false;
+}
+
+static void ReloadRuntimeState(void) {
+    LogMessage("Reload", "Restoring hooks for world reload");
+
+    if (g_G2MOptions.bIsClientHost) {
+        CheatManager::Destroy();
+    }
+
+    PlayerCache::InvalidateCache();
+    HookManager::ProcessEventHooker::RestoreHooks();
+    HookManager::NativeHooker::RestoreAll();
+
+    SDK::UObject* lpEndingController = g_EndingController.load(std::memory_order_acquire);
+    if (!WaitForReplacementWorld(lpEndingController)) {
+        LogError(
+            "Reload", 
+            "Timed out waiting for a replacement playable world; hooks remain restored"
+        );
+        g_ReloadState.store(ReloadState::Failed, std::memory_order_release);
+        return;
+    }
+
+    if (
+        !HookManager::ProcessEventHooker::CompleteRestore()
+        || 
+        !HookManager::NativeHooker::CompleteRestore()
+    ) {
+        LogError(
+            "Reload", 
+            "Failed to complete hook restoration for reinitialization"
+        );
+        g_ReloadState.store(ReloadState::Failed, std::memory_order_release);
+        return;
+    }
+
+    if (!InitializeRuntimeState()) {
+        LogError(
+            "Reload", 
+            "Failed to initialize hooks for the replacement world"
+        );
+        g_ReloadState.store(ReloadState::Failed, std::memory_order_release);
+        return;
+    }
+
+    g_EndingController.store(nullptr, std::memory_order_release);
+    g_ReloadState.store(ReloadState::Idle, std::memory_order_release);
+    LogMessage("Reload", "Hook reload completed");
+}
+
+static void ReloadWorkerLoop(void) {
+    while (g_ReloadWorkerRunning.load(std::memory_order_acquire)) {
+        ReloadState eExpected = ReloadState::Requested;
+        if (g_ReloadState.compare_exchange_strong(
+            eExpected,
+            ReloadState::Reloading,
+            std::memory_order_acq_rel
+        )) {
+            ReloadRuntimeState();
+        }
+
+        std::this_thread::sleep_for(std::chrono::milliseconds(50));
+    }
+}
+
 static bool IsDebugFilePresent(void) {
     LPCSTR cszDebugFileName = ".g2m_debug";
 
@@ -827,140 +1033,13 @@ DWORD WINAPI ThreadEntry(
         true
      );
 
-    // Host authority check
-    LogMessage(
-        "Init",
-        "Checking client host authority..."
-    );
-
-    g_G2MOptions.bIsClientHost = UnrealUtils::IsPlayerHostAuthority(
-        UnrealUtils::GetLocalPlayerId()
-    );
-
-    if (!g_G2MOptions.bIsClientHost) {
-        LogMessage("Init", "Client is NOT host authority, tool will have limited functionality");
-    }
-
-    LogMessage("Init", "Starting hooks initialization...");
-    
-    // Don't hook SPC and ChatBox events if client is not host
-    if (g_G2MOptions.bIsClientHost) {
-        LogMessage("Init", "Initializing SurvivalPlayerController ProcessEvent hook...", true);
-        SDK::ASurvivalPlayerController* lpLocalSPC = UnrealUtils::GetLocalSurvivalPlayerControllerFast();
-
-        if (nullptr == lpLocalSPC) {
-            LogMessage(
-                "Init",
-                "Failed to get local SurvivalPlayerController, trying fallback..."
-            );
-            lpLocalSPC = UnrealUtils::GetLocalSurvivalPlayerController();
-
-            if (nullptr == lpLocalSPC) {
-                LogError(
-                    "Init",
-                    "Failed to get local SurvivalPlayerController for hooking"
-                );
-                goto _RYUJI;
-            }
-            LogMessage(
-                "Init",
-                "Successfully obtained local SurvivalPlayerController via fallback: " + CoreUtils::HexConvert(
-                    reinterpret_cast<uintptr_t>(lpLocalSPC)
-                ),
-                true
-            );
-        } else {
-            LogMessage(
-                "Init",
-                "Successfully obtained local SurvivalPlayerController: " + CoreUtils::HexConvert(
-                    reinterpret_cast<uintptr_t>(lpLocalSPC)
-                ),
-                true
-            );
-        }
-
-        if (!HookManager::ProcessEventHooker::InstallHook(
-            lpLocalSPC,
-            _HookedSPCProcessEvent,    // ASurvivalPlayerController
-            "SPC_ProcessEvent"
-        )) {
-            LogError(
-                "Init",
-                "Failed to hook SurvivalPlayerController ProcessEvent"
-            );
-            goto _RYUJI;
-        }
-
-        LogMessage("Init", "Initializing ChatBoxWidget ProcessEvent hook...", true);
-
-        if (!HookManager::ProcessEventHooker::InstallHook(
-            SDK::UChatBoxWidget::GetDefaultObj(),
-            _HookedChatBoxProcessEvent,
-            "ChatBoxWidget_ProcessEvent"
-        )) {
-            LogError("Init", "Failed to hook ChatBoxWidget ProcessEvent");
-            goto _RYUJI; // lol
-        }
-    } else {
-        LogMessage("Init", "Skipping SurvivalPlayerController and ChatBoxWidget ProcessEvent hooks - no host authority");
-    }
-
-    // Idk if GameModeBase is doable for non-host clients
-    LogMessage("Init", "Initializing GameModeBase ProcessEvent hook...", true);
-    if (!HookManager::ProcessEventHooker::InstallHook(
-        SDK::AGameModeBase::StaticClass(),
-        _HookedGameModeBaseProcessEvent,
-        "GameModeBase_ProcessEvent"
-    )) {
-        LogError(
-            "Init",
-            "Failed to hook GameModeBase ProcessEvent"
-        );
+    LogMessage("Init", "Starting runtime initialization...");
+    if (!InitializeRuntimeState()) {
         goto _RYUJI;
     }
 
-    LogMessage("Init", "Initializing Building::UpdateCollisionStateChange native hook...", true);
-
-    if (nullptr == HookManager::NativeHooker::HookNativeFunction(
-        "UpdateCollisionStateChange",
-        &_HookedUpdateCollisionStateChange,
-        "UpdateCollisionStateChange_Native"
-    )) {
-        LogError(
-            "Init", 
-            "Failed to hook Building::UpdateCollisionStateChange"
-        );
-        goto _RYUJI;
-    }
-
-    LogMessage("Init", "Initializing IPlaceable::GetPlacementValid native hook...", true);
-    if (nullptr == HookManager::NativeHooker::HookNativeFunction(
-        "GetPlacementValid",
-        &_HookedGetPlacementValid,
-        "GetPlacementValid_Native"
-    )) {
-        LogError(
-            "Init",
-            "Failed to hook IPlaceable::GetPlacementValid"
-        );
-        goto _RYUJI;
-    }
-
-    LogMessage("Init", "Hooks initialized");
-
-    if (g_G2MOptions.bIsClientHost) {
-        LogMessage("Init", "Initializing CheatManager...");
-        if (!CheatManager::ManualInitialize()) {
-            LogError("Init", "Failed to initialize CheatManager");
-            goto _RYUJI;
-        }
-        LogMessage("Init", "CheatManager initialized successfully");
-    }
-
-    // Game Statics read
-    LogMessage("Init", "Reading 'GameStatics' game option values...");
-
-    InitializeGameStatics();
+    g_ReloadWorkerRunning.store(true, std::memory_order_release);
+    g_ReloadWorker = std::thread(ReloadWorkerLoop);
 
     // Cache initialization
 
@@ -1005,6 +1084,11 @@ DWORD WINAPI ThreadEntry(
     /////// Cleanup ///////
 _RYUJI:
     LogMessage("Exit", "GroundedMinimal2: Unhooking and cleaning up...");
+
+    g_ReloadWorkerRunning.store(false, std::memory_order_release);
+    if (g_ReloadWorker.joinable()) {
+        g_ReloadWorker.join();
+    }
 
     if (g_G2MOptions.bIsClientHost) {
         LogMessage("Exit", "Cleaning up CheatManager instance...");

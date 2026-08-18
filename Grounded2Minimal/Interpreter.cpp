@@ -1791,7 +1791,12 @@ namespace Interpreter {
         }
 
         // strip newline bih
-        szInput[strcspn(szInput, "\n")] = '\0';
+        if (nullptr != strchr(szInput, '\n')) {
+            szInput[strcspn(szInput, "\r\n")] = '\0';
+        } else {
+            int ch = 0;
+            while ('\n' != (ch = getchar()) && EOF != ch);
+        }
 
         std::string s(szInput);
 
@@ -1801,7 +1806,7 @@ namespace Interpreter {
         size_t end = s.find_last_not_of(" \t\r\n");
 
         if (start == std::string::npos || end == std::string::npos) {
-            szOutInput = "";
+            szOutInput.clear();
         } else {
             szOutInput = s.substr(start, end - start + 1);
         }
