@@ -3,7 +3,7 @@
 [![Release workflow](https://github.com/x0reaxeax/Grounded2Minimal/actions/workflows/release.yml/badge.svg)](https://github.com/x0reaxeax/Grounded2Minimal/actions/workflows/release.yml)
 
 ## !!! IMPORTANT PLZ READ !!!
-Under set configurations, this tool can allow any connected players to **EXECUTE CONTROLLED CODE ON YOUR MACHINE**.  
+Under set configurations, this tool can allow any connected players to **EXECUTE CONTROLLED CODE ON YOUR MACHINE** (disabled by default).  
 Only use this tool with people you trust, and only if you understand the risks involved.  
 
 Additionally, the tool allows for spawning experimental and unimplemented items, which can potentially break your save files or cause other issues.  
