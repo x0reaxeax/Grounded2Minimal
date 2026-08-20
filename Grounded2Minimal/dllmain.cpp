@@ -106,9 +106,9 @@ void ProcessDebugFilter(
 
 static bool CheckGameCompat(void) {
 #if (TARGET_PLATFORM == TARGET_PLATFORM_STEAM)
-    constexpr uintptr_t GameVersionStringOffset = 0x08187424;
+    constexpr uintptr_t GameVersionStringOffset = 0x08188224;
 #elif (TARGET_PLATFORM == TARGET_PLATFORM_XGP)
-    constexpr uintptr_t GameVersionStringOffset = 0x07A43C24;
+    constexpr uintptr_t GameVersionStringOffset = 0x07A41E24;
 #endif
 
     HMODULE hBaseAddress = GetModuleHandleW(nullptr);
@@ -151,7 +151,16 @@ static bool CheckGameCompat(void) {
         return false;
     }
 
-    CONST BYTE abGameVersion[] = { 0x30, 0x00, 0x2E, 0x00, 0x35, 0x00, 0x2E, 0x00, 0x30, 0x00, 0x2E, 0x00, 0x33 };
+    CONST BYTE abGameVersion[] = { 
+        0x30, 0x00,         // '0'
+        0x2E, 0x00,         // '.'
+        0x35, 0x00,         // '5'
+        0x2E, 0x00,         // '.'
+        0x30, 0x00,         // '0'
+        0x2E, 0x00,         // '.' 
+        0x34, 0x00          // '4'
+    };
+
     if (0 != memcmp(
         reinterpret_cast<const void*>(lpcTargetVersionAddress),
         abGameVersion,
