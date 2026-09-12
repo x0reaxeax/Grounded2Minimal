@@ -59,7 +59,9 @@ namespace CoreUtils {
 
     DWORD32 GetSectionRVAOffset(
         LPCBYTE lpBaseAddress,
-        LPCSTR szSectionName
+        LPCSTR szSectionName,
+        LPCBYTE *lppSectionStart = nullptr,
+        SIZE_T *lpcbSectionSize = nullptr
     );
 } // namespace CoreUtils
 

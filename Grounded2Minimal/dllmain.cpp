@@ -105,12 +105,6 @@ void ProcessDebugFilter(
 }
 
 static bool CheckGameCompat(void) {
-#if (TARGET_PLATFORM == TARGET_PLATFORM_STEAM)
-    constexpr uintptr_t GameVersionStringOffset = 0x08188224;
-#elif (TARGET_PLATFORM == TARGET_PLATFORM_XGP)
-    constexpr uintptr_t GameVersionStringOffset = 0x07A41E24;
-#endif
-
     HMODULE hBaseAddress = GetModuleHandleW(nullptr);
     if (nullptr == hBaseAddress) {
         LogError(
@@ -120,17 +114,28 @@ static bool CheckGameCompat(void) {
         return false;
     }
 
-    MEMORY_BASIC_INFORMATION mbInfo{};
+    LPCBYTE lpSectionStart = nullptr;
+    SIZE_T cbSectionSize = 0;
 
-    DWORD32 dwRdataRVA = CoreUtils::GetSectionRVAOffset(
-        reinterpret_cast<LPCBYTE>(hBaseAddress), 
-        ".rdata"
+    CoreUtils::GetSectionRVAOffset(
+        reinterpret_cast<LPCBYTE>(hBaseAddress),
+        ".rdata",
+        &lpSectionStart,
+        &cbSectionSize
     );
 
-    LPCBYTE lpcTargetVersionAddress = reinterpret_cast<LPCBYTE>(hBaseAddress) + dwRdataRVA + GameVersionStringOffset;
+    if (nullptr == lpSectionStart || 0 == cbSectionSize) {
+        LogError(
+            "CheckGameCompat",
+            "Failed to locate .rdata section in the game module"
+        );
+        return false;
+    }
+
+    MEMORY_BASIC_INFORMATION mbInfo{};
 
     if (0 == VirtualQuery(
-        lpcTargetVersionAddress,
+        lpSectionStart,
         &mbInfo,
         sizeof(mbInfo)
     )) {
@@ -151,30 +156,42 @@ static bool CheckGameCompat(void) {
         return false;
     }
 
+    // UTF-16LE encoding of "release-0.5.0.5" - the "release-" prefix makes
+    // this specific enough to avoid coincidentally matching unrelated data
+    // elsewhere in .rdata, without pinning unrelated engine/codename details
+    // (e.g. the "5.6.1-3100008+++Augusta+" prefix) that aren't part of the
+    // game's own version numbering.
     CONST BYTE abGameVersion[] = { 
+        0x72, 0x00,         // 'r'
+        0x65, 0x00,         // 'e'
+        0x6C, 0x00,         // 'l'
+        0x65, 0x00,         // 'e'
+        0x61, 0x00,         // 'a'
+        0x73, 0x00,         // 's'
+        0x65, 0x00,         // 'e'
+        0x2D, 0x00,         // '-'
         0x30, 0x00,         // '0'
         0x2E, 0x00,         // '.'
         0x35, 0x00,         // '5'
         0x2E, 0x00,         // '.'
         0x30, 0x00,         // '0'
         0x2E, 0x00,         // '.' 
-        0x34, 0x00          // '4'
+        0x35, 0x00          // '5'
     };
 
-    if (0 != memcmp(
-        reinterpret_cast<const void*>(lpcTargetVersionAddress),
-        abGameVersion,
-        sizeof(abGameVersion)
-    )) {
-        LogMessage(
-            "CheckGameCompat",
-            "Incompatibility report:\n"
-            " * BaseAddress: " + CoreUtils::HexConvert(reinterpret_cast<uintptr_t>(hBaseAddress)) + "\n"
-            " * TargetVersionAddress: " + CoreUtils::HexConvert(reinterpret_cast<uintptr_t>(lpcTargetVersionAddress)) + "\n"
-            " * .rdata RVA: " + CoreUtils::HexConvert(dwRdataRVA) + "\n",
-            true
-        );
+    constexpr SIZE_T cbNeedle = sizeof(abGameVersion);
+    bool bFound = false;
 
+    if (cbSectionSize >= cbNeedle) {
+        for (SIZE_T i = 0; i <= cbSectionSize - cbNeedle; ++i) {
+            if (0 == memcmp(lpSectionStart + i, abGameVersion, cbNeedle)) {
+                bFound = true;
+                break;
+            }
+        }
+    }
+
+    if (!bFound) {
         LogError(
             "CheckGameCompat",
             "Game version string does not match expected value, the game may have been updated and is incompatible with this mod"

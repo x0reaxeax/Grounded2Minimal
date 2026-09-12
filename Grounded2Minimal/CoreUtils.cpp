@@ -270,7 +270,9 @@ namespace CoreUtils {
 
     DWORD32 GetSectionRVAOffset(
         LPCBYTE lpBaseAddress,
-        LPCSTR szSectionName
+        LPCSTR szSectionName,
+        LPCBYTE *lppSectionStart,
+        SIZE_T *lpcbSectionSize
     ) {
         PIMAGE_DOS_HEADER pDosHeader = (PIMAGE_DOS_HEADER) lpBaseAddress;
         if (IMAGE_DOS_SIGNATURE != pDosHeader->e_magic) {
@@ -316,6 +318,13 @@ namespace CoreUtils {
                 '\0' != pSectionHeaders[i].Name[cbSectionName]
             ) {
                 continue;
+            }
+
+            if (nullptr != lppSectionStart) {
+                *lppSectionStart = lpBaseAddress + pSectionHeaders[i].VirtualAddress;
+            }
+            if (nullptr != lpcbSectionSize) {
+                *lpcbSectionSize = static_cast<SIZE_T>(pSectionHeaders[i].Misc.VirtualSize);
             }
 
             return pSectionHeaders[i].VirtualAddress - pSectionHeaders[i].PointerToRawData;
