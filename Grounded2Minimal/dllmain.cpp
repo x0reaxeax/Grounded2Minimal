@@ -48,7 +48,7 @@ void ShowConsole(
 }
 
 ///////////////////////////////////////////////////////////////
-// Hooked functions
+// Hooked functions 
 
 void ProcessDebugFilter(
     HookManager::ProcessEventHooker::HookData *lpHookData,
