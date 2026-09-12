@@ -31,7 +31,7 @@ However, in case of multiplayer lobbies, only the LOBBY HOST can use this.**
 ## Getting started
  1. Download or build Grounded2Minimal.dll
  2. Load into the game. Like actually load into the world, not just main menu.
- 3. Inject Grounded2Minimal.dll into `Grounded2-WinGRTS-Shipping.exe` (Steam), or `Grounded2-WinGDK-Shipping.exe` (Xbox Game Pass) using your fave injector.
+ 3. Inject Grounded2Minimal.dll into `Grounded2Steam-Win64-Shipping.exe` (Steam), or `Grounded2-WinGDK-Shipping.exe` (Xbox Game Pass) using your fave injector.
  4. Enjoy
 
 ## GUI Usage
