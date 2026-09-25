@@ -156,30 +156,38 @@ static bool CheckGameCompat(void) {
         return false;
     }
 
-    // UTF-16LE encoding of "release-0.5.0.5" - the "release-" prefix makes
+    // UTF-16LE encoding of "release-0.5.X.X" - the "release-" prefix makes
     // this specific enough to avoid coincidentally matching unrelated data
     // elsewhere in .rdata, without pinning unrelated engine/codename details
     // (e.g. the "5.6.1-3100008+++Augusta+" prefix) that aren't part of the
     // game's own version numbering.
-    CONST BYTE abGameVersion[] = { 
-        0x72, 0x00,         // 'r'
-        0x65, 0x00,         // 'e'
-        0x6C, 0x00,         // 'l'
-        0x65, 0x00,         // 'e'
-        0x61, 0x00,         // 'a'
-        0x73, 0x00,         // 's'
-        0x65, 0x00,         // 'e'
-        0x2D, 0x00,         // '-'
-        0x30, 0x00,         // '0'
-        0x2E, 0x00,         // '.'
-        0x35, 0x00,         // '5'
-        0x2E, 0x00,         // '.'
-        0x30, 0x00,         // '0'
-        0x2E, 0x00,         // '.' 
-        0x35, 0x00          // '5'
-    };
 
-    constexpr SIZE_T cbNeedle = sizeof(abGameVersion);
+    CONST DWORD32 dwMajor = 0x05;
+    CONST DWORD32 dwMinor = 0x01;
+    CONST DWORD32 dwPatch = 0x00;
+
+    WCHAR wszGameVersion[64] = { 0 };
+
+    INT cchGameVersion = _snwprintf_s(
+        wszGameVersion,
+        _countof(wszGameVersion),
+        _TRUNCATE,
+        L"release-0.%lu.%lu.%lu",
+        dwMajor,
+        dwMinor,
+        dwPatch
+    );
+    
+    if (cchGameVersion < 0) {
+        LogError(
+            "CheckGameCompat",
+            "Failed to construct expected game version string"
+        );
+        return false;
+    }
+
+    CONST BYTE* abGameVersion = reinterpret_cast<CONST BYTE*>(wszGameVersion);
+    CONST SIZE_T cbNeedle = static_cast<SIZE_T>(cchGameVersion) * sizeof(WCHAR);
     bool bFound = false;
 
     if (cbSectionSize >= cbNeedle) {
