@@ -54,8 +54,10 @@ jobs:
         run: |
           $projectDir = Join-Path $pwd "Grounded2Minimal"
           $sdkArchive = Join-Path $pwd "_sdk/Grounded2Minimal-SDK.zip"
+
           $sdkProjectFiles = @(
             "SDK",
+            "Assertions.inl",
             "NameCollisions.inl",
             "PropertyFixup.hpp",
             "SDK.hpp",
@@ -65,15 +67,23 @@ jobs:
 
           foreach ($relativePath in $sdkProjectFiles) {
             $fullPath = Join-Path $projectDir $relativePath
+
             if (Test-Path $fullPath) {
               Remove-Item $fullPath -Recurse -Force
             }
           }
 
-          Expand-Archive -Path $sdkArchive -DestinationPath $projectDir -Force
+          Expand-Archive `
+            -Path $sdkArchive `
+            -DestinationPath $projectDir `
+            -Force
 
           $requiredPaths = @(
             "SDK",
+            "SDK\Basic.hpp",
+            "Assertions.inl",
+            "NameCollisions.inl",
+            "PropertyFixup.hpp",
             "SDK.hpp",
             "UnrealContainers.hpp",
             "UtfN.hpp"
@@ -81,6 +91,7 @@ jobs:
 
           foreach ($relativePath in $requiredPaths) {
             $fullPath = Join-Path $projectDir $relativePath
+
             if (-not (Test-Path $fullPath)) {
               throw "Missing expected SDK path after extraction: $relativePath"
             }

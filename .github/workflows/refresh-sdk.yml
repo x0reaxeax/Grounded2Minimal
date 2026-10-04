@@ -1,0 +1,1007 @@
+name: Refresh SDK Offsets
+
+on:
+  workflow_dispatch:
+    inputs:
+      game_version:
+        description: "New Grounded 2 version (e.g. 0.5.1.1)"
+        required: true
+        type: string
+
+      steam_exe_url:
+        description: "Download URL for the Steam executable"
+        required: true
+        type: string
+
+      xgp_exe_url:
+        description: "Download URL for the XGP executable"
+        required: true
+        type: string
+
+      dry_run:
+        description: "Validate everything without rotating/publishing SDK releases"
+        required: true
+        default: true
+        type: boolean
+
+permissions:
+  contents: write
+
+concurrency:
+  group: refresh-sdk
+  cancel-in-progress: false
+
+jobs:
+  refresh-sdk:
+    name: Refresh SDK offsets
+    runs-on: windows-latest
+
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+
+      NEW_GAME_VERSION: ${{ inputs.game_version }}
+
+      STEAM_EXE_URL: ${{ inputs.steam_exe_url }}
+      XGP_EXE_URL: ${{ inputs.xgp_exe_url }}
+
+    steps:
+      # ------------------------------------------------------------
+      # Checkout
+      # ------------------------------------------------------------
+
+      - name: Checkout Grounded2Minimal
+        uses: actions/checkout@v4
+
+      - name: Checkout G2Dumper
+        uses: actions/checkout@v4
+        with:
+          repository: x0reaxeax/G2Dumper
+          ref: main
+          path: _g2dumper
+
+      - name: Setup MSBuild
+        uses: microsoft/setup-msbuild@v2
+        with:
+          msbuild-architecture: x64
+
+      # ------------------------------------------------------------
+      # Validate requested version
+      # ------------------------------------------------------------
+
+      - name: Validate game version
+        shell: pwsh
+        run: |
+          if ($env:NEW_GAME_VERSION -notmatch '^\d+\.\d+\.\d+\.\d+$') {
+              throw "Invalid game version '$env:NEW_GAME_VERSION'. Expected X.X.X.X, e.g. 0.5.1.1."
+          }
+
+          Write-Host "[+] New game version: $env:NEW_GAME_VERSION"
+
+      # ------------------------------------------------------------
+      # Read current SDK metadata BEFORE doing any expensive work.
+      #
+      # Outputs:
+      #   old_version
+      #   archive_tag
+      #   release_id
+      #   old_tag_sha
+      # ------------------------------------------------------------
+
+      - name: Read current SDK metadata
+        id: sdk_metadata
+        shell: pwsh
+        run: |
+          $releaseJson = gh release view sdk `
+              --json databaseId,body,name,isImmutable
+
+          if ($LASTEXITCODE -ne 0) {
+              throw "Failed to read current 'sdk' release."
+          }
+
+          $release = $releaseJson | ConvertFrom-Json
+
+          if ($release.isImmutable) {
+              throw "The current 'sdk' release is immutable and cannot be rotated."
+          }
+
+          $match = [Regex]::Match(
+              [string]$release.body,
+              '(?im)^\s*Game version:\s*(\d+\.\d+\.\d+\.\d+)\s*$'
+          )
+
+          if (-not $match.Success) {
+              throw "Could not determine the current SDK game version from the 'sdk' release body."
+          }
+
+          $oldVersion = $match.Groups[1].Value
+          $archiveTag = "sdk-$oldVersion"
+
+          if ($oldVersion -eq $env:NEW_GAME_VERSION) {
+              throw "The current SDK is already marked as game version $oldVersion."
+          }
+
+          $oldTagSha = gh api `
+              "repos/$env:GH_REPO/git/ref/tags/sdk" `
+              --jq '.object.sha'
+
+          if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($oldTagSha)) {
+              throw "Failed to resolve refs/tags/sdk."
+          }
+
+          #
+          # Refuse to overwrite an existing historical SDK.
+          #
+          $null = gh api `
+              "repos/$env:GH_REPO/git/ref/tags/$archiveTag" `
+              2>$null
+
+          if ($LASTEXITCODE -eq 0) {
+              throw "Archive tag '$archiveTag' already exists."
+          }
+
+          $null = gh release view $archiveTag 2>$null
+
+          if ($LASTEXITCODE -eq 0) {
+              throw "Archive release '$archiveTag' already exists."
+          }
+
+          Write-Host "[+] Current SDK version : $oldVersion"
+          Write-Host "[+] Archive tag        : $archiveTag"
+          Write-Host "[+] Current sdk SHA    : $oldTagSha"
+          Write-Host "[+] Release ID         : $($release.databaseId)"
+
+          "old_version=$oldVersion" >> $env:GITHUB_OUTPUT
+          "archive_tag=$archiveTag" >> $env:GITHUB_OUTPUT
+          "release_id=$($release.databaseId)" >> $env:GITHUB_OUTPUT
+          "old_tag_sha=$oldTagSha" >> $env:GITHUB_OUTPUT
+
+      # ------------------------------------------------------------
+      # Build G2Dumper
+      # ------------------------------------------------------------
+
+      - name: Build G2Dumper
+        shell: pwsh
+        run: |
+          msbuild .\_g2dumper\G2Dumper.sln `
+              /m `
+              /p:Configuration=Release `
+              /p:Platform=x64 `
+              /verbosity:minimal
+
+          if ($LASTEXITCODE -ne 0) {
+              throw "Failed to build G2Dumper."
+          }
+
+          $dumper = Get-ChildItem `
+              -Path .\_g2dumper `
+              -Filter G2Dumper.exe `
+              -Recurse `
+              -File |
+              Where-Object {
+                  $_.FullName -match '[\\/]x64[\\/]Release[\\/]'
+              } |
+              Select-Object -First 1
+
+          if ($null -eq $dumper) {
+              throw "Could not locate the built G2Dumper.exe."
+          }
+
+          Write-Host "[+] G2Dumper: $($dumper.FullName)"
+
+          "G2DUMPER_PATH=$($dumper.FullName)" >> $env:GITHUB_ENV
+
+      # ------------------------------------------------------------
+      # Download supplied game executables.
+      #
+      # Intentionally consume the URLs through environment variables
+      # instead of interpolating them directly into the script.
+      # ------------------------------------------------------------
+
+      - name: Download game executables
+        shell: pwsh
+        run: |
+          $ProgressPreference = "SilentlyContinue"
+
+          New-Item `
+              -ItemType Directory `
+              -Force `
+              -Path .\_input |
+              Out-Null
+
+          $steamPath = Join-Path $pwd "_input\steam.exe"
+          $xgpPath   = Join-Path $pwd "_input\xgp.exe"
+
+          Write-Host "[+] Downloading Steam executable..."
+
+          Invoke-WebRequest `
+              -Uri $env:STEAM_EXE_URL `
+              -OutFile $steamPath
+
+          Write-Host "[+] Downloading XGP executable..."
+
+          Invoke-WebRequest `
+              -Uri $env:XGP_EXE_URL `
+              -OutFile $xgpPath
+
+          function Test-PeFile {
+              param(
+                  [Parameter(Mandatory = $true)]
+                  [string]$Path,
+
+                  [Parameter(Mandatory = $true)]
+                  [string]$Name
+              )
+
+              if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) {
+                  throw "$Name executable was not downloaded."
+              }
+
+              $item = Get-Item -LiteralPath $Path
+
+              if ($item.Length -lt 1024) {
+                  throw "$Name executable is suspiciously small: $($item.Length) bytes."
+              }
+
+              $stream = [System.IO.File]::OpenRead($Path)
+
+              try {
+                  $m = $stream.ReadByte()
+                  $z = $stream.ReadByte()
+              }
+              finally {
+                  $stream.Dispose()
+              }
+
+              if ($m -ne 0x4D -or $z -ne 0x5A) {
+                  throw "$Name download does not appear to be a PE file (missing MZ header)."
+              }
+
+              Write-Host (
+                  "[+] {0,-5}: {1:N0} bytes" -f
+                  $Name,
+                  $item.Length
+              )
+          }
+
+          Test-PeFile `
+              -Path $steamPath `
+              -Name "Steam"
+
+          Test-PeFile `
+              -Path $xgpPath `
+              -Name "XGP"
+
+      # ------------------------------------------------------------
+      # Run G2Dumper
+      # ------------------------------------------------------------
+
+      - name: Dump Steam and XGP offsets
+        shell: pwsh
+        run: |
+          New-Item `
+              -ItemType Directory `
+              -Force `
+              -Path .\_offsets |
+              Out-Null
+
+          Write-Host ""
+          Write-Host "========================================"
+          Write-Host " Steam"
+          Write-Host "========================================"
+          Write-Host ""
+
+          & $env:G2DUMPER_PATH `
+              ".\_input\steam.exe" `
+              --json ".\_offsets\steam.json"
+
+          if ($LASTEXITCODE -ne 0) {
+              throw "G2Dumper failed for the Steam executable."
+          }
+
+          Write-Host ""
+          Write-Host "========================================"
+          Write-Host " XGP"
+          Write-Host "========================================"
+          Write-Host ""
+
+          & $env:G2DUMPER_PATH `
+              ".\_input\xgp.exe" `
+              --json ".\_offsets\xgp.json"
+
+          if ($LASTEXITCODE -ne 0) {
+              throw "G2Dumper failed for the XGP executable."
+          }
+
+          if (-not (Test-Path ".\_offsets\steam.json")) {
+              throw "Steam offsets JSON was not created."
+          }
+
+          if (-not (Test-Path ".\_offsets\xgp.json")) {
+              throw "XGP offsets JSON was not created."
+          }
+
+          Write-Host ""
+          Write-Host "[+] Steam offsets:"
+          Get-Content ".\_offsets\steam.json"
+
+          Write-Host ""
+          Write-Host "[+] XGP offsets:"
+          Get-Content ".\_offsets\xgp.json"
+
+      # ------------------------------------------------------------
+      # Download/extract current floating SDK release.
+      # ------------------------------------------------------------
+
+      - name: Download current SDK
+        shell: pwsh
+        run: |
+          $downloadDir = Join-Path $pwd "_sdk\current"
+
+          New-Item `
+              -ItemType Directory `
+              -Force `
+              -Path $downloadDir |
+              Out-Null
+
+          gh release download sdk `
+              --pattern "Grounded2Minimal-SDK.zip" `
+              --dir $downloadDir
+
+          if ($LASTEXITCODE -ne 0) {
+              throw "Failed to download Grounded2Minimal-SDK.zip from release 'sdk'."
+          }
+
+          $archive = Join-Path `
+              $downloadDir `
+              "Grounded2Minimal-SDK.zip"
+
+          if (-not (Test-Path -LiteralPath $archive -PathType Leaf)) {
+              throw "Grounded2Minimal-SDK.zip was not downloaded."
+          }
+
+          Write-Host "[+] Current SDK archive: $archive"
+
+      - name: Extract current SDK
+        shell: pwsh
+        run: |
+          $archive = Join-Path `
+              $pwd `
+              "_sdk\current\Grounded2Minimal-SDK.zip"
+
+          $destination = Join-Path `
+              $pwd `
+              "_sdk\staged"
+
+          if (Test-Path $destination) {
+              Remove-Item `
+                  -LiteralPath $destination `
+                  -Recurse `
+                  -Force
+          }
+
+          New-Item `
+              -ItemType Directory `
+              -Force `
+              -Path $destination |
+              Out-Null
+
+          Expand-Archive `
+              -LiteralPath $archive `
+              -DestinationPath $destination `
+              -Force
+
+          $requiredPaths = @(
+              "SDK",
+              "SDK\Basic.hpp",
+              "SDK.hpp",
+              "UnrealContainers.hpp",
+              "UtfN.hpp"
+          )
+
+          foreach ($relativePath in $requiredPaths) {
+              $fullPath = Join-Path `
+                  $destination `
+                  $relativePath
+
+              if (-not (Test-Path -LiteralPath $fullPath)) {
+                  throw "Current SDK archive is missing expected path: $relativePath"
+              }
+          }
+
+      # ------------------------------------------------------------
+      # Patch staged Basic.hpp.
+      # ------------------------------------------------------------
+
+      - name: Patch SDK offsets
+        shell: pwsh
+        run: |
+          & .\tools\Update-SdkOffsets.ps1 `
+              -BasicHpp ".\_sdk\staged\SDK\Basic.hpp" `
+              -SteamJson ".\_offsets\steam.json" `
+              -XgpJson ".\_offsets\xgp.json"
+
+      # ------------------------------------------------------------
+      # Create the candidate archive.
+      # ------------------------------------------------------------
+
+      - name: Package refreshed SDK
+        shell: pwsh
+        run: |
+          $source = Join-Path `
+              $pwd `
+              "_sdk\staged"
+
+          $outputDir = Join-Path `
+              $pwd `
+              "_sdk\candidate"
+
+          $archive = Join-Path `
+              $outputDir `
+              "Grounded2Minimal-SDK.zip"
+
+          New-Item `
+              -ItemType Directory `
+              -Force `
+              -Path $outputDir |
+              Out-Null
+
+          if (Test-Path -LiteralPath $archive) {
+              Remove-Item `
+                  -LiteralPath $archive `
+                  -Force
+          }
+
+          Compress-Archive `
+              -Path (Join-Path $source "*") `
+              -DestinationPath $archive `
+              -CompressionLevel Optimal
+
+          if (-not (Test-Path -LiteralPath $archive -PathType Leaf)) {
+              throw "Failed to create refreshed SDK archive."
+          }
+
+          $hash = (
+              Get-FileHash `
+                  -LiteralPath $archive `
+                  -Algorithm SHA384
+          ).Hash.ToUpperInvariant()
+
+          Write-Host "[+] Candidate SDK:"
+          Write-Host "    $archive"
+          Write-Host "[+] SHA384:"
+          Write-Host "    $hash"
+
+          "SDK_SHA384=$hash" >> $env:GITHUB_ENV
+
+      # ------------------------------------------------------------
+      # IMPORTANT:
+      #
+      # Re-extract the exact ZIP that will be published.
+      # Validation builds consume THIS copy.
+      # ------------------------------------------------------------
+
+      - name: Round-trip SDK archive
+        shell: pwsh
+        run: |
+          $archive = Join-Path `
+              $pwd `
+              "_sdk\candidate\Grounded2Minimal-SDK.zip"
+
+          $destination = Join-Path `
+              $pwd `
+              "_sdk\roundtrip"
+
+          if (Test-Path -LiteralPath $destination) {
+              Remove-Item `
+                  -LiteralPath $destination `
+                  -Recurse `
+                  -Force
+          }
+
+          New-Item `
+              -ItemType Directory `
+              -Force `
+              -Path $destination |
+              Out-Null
+
+          Expand-Archive `
+              -LiteralPath $archive `
+              -DestinationPath $destination `
+              -Force
+
+          $requiredPaths = @(
+              "SDK",
+              "SDK\Basic.hpp",
+              "SDK.hpp",
+              "NameCollisions.inl",
+              "PropertyFixup.hpp",
+              "UnrealContainers.hpp",
+              "UtfN.hpp"
+          )
+
+          foreach ($relativePath in $requiredPaths) {
+              $fullPath = Join-Path `
+                  $destination `
+                  $relativePath
+
+              if (-not (Test-Path -LiteralPath $fullPath)) {
+                  throw "Candidate SDK archive is missing expected path: $relativePath"
+              }
+          }
+
+          #
+          # Assertions.inl is referenced by the Basic.hpp you currently
+          # generate. Require it if present in this SDK generation.
+          #
+          $basicHpp = Get-Content `
+              -LiteralPath (Join-Path $destination "SDK\Basic.hpp") `
+              -Raw
+
+          if ($basicHpp -match '\.\./Assertions\.inl') {
+              $assertions = Join-Path `
+                  $destination `
+                  "Assertions.inl"
+
+              if (-not (Test-Path -LiteralPath $assertions)) {
+                  throw "Basic.hpp references Assertions.inl, but the candidate SDK archive does not contain it."
+              }
+          }
+
+      # ------------------------------------------------------------
+      # Replace the checked-out project's SDK with the candidate.
+      #
+      # This mutates only the ephemeral Actions checkout.
+      # ------------------------------------------------------------
+
+      - name: Install candidate SDK for validation
+        shell: pwsh
+        run: |
+          $projectDir = Join-Path `
+              $pwd `
+              "Grounded2Minimal"
+
+          $sdkSource = Join-Path `
+              $pwd `
+              "_sdk\roundtrip"
+
+          $sdkProjectFiles = @(
+              "SDK",
+              "Assertions.inl",
+              "NameCollisions.inl",
+              "PropertyFixup.hpp",
+              "SDK.hpp",
+              "UtfN.hpp",
+              "UnrealContainers.hpp"
+          )
+
+          foreach ($relativePath in $sdkProjectFiles) {
+              $target = Join-Path `
+                  $projectDir `
+                  $relativePath
+
+              if (Test-Path -LiteralPath $target) {
+                  Remove-Item `
+                      -LiteralPath $target `
+                      -Recurse `
+                      -Force
+              }
+          }
+
+          Get-ChildItem `
+              -LiteralPath $sdkSource |
+              ForEach-Object {
+                  Copy-Item `
+                      -LiteralPath $_.FullName `
+                      -Destination $projectDir `
+                      -Recurse `
+                      -Force
+              }
+
+      # ------------------------------------------------------------
+      # Validation builds.
+      #
+      # NOTHING on GitHub's release/tag state has been modified yet.
+      # ------------------------------------------------------------
+
+      - name: Validate Steam build
+        shell: pwsh
+        env:
+          CI: "1"
+        run: |
+          msbuild .\Grounded2Minimal.sln `
+              /m `
+              /t:Rebuild `
+              /p:Configuration=Release-Steam `
+              /p:Platform=x64 `
+              /verbosity:minimal
+
+          if ($LASTEXITCODE -ne 0) {
+              throw "Release-Steam validation build failed."
+          }
+
+      - name: Validate XGP build
+        shell: pwsh
+        env:
+          CI: "1"
+        run: |
+          msbuild .\Grounded2Minimal.sln `
+              /m `
+              /t:Rebuild `
+              /p:Configuration=Release-XGP `
+              /p:Platform=x64 `
+              /verbosity:minimal
+
+          if ($LASTEXITCODE -ne 0) {
+              throw "Release-XGP validation build failed."
+          }
+
+      # ------------------------------------------------------------
+      # Release notes for the NEW floating `sdk`.
+      # ------------------------------------------------------------
+
+      - name: Prepare SDK release notes
+        shell: pwsh
+        run: |
+          $lines = @(
+              "[Dumper-7](https://github.com/Encryqed/Dumper-7) + [G2Dumper](https://github.com/x0reaxeax/G2Dumper) generated SDK"
+              "Game version: $env:NEW_GAME_VERSION"
+              ""
+              '```text'
+              "$env:SDK_SHA384  Grounded2Minimal-SDK.zip"
+              '```'
+          )
+
+          Set-Content `
+              -LiteralPath ".\_sdk\candidate\RELEASE_NOTES.md" `
+              -Value $lines
+
+          Write-Host ""
+          Get-Content ".\_sdk\candidate\RELEASE_NOTES.md"
+
+      # ------------------------------------------------------------
+      # FINAL MUTATING STEP
+      #
+      #  sdk
+      #   ↓
+      #  sdk-<old version>
+      #
+      # then create new:
+      #
+      #  sdk
+      #
+      # This also verifies that nobody changed `sdk` while the workflow
+      # was running.
+      # ------------------------------------------------------------
+
+      - name: Rotate SDK release and publish refreshed SDK
+        if: ${{ !inputs.dry_run }}
+        shell: pwsh
+        env:
+          EXPECTED_RELEASE_ID: ${{ steps.sdk_metadata.outputs.release_id }}
+          EXPECTED_OLD_TAG_SHA: ${{ steps.sdk_metadata.outputs.old_tag_sha }}
+          ARCHIVE_TAG: ${{ steps.sdk_metadata.outputs.archive_tag }}
+        run: |
+          $ErrorActionPreference = "Stop"
+
+          $newArchive = Join-Path `
+              $pwd `
+              "_sdk\candidate\Grounded2Minimal-SDK.zip"
+
+          $notesFile = Join-Path `
+              $pwd `
+              "_sdk\candidate\RELEASE_NOTES.md"
+
+          #
+          # Re-read live state immediately before mutation.
+          #
+          $liveReleaseJson = gh release view sdk `
+              --json databaseId,isImmutable,name
+
+          if ($LASTEXITCODE -ne 0) {
+              throw "Current 'sdk' release disappeared before publication."
+          }
+
+          $liveRelease = $liveReleaseJson |
+              ConvertFrom-Json
+
+          if ($liveRelease.isImmutable) {
+              throw "Current 'sdk' release became immutable."
+          }
+
+          if (
+              [string]$liveRelease.databaseId -ne
+              [string]$env:EXPECTED_RELEASE_ID
+          ) {
+              throw (
+                  "The 'sdk' release changed while this workflow was running. " +
+                  "Expected release ID $env:EXPECTED_RELEASE_ID, " +
+                  "got $($liveRelease.databaseId)."
+              )
+          }
+
+          $liveTagSha = gh api `
+              "repos/$env:GH_REPO/git/ref/tags/sdk" `
+              --jq '.object.sha'
+
+          if ($LASTEXITCODE -ne 0) {
+              throw "Failed to re-read refs/tags/sdk."
+          }
+
+          if (
+              $liveTagSha.Trim() -ne
+              $env:EXPECTED_OLD_TAG_SHA.Trim()
+          ) {
+              throw (
+                  "The 'sdk' tag changed while this workflow was running. " +
+                  "Expected $env:EXPECTED_OLD_TAG_SHA, got $liveTagSha."
+              )
+          }
+
+          #
+          # Check historical destination again immediately before mutation.
+          #
+          $null = gh api `
+              "repos/$env:GH_REPO/git/ref/tags/$env:ARCHIVE_TAG" `
+              2>$null
+
+          if ($LASTEXITCODE -eq 0) {
+              throw "Archive tag '$env:ARCHIVE_TAG' appeared while the workflow was running."
+          }
+
+          $null = gh release view $env:ARCHIVE_TAG 2>$null
+
+          if ($LASTEXITCODE -eq 0) {
+              throw "Archive release '$env:ARCHIVE_TAG' appeared while the workflow was running."
+          }
+
+          $oldReleaseId = [string]$env:EXPECTED_RELEASE_ID
+          $oldTagSha    = [string]$env:EXPECTED_OLD_TAG_SHA
+          $archiveTag   = [string]$env:ARCHIVE_TAG
+          $oldName      = [string]$liveRelease.name
+
+          $archiveRefCreated = $false
+          $releaseArchived   = $false
+          $oldSdkRefDeleted  = $false
+          $newSdkRefCreated  = $false
+          $newReleaseCreated = $false
+
+          function Invoke-GhChecked {
+              param(
+                  [Parameter(Mandatory = $true)]
+                  [scriptblock]$Command,
+
+                  [Parameter(Mandatory = $true)]
+                  [string]$FailureMessage
+              )
+
+              & $Command
+
+              if ($LASTEXITCODE -ne 0) {
+                  throw $FailureMessage
+              }
+          }
+
+          try {
+              Write-Host ""
+              Write-Host "========================================"
+              Write-Host " Archiving current SDK"
+              Write-Host "========================================"
+              Write-Host ""
+
+              #
+              # 1. Create historical tag pointing to the exact same object
+              #    as the current floating `sdk` tag.
+              #
+              $createArchiveRef = @{
+                  ref = "refs/tags/$archiveTag"
+                  sha = $oldTagSha
+              } | ConvertTo-Json
+
+              $createArchiveRef |
+                  gh api `
+                      --method POST `
+                      "repos/$env:GH_REPO/git/refs" `
+                      --input - |
+                  Out-Null
+
+              if ($LASTEXITCODE -ne 0) {
+                  throw "Failed to create archive tag '$archiveTag'."
+              }
+
+              $archiveRefCreated = $true
+
+              #
+              # 2. Re-associate the existing release with the historical tag.
+              #    Assets/body stay attached to the same release object.
+              #
+              $archiveReleasePatch = @{
+                  tag_name = $archiveTag
+                  name     = $archiveTag
+              } | ConvertTo-Json
+
+              $archiveReleasePatch |
+                  gh api `
+                      --method PATCH `
+                      "repos/$env:GH_REPO/releases/$oldReleaseId" `
+                      --input - |
+                  Out-Null
+
+              if ($LASTEXITCODE -ne 0) {
+                  throw "Failed to archive existing SDK release as '$archiveTag'."
+              }
+
+              $releaseArchived = $true
+
+              #
+              # 3. Remove old floating tag.
+              #
+              gh api `
+                  --method DELETE `
+                  "repos/$env:GH_REPO/git/refs/tags/sdk"
+
+              if ($LASTEXITCODE -ne 0) {
+                  throw "Failed to remove old floating 'sdk' tag."
+              }
+
+              $oldSdkRefDeleted = $true
+
+              Write-Host "[+] Archived old SDK as: $archiveTag"
+
+              Write-Host ""
+              Write-Host "========================================"
+              Write-Host " Publishing refreshed SDK"
+              Write-Host "========================================"
+              Write-Host ""
+
+              #
+              # 4. Create new floating `sdk` tag on the commit that contains
+              #    this workflow/patcher.
+              #
+              $createSdkRef = @{
+                  ref = "refs/tags/sdk"
+                  sha = "${{ github.sha }}"
+              } | ConvertTo-Json
+
+              $createSdkRef |
+                  gh api `
+                      --method POST `
+                      "repos/$env:GH_REPO/git/refs" `
+                      --input - |
+                  Out-Null
+
+              if ($LASTEXITCODE -ne 0) {
+                  throw "Failed to create refreshed floating 'sdk' tag."
+              }
+
+              $newSdkRefCreated = $true
+
+              #
+              # 5. Create the new floating release and upload the exact ZIP
+              #    that passed both validation builds.
+              #
+              gh release create sdk `
+                  $newArchive `
+                  --verify-tag `
+                  --title "sdk" `
+                  --notes-file $notesFile `
+                  --latest=false
+
+              if ($LASTEXITCODE -ne 0) {
+                  throw "Failed to publish refreshed 'sdk' release."
+              }
+
+              $newReleaseCreated = $true
+
+              Write-Host ""
+              Write-Host "[+] SDK refresh complete."
+              Write-Host "[+] Archived : $archiveTag"
+              Write-Host "[+] Current  : sdk"
+              Write-Host "[+] Version  : $env:NEW_GAME_VERSION"
+              Write-Host "[+] SHA384   : $env:SDK_SHA384"
+          }
+          catch {
+              $publishError = $_
+
+              Write-Host ""
+              Write-Host "========================================"
+              Write-Host " SDK rotation failed - attempting rollback"
+              Write-Host "========================================"
+              Write-Host ""
+
+              #
+              # New release should normally not exist unless release creation
+              # partially succeeded.
+              #
+              if ($newReleaseCreated) {
+                  gh release delete sdk `
+                      --yes `
+                      2>$null |
+                      Out-Null
+              }
+
+              #
+              # Remove new floating tag if we created it.
+              #
+              if ($newSdkRefCreated) {
+                  gh api `
+                      --method DELETE `
+                      "repos/$env:GH_REPO/git/refs/tags/sdk" `
+                      2>$null |
+                      Out-Null
+              }
+
+              #
+              # Restore original floating tag.
+              #
+              if ($oldSdkRefDeleted) {
+                  $restoreSdkRef = @{
+                      ref = "refs/tags/sdk"
+                      sha = $oldTagSha
+                  } | ConvertTo-Json
+
+                  $restoreSdkRef |
+                      gh api `
+                          --method POST `
+                          "repos/$env:GH_REPO/git/refs" `
+                          --input - `
+                          2>$null |
+                      Out-Null
+              }
+
+              #
+              # Point old release back at sdk.
+              #
+              if ($releaseArchived) {
+                  $restoreRelease = @{
+                      tag_name = "sdk"
+                      name     = $oldName
+                  } | ConvertTo-Json
+
+                  $restoreRelease |
+                      gh api `
+                          --method PATCH `
+                          "repos/$env:GH_REPO/releases/$oldReleaseId" `
+                          --input - `
+                          2>$null |
+                      Out-Null
+              }
+
+              #
+              # Remove historical ref we created during this failed run.
+              #
+              if ($archiveRefCreated) {
+                  gh api `
+                      --method DELETE `
+                      "repos/$env:GH_REPO/git/refs/tags/$archiveTag" `
+                      2>$null |
+                      Out-Null
+              }
+
+              throw $publishError
+          }
+
+      # ------------------------------------------------------------
+      # Job summary
+      # ------------------------------------------------------------
+
+      - name: Write summary
+        if: ${{ !inputs.dry_run }}
+        shell: pwsh
+        env:
+          OLD_VERSION: ${{ steps.sdk_metadata.outputs.old_version }}
+          ARCHIVE_TAG: ${{ steps.sdk_metadata.outputs.archive_tag }}
+        run: |
+          @"
+          ## SDK refresh complete
+
+          | | |
+          |---|---|
+          | Previous game version | ``$env:OLD_VERSION`` |
+          | New game version | ``$env:NEW_GAME_VERSION`` |
+          | Archived SDK tag | ``$env:ARCHIVE_TAG`` |
+          | Current SDK tag | ``sdk`` |
+          | SHA384 | ``$env:SDK_SHA384`` |
+
+          Both ``Release-Steam`` and ``Release-XGP`` successfully rebuilt against the exact published SDK ZIP.
+          "@ >> $env:GITHUB_STEP_SUMMARY
