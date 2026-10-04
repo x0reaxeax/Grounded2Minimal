@@ -125,24 +125,39 @@ jobs:
               "repos/$env:GH_REPO/git/ref/tags/sdk" `
               --jq '.object.sha'
 
-          if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($oldTagSha)) {
+          if (
+              $LASTEXITCODE -ne 0 -or
+              [string]::IsNullOrWhiteSpace($oldTagSha)
+          ) {
               throw "Failed to resolve refs/tags/sdk."
           }
 
           #
           # Refuse to overwrite an existing historical SDK.
           #
+          # NOTE:
+          # These commands are EXPECTED to return exit code 1 when the
+          # tag/release does not exist. Capture that state explicitly so
+          # the intentional failure does not leak into the step result.
+          #
+
           $null = gh api `
               "repos/$env:GH_REPO/git/ref/tags/$archiveTag" `
               2>$null
 
-          if ($LASTEXITCODE -eq 0) {
+          $archiveTagExists = ($LASTEXITCODE -eq 0)
+          $LASTEXITCODE = 0
+
+          if ($archiveTagExists) {
               throw "Archive tag '$archiveTag' already exists."
           }
 
           $null = gh release view $archiveTag 2>$null
 
-          if ($LASTEXITCODE -eq 0) {
+          $archiveReleaseExists = ($LASTEXITCODE -eq 0)
+          $LASTEXITCODE = 0
+
+          if ($archiveReleaseExists) {
               throw "Archive release '$archiveTag' already exists."
           }
 
@@ -150,11 +165,19 @@ jobs:
           Write-Host "[+] Archive tag        : $archiveTag"
           Write-Host "[+] Current sdk SHA    : $oldTagSha"
           Write-Host "[+] Release ID         : $($release.databaseId)"
+          Write-Host "[+] Archive tag free   : yes"
+          Write-Host "[+] Archive release free: yes"
 
           "old_version=$oldVersion" >> $env:GITHUB_OUTPUT
           "archive_tag=$archiveTag" >> $env:GITHUB_OUTPUT
           "release_id=$($release.databaseId)" >> $env:GITHUB_OUTPUT
           "old_tag_sha=$oldTagSha" >> $env:GITHUB_OUTPUT
+
+          #
+          # Explicitly finish successfully so no native-command exit status
+          # can accidentally leak out of this metadata/preflight step.
+          #
+          exit 0
 
       # ------------------------------------------------------------
       # Build G2Dumper
@@ -745,13 +768,19 @@ jobs:
               "repos/$env:GH_REPO/git/ref/tags/$env:ARCHIVE_TAG" `
               2>$null
 
-          if ($LASTEXITCODE -eq 0) {
+          $archiveTagExists = ($LASTEXITCODE -eq 0)
+          $LASTEXITCODE = 0
+
+          if ($archiveTagExists) {
               throw "Archive tag '$env:ARCHIVE_TAG' appeared while the workflow was running."
           }
 
           $null = gh release view $env:ARCHIVE_TAG 2>$null
 
-          if ($LASTEXITCODE -eq 0) {
+          $archiveReleaseExists = ($LASTEXITCODE -eq 0)
+          $LASTEXITCODE = 0
+
+          if ($archiveReleaseExists) {
               throw "Archive release '$env:ARCHIVE_TAG' appeared while the workflow was running."
           }
 
