@@ -59,6 +59,7 @@ jobs:
           repository: x0reaxeax/G2Dumper
           ref: main
           path: _g2dumper
+          submodules: recursive
 
       - name: Setup MSBuild
         uses: microsoft/setup-msbuild@v2
