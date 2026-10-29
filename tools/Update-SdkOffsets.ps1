@@ -17,7 +17,8 @@ $RequiredOffsets = @(
     "AppendString",
     "GNames",
     "GWorld",
-    "ProcessEvent"
+    "ProcessEvent",
+    "FindFunctionChecked"
 )
 
 function Read-OffsetsJson {
