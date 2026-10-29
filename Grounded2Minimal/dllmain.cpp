@@ -162,9 +162,9 @@ static bool CheckGameCompat(void) {
     // (e.g. the "5.6.1-3100008+++Augusta+" prefix) that aren't part of the
     // game's own version numbering.
 
-    CONST DWORD32 dwMajor = 0x05;
-    CONST DWORD32 dwMinor = 0x01;
-    CONST DWORD32 dwPatch = 0x01;
+    CONST DWORD32 dwMajor = 0x06;
+    CONST DWORD32 dwMinor = 0x00;
+    CONST DWORD32 dwPatch = 0x04;
 
     WCHAR wszGameVersion[64] = { 0 };
 
