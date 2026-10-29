@@ -47,7 +47,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           New-Item -ItemType Directory -Force -Path _sdk | Out-Null
-          gh release download sdk --pattern "Grounded2Minimal-SDK.zip" --dir _sdk
+          gh release download sdk --repo x0reaxeax/Grounded2Minimal --pattern "Grounded2Minimal-SDK.zip" --dir _sdk
 
       - name: Extract SDK into project directory
         shell: pwsh
@@ -171,15 +171,35 @@ jobs:
           Set-Content -Path $hashFile -Value $lines
 
       - name: Upload packaged artifacts
+        id: upload
         uses: actions/upload-artifact@v4
         with:
           name: release-${{ matrix.target_name }}
           path: _release/${{ matrix.target_name }}
           if-no-files-found: error
+          retention-days: 30
+
+      - name: Add artifact download link
+        shell: pwsh
+        env:
+          ARTIFACT_URL: ${{ steps.upload.outputs.artifact-url }}
+        run: |
+          @(
+            "### ${{ matrix.target_name }} Build"
+            ""
+            "Build completed successfully!"
+            ""
+            "[Download ${{ matrix.target_name }} artifacts]($env:ARTIFACT_URL)"
+          ) | Out-File `
+            -FilePath $env:GITHUB_STEP_SUMMARY `
+            -Append `
+            -Encoding utf8
 
   publish-release:
     name: Publish GitHub release
-    if: startsWith(github.ref, 'refs/tags/')
+    if: >-
+      startsWith(github.ref, 'refs/tags/v') &&
+      github.repository == 'x0reaxeax/Grounded2Minimal'
     needs: build-release
     runs-on: windows-latest
     permissions:
