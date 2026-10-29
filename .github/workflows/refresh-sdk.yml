@@ -698,8 +698,23 @@ jobs:
       # was running.
       # ------------------------------------------------------------
 
+      - name: Upload validated SDK and DLLs
+        id: upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: refreshed-sdk-${{ inputs.game_version }}
+          path: |
+            _sdk/candidate/Grounded2Minimal-SDK.zip
+            _sdk/candidate/RELEASE_NOTES.md
+            x64/Release-Steam/Grounded2Minimal.dll
+            x64/Release-XGP/Grounded2Minimal.dll
+          if-no-files-found: error
+          retention-days: 30
+
       - name: Rotate SDK release and publish refreshed SDK
-        if: ${{ !inputs.dry_run }}
+        if: >-
+          ${{ !inputs.dry_run &&
+              github.repository == 'x0reaxeax/Grounded2Minimal' }}
         shell: pwsh
         env:
           EXPECTED_RELEASE_ID: ${{ steps.sdk_metadata.outputs.release_id }}
