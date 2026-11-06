@@ -717,6 +717,7 @@ jobs:
               github.repository == 'x0reaxeax/Grounded2Minimal' }}
         shell: pwsh
         env:
+          GH_TOKEN: ${{ secrets.SDK_RELEASE_TOKEN }}
           EXPECTED_RELEASE_ID: ${{ steps.sdk_metadata.outputs.release_id }}
           EXPECTED_OLD_TAG_SHA: ${{ steps.sdk_metadata.outputs.old_tag_sha }}
           ARCHIVE_TAG: ${{ steps.sdk_metadata.outputs.archive_tag }}
