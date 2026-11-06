@@ -164,7 +164,7 @@ static bool CheckGameCompat(void) {
 
     CONST DWORD32 dwMajor = 0x06;
     CONST DWORD32 dwMinor = 0x00;
-    CONST DWORD32 dwPatch = 0x04;
+    CONST DWORD32 dwPatch = 0x05;
 
     WCHAR wszGameVersion[64] = { 0 };
 
